@@ -77,6 +77,26 @@ export interface ReportsRepository {
   findAll: () => Promise<RxDocument<IReport>[]>;
 }
 
+/**
+ * Derives the sync status of a single report from global replication state.
+ *
+ * Heuristic:
+ * - If replication is in error state → failed
+ * - If the report was modified after the last successful sync → pending
+ * - Otherwise → synced
+ */
+export function getReportSyncStatus(
+  report: IReport,
+  globalSyncStatus: 'idle' | 'syncing' | 'error' | 'offline',
+  lastSyncTimestamp: number | null
+): 'synced' | 'pending' | 'failed' {
+  if (globalSyncStatus === 'error') return 'failed';
+  if (globalSyncStatus === 'offline') return 'failed';
+  if (!lastSyncTimestamp) return 'pending';
+  if (report.updated_at > lastSyncTimestamp) return 'pending';
+  return 'synced';
+}
+
 export function useReportsRepository(): ReportsRepository {
   const db = useDatabase();
 

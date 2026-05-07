@@ -1,21 +1,194 @@
 /**
- * Home screen — Production dashboard for Chocolate Ibarra PRODUCCIÓN.
+ * Home screen — Production dashboard and Reports History for Chocolate Ibarra PRODUCCIÓN.
  *
  * Displays:
- * - OEE overview cards
- * - Connection and sync status
- * - Quick actions to production reports
+ * - Reactive list of production reports from RxDB
+ * - Sync status indicator per report
+ * - Quick delete action with confirmation
+ * - Empty state with CTA to capture form
  *
  * Optimised for industrial tablets with large touch targets (≥48 dp).
  */
 
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Text, Button, Card } from 'react-native-paper';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, StyleSheet, FlatList } from 'react-native';
+import {
+  Text,
+  Card,
+  IconButton,
+  Button,
+  Dialog,
+  Portal,
+  Snackbar,
+} from 'react-native-paper';
+import { useRouter } from 'expo-router';
+import {
+  useReportsRepository,
+  getReportSyncStatus,
+} from '../../src/repositories/useReportsRepository';
+import { useReplication } from '../../src/data/DatabaseContext';
+import type { IReport } from '../../src/core/types';
 import { ConnectionBadge } from '../../src/ui/components/ConnectionBadge';
 import { SyncMonitor } from '../../src/ui/components/SyncMonitor';
 
+function formatCaptureTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleString('es-MX', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/**
+ * Observes the reports replication state to derive per-item sync status.
+ */
+function useReportsReplicationState() {
+  const replication = useReplication();
+  const [lastSyncTime, setLastSyncTime] = useState<number | null>(null);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    if (!replication) return;
+    const { reports } = replication;
+    const subs: Array<() => void> = [];
+
+    const subActive = reports.active$.subscribe((active: boolean) => {
+      if (active) {
+        setHasError(false);
+      } else {
+        setLastSyncTime(Date.now());
+      }
+    });
+    subs.push(() => subActive.unsubscribe());
+
+    const subError = reports.error$.subscribe((err: Error | undefined) => {
+      if (err) {
+        setHasError(true);
+      }
+    });
+    subs.push(() => subError.unsubscribe());
+
+    return () => subs.forEach((unsub) => unsub());
+  }, [replication]);
+
+  return { lastSyncTime, hasError };
+}
+
 export default function HomeScreen() {
+  const router = useRouter();
+  const { docs$, remove } = useReportsRepository();
+  const { lastSyncTime, hasError } = useReportsReplicationState();
+
+  const [reports, setReports] = useState<IReport[]>([]);
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState<IReport | null>(null);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  useEffect(() => {
+    const subscription = docs$.subscribe((docs) => {
+      setReports(docs.map((doc) => doc.toJSON() as IReport));
+    });
+    return () => subscription.unsubscribe();
+  }, [docs$]);
+
+  const handleDeletePress = useCallback((report: IReport) => {
+    setReportToDelete(report);
+    setDeleteDialogVisible(true);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!reportToDelete) return;
+    try {
+      await remove(reportToDelete.id);
+      setSnackbarMessage('Reporte eliminado correctamente');
+      setSnackbarVisible(true);
+    } catch {
+      setSnackbarMessage('Error al eliminar el reporte');
+      setSnackbarVisible(true);
+    } finally {
+      setDeleteDialogVisible(false);
+      setReportToDelete(null);
+    }
+  }, [reportToDelete, remove]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: IReport }) => {
+      const syncStatus = getReportSyncStatus(
+        item,
+        hasError ? 'error' : 'idle',
+        lastSyncTime
+      );
+      const syncIcon =
+        syncStatus === 'synced'
+          ? { name: 'cloud-check' as const, color: '#4CAF50' }
+          : syncStatus === 'pending'
+          ? { name: 'clock-outline' as const, color: '#FF9800' }
+          : { name: 'cloud-off-outline' as const, color: '#F44336' };
+
+      return (
+        <Card style={styles.card}>
+          <Card.Content>
+            <View style={styles.cardHeader}>
+              <Text variant="titleMedium" style={styles.lineName}>
+                {item.data.line_id}
+              </Text>
+              <IconButton
+                icon={syncIcon.name}
+                iconColor={syncIcon.color}
+                size={20}
+                onPress={() => {}}
+                style={styles.syncIcon}
+              />
+            </View>
+            <Text variant="bodyMedium">
+              Total piezas: {item.data.total_pieces}
+            </Text>
+            <Text variant="bodySmall" style={styles.timestamp}>
+              {formatCaptureTime(item.updated_at)}
+            </Text>
+          </Card.Content>
+          <Card.Actions>
+            <Button
+              mode="outlined"
+              onPress={() => handleDeletePress(item)}
+              style={styles.deleteButton}
+              contentStyle={styles.deleteButtonContent}
+              textColor="#F44336"
+            >
+              Eliminar
+            </Button>
+          </Card.Actions>
+        </Card>
+      );
+    },
+    [lastSyncTime, hasError, handleDeletePress]
+  );
+
+  const renderEmptyState = useCallback(
+    () => (
+      <View style={styles.emptyContainer}>
+        <Text variant="headlineSmall" style={styles.emptyTitle}>
+          No hay reportes aún
+        </Text>
+        <Text variant="bodyMedium" style={styles.emptySubtitle}>
+          Comience capturando su primer reporte de producción
+        </Text>
+        <Button
+          mode="contained"
+          onPress={() => router.push('/(tabs)/reports')}
+          style={styles.emptyButton}
+          contentStyle={styles.emptyButtonContent}
+        >
+          Ir a Captura OEE
+        </Button>
+      </View>
+    ),
+    [router]
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -26,49 +199,54 @@ export default function HomeScreen() {
       </View>
 
       <Text variant="titleMedium" style={styles.subtitle}>
-        PRODUCCIÓN — Panel de Control
+        PRODUCCIÓN — Historial de Reportes
       </Text>
 
-      <Card style={styles.card}>
-        <Card.Content>
-          <Text variant="titleLarge">OEE General</Text>
-          <Text variant="bodyMedium">
-            Disponibilidad · Rendimiento · Calidad
-          </Text>
-        </Card.Content>
-      </Card>
+      <FlatList
+        style={{ flex: 1 }}
+        data={reports}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={
+          reports.length === 0 ? styles.emptyListContent : styles.listContent
+        }
+        ListEmptyComponent={renderEmptyState}
+      />
 
-      <Card style={styles.card}>
-        <Card.Content>
-          <Text variant="titleLarge">Reportes de Producción</Text>
-          <Text variant="bodyMedium">
-            Registro de paros, tonelaje y eficiencia
-          </Text>
-        </Card.Content>
-      </Card>
+      <Portal>
+        <Dialog
+          visible={deleteDialogVisible}
+          onDismiss={() => setDeleteDialogVisible(false)}
+        >
+          <Dialog.Title>Confirmar eliminación</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">
+              ¿Está seguro de que desea eliminar el reporte de la línea{' '}
+              <Text style={styles.dialogBold}>
+                {reportToDelete?.data.line_id}
+              </Text>
+              ?
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setDeleteDialogVisible(false)}>
+              Cancelar
+            </Button>
+            <Button onPress={confirmDelete} textColor="#F44336">
+              Eliminar
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
 
-      <View style={styles.actions}>
-        <Button
-          mode="contained"
-          style={styles.button}
-          contentStyle={styles.buttonContent}
-          onPress={() => {
-            /* TODO: Navigate to reports */
-          }}
-        >
-          Ver Reportes
-        </Button>
-        <Button
-          mode="outlined"
-          style={styles.button}
-          contentStyle={styles.buttonContent}
-          onPress={() => {
-            /* TODO: Navigate to OEE detail */
-          }}
-        >
-          Detalle OEE
-        </Button>
-      </View>
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={3000}
+        style={styles.snackbar}
+      >
+        {snackbarMessage}
+      </Snackbar>
 
       <SyncMonitor />
     </View>
@@ -93,22 +271,73 @@ const styles = StyleSheet.create({
     color: '#5D4037',
   },
   subtitle: {
-    marginBottom: 24,
+    marginBottom: 16,
     color: '#757575',
   },
+  listContent: {
+    paddingBottom: 16,
+  },
+  emptyListContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   card: {
-    marginBottom: 16,
+    marginBottom: 12,
     backgroundColor: '#FFFFFF',
   },
-  actions: {
-    gap: 12,
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  lineName: {
+    fontWeight: 'bold',
+    color: '#5D4037',
+    flex: 1,
+  },
+  syncIcon: {
+    margin: 0,
+  },
+  timestamp: {
+    color: '#757575',
+    marginTop: 4,
+  },
+  deleteButton: {
+    minHeight: 48,
+    borderColor: '#F44336',
+  },
+  deleteButtonContent: {
+    minHeight: 48,
+    paddingHorizontal: 16,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  emptyTitle: {
+    fontWeight: 'bold',
+    color: '#5D4037',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    color: '#757575',
+    textAlign: 'center',
     marginBottom: 24,
   },
-  button: {
+  emptyButton: {
     minHeight: 48,
   },
-  buttonContent: {
-    paddingVertical: 8,
+  emptyButtonContent: {
     minHeight: 48,
+    paddingVertical: 8,
+  },
+  dialogBold: {
+    fontWeight: 'bold',
+  },
+  snackbar: {
+    marginBottom: 16,
+    marginHorizontal: 16,
   },
 });
