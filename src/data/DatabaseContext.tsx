@@ -1,10 +1,11 @@
 /**
- * Database Context — React dependency injection for the RxDB singleton.
+ * Database Context — React dependency injection for the RxDB singleton and replication states.
  *
  * Pattern: Context + Hook (DI Container)
  * Why:
  * - The database needs to be shared across many components without prop drilling.
  * - The database is async and lazy-initialized — the context handles the loading state.
+ * - Replication states are also shared to allow UI components (SyncMonitor) to observe sync status.
  * - This follows the standard React pattern for framework-level singletons (like Redux Provider).
  *
  * Usage:
@@ -14,35 +15,33 @@
  *
  * Inside any child component:
  *   const db = useDatabase();
+ *   const replication = useReplication();
  *   const assets = await db.collections.assets.find().exec();
- *
- * The provider renders null during initialization — replace with a SplashScreen
- * if you need a branded loading state.
  */
 
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { getDatabase, type ChocolateIbarraDatabase } from './database';
+import { startReplication, type ReplicationStates } from '../graphql/sync';
 
-/**
- * The shape of what DatabaseContext provides to consumers.
- * We cast to the actual database type at the useDatabase() call site.
- */
+// ─── Database Context ──────────────────────────────────────────────────────────
+
 const DatabaseContext = createContext<ChocolateIbarraDatabase | undefined>(undefined);
+
+// ─── Replication Context ───────────────────────────────────────────────────────
+
+const ReplicationContext = createContext<ReplicationStates | undefined>(undefined);
+
+// ─── Provider Props ────────────────────────────────────────────────────────────
 
 interface DatabaseProviderProps {
   children: ReactNode;
 }
 
-/**
- * DatabaseProvider — wraps the app and initializes the RxDB singleton.
- *
- * Responsibilities:
- * - Call getDatabase() on mount (triggers lazy init)
- * - Manage loading/error states
- * - Provide the database instance to all children via Context
- */
+// ─── DatabaseProvider ──────────────────────────────────────────────────────────
+
 export function DatabaseProvider({ children }: DatabaseProviderProps) {
   const [db, setDb] = useState<ChocolateIbarraDatabase | undefined>(undefined);
+  const [replication, setReplication] = useState<ReplicationStates | undefined>(undefined);
   const [error, setError] = useState<unknown>(undefined);
 
   useEffect(() => {
@@ -50,13 +49,20 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
 
     getDatabase()
       .then((database) => {
-        if (mounted) setDb(database);
+        if (!mounted) return;
+        
+        // Start replication after database is ready
+        const replicationStates = startReplication(database);
+        
+        if (mounted) {
+          setDb(database);
+          setReplication(replicationStates);
+        }
       })
       .catch((err) => {
         if (mounted) setError(err);
       });
 
-    // Cleanup: prevent state updates after unmount
     return () => {
       mounted = false;
     };
@@ -74,19 +80,15 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
 
   return (
     <DatabaseContext.Provider value={db}>
-      {children}
+      <ReplicationContext.Provider value={replication}>
+        {children}
+      </ReplicationContext.Provider>
     </DatabaseContext.Provider>
   );
 }
 
-/**
- * Hook to access the RxDB database instance.
- *
- * REQUIREMENT: Must be called within a <DatabaseProvider> tree.
- * Throws a descriptive error otherwise — fail-fast prevents subtle bugs.
- *
- * @returns {ChocolateIbarraDatabase} The RxDB database instance
- */
+// ─── useDatabase Hook ──────────────────────────────────────────────────────────
+
 export function useDatabase(): ChocolateIbarraDatabase {
   const db = useContext(DatabaseContext);
   if (db === undefined) {
@@ -96,4 +98,10 @@ export function useDatabase(): ChocolateIbarraDatabase {
     );
   }
   return db;
+}
+
+// ─── useReplication Hook ───────────────────────────────────────────────────────
+
+export function useReplication(): ReplicationStates | undefined {
+  return useContext(ReplicationContext);
 }

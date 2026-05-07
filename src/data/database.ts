@@ -29,25 +29,6 @@ export type ChocolateIbarraDatabase = RxDatabase<{
   work_orders: typeof workOrderSchema;
 }>;
 
-// ─── Isomorphic Storage Factory ───────────────────────────────────────────────
-
-/**
- * Returns the RxDB storage adapter.
- *
- * Strategy: PWA (Progressive Web App) — the app runs as a web app in all platforms
- * (mobile browser, desktop browser). Dexie.js (IndexedDB) is used everywhere.
- *
- * Web: Uses Dexie.js — wraps IndexedDB with a clean API, official RxDB plugin.
- * Mobile PWA: Same — runs in the mobile browser where IndexedDB is available.
- * Desktop: Same — runs in the desktop browser.
- *
- * This avoids the RxDB Premium license requirement entirely.
- */
-function getStorage() {
-  // PWA: Dexie.js works in all browser environments (web, mobile PWA, desktop PWA)
-  return getRxStorageDexie();
-}
-
 // ─── Database Singleton ────────────────────────────────────────────────────────
 
 let dbPromise: Promise<ChocolateIbarraDatabase> | null = null;
@@ -71,7 +52,7 @@ export async function getDatabase(): Promise<ChocolateIbarraDatabase> {
       addRxPlugin(RxDBDevModePlugin);
     }
 
-    const storage = getStorage();
+    const storage = getRxStorageDexie();
 
     dbPromise = createRxDatabase<ChocolateIbarraDatabase>({
       name: 'chocolate_ibarra_db',

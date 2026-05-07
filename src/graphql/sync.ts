@@ -240,7 +240,12 @@ function pushMutationBuilderWorkOrders(docs: IWorkOrder[]) {
  * }, [db]);
  * ```
  */
-export function startReplication(db: ChocolateIbarraDatabase): void {
+export interface ReplicationStates {
+  assets: ReplicationState<IAsset, GraphQLAsset>;
+  workOrders: ReplicationState<IWorkOrder, GraphQLWorkOrder>;
+}
+
+export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates {
   // ── Assets replication ──────────────────────────────────────────────────────
   const replicationAssets: ReplicationState<IAsset, GraphQLAsset> = replicateGraphQL<
     IAsset,
@@ -284,4 +289,6 @@ export function startReplication(db: ChocolateIbarraDatabase): void {
 
   // Asset Types replication would follow the same pattern.
   // TODO: Add asset_types replication once Nhost tables are created.
+
+  return { assets: replicationAssets, workOrders: replicationWorkOrders };
 }
