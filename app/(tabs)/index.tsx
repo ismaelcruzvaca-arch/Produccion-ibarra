@@ -1,15 +1,19 @@
 /**
- * Home screen — initial route of the application.
+ * Home screen — Production dashboard for Chocolate Ibarra PRODUCCIÓN.
  *
- * Displays the main dashboard for the Chocolate Ibarra production app.
- * Optimized for industrial tablets with large touch targets (≥48dp).
+ * Displays:
+ * - OEE overview cards
+ * - Connection and sync status
+ * - Quick actions to production reports
+ *
+ * Optimised for industrial tablets with large touch targets (≥48 dp).
  */
 
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Button, Card } from 'react-native-paper';
-import { ConnectionBadge } from '../src/ui/components/ConnectionBadge';
-import { SyncMonitor } from '../src/ui/components/SyncMonitor';
+import { ConnectionBadge } from '../../src/ui/components/ConnectionBadge';
+import { SyncMonitor } from '../../src/ui/components/SyncMonitor';
 
 export default function HomeScreen() {
   return (
@@ -21,10 +25,25 @@ export default function HomeScreen() {
         <ConnectionBadge />
       </View>
 
+      <Text variant="titleMedium" style={styles.subtitle}>
+        PRODUCCIÓN — Panel de Control
+      </Text>
+
       <Card style={styles.card}>
         <Card.Content>
-          <Text variant="titleLarge">Producción</Text>
-          <Text variant="bodyMedium">Panel de control de órdenes de trabajo</Text>
+          <Text variant="titleLarge">OEE General</Text>
+          <Text variant="bodyMedium">
+            Disponibilidad · Rendimiento · Calidad
+          </Text>
+        </Card.Content>
+      </Card>
+
+      <Card style={styles.card}>
+        <Card.Content>
+          <Text variant="titleLarge">Reportes de Producción</Text>
+          <Text variant="bodyMedium">
+            Registro de paros, tonelaje y eficiencia
+          </Text>
         </Card.Content>
       </Card>
 
@@ -33,17 +52,21 @@ export default function HomeScreen() {
           mode="contained"
           style={styles.button}
           contentStyle={styles.buttonContent}
-          onPress={() => { /* TODO: Navigate to orders */ }}
+          onPress={() => {
+            /* TODO: Navigate to reports */
+          }}
         >
-          Ver Órdenes
+          Ver Reportes
         </Button>
         <Button
           mode="outlined"
           style={styles.button}
           contentStyle={styles.buttonContent}
-          onPress={() => { /* TODO: Navigate to assets */ }}
+          onPress={() => {
+            /* TODO: Navigate to OEE detail */
+          }}
         >
-          Activos
+          Detalle OEE
         </Button>
       </View>
 
@@ -62,12 +85,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 8,
     marginTop: 8,
   },
   title: {
     fontWeight: 'bold',
     color: '#5D4037',
+  },
+  subtitle: {
+    marginBottom: 24,
+    color: '#757575',
   },
   card: {
     marginBottom: 16,

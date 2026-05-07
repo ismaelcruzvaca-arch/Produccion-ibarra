@@ -1,48 +1,118 @@
 /**
  * Nhost client singleton for authentication and GraphQL requests.
  *
- * Pattern: Singleton Service
+ * Pattern: Singleton Service + Token Adapter
  * Why:
  * - NhostClient manages auth state, token refresh, and GraphQL requests globally.
  * - A single shared instance avoids duplicate client initialization.
  * - The client auto-injects the Authorization header (Bearer token) on authenticated requests.
+ * - For raw fetch (replication layer), getAuthToken() provides the current token.
+ *
+ * Offline-first token handling:
+ * - On module load, we attempt to restore the stored session into the Nhost client.
+ * - getAuthToken() first checks the Nhost in-memory session, then falls back to
+ *   the memory-cached token from secure storage (set during checkSession or signIn).
+ * - This ensures replication requests carry the token even if the Nhost internal
+ *   session hasn't been fully restored yet.
  *
  * Configuration:
  * - subdomain: Your Nhost project subdomain (found in Nhost dashboard)
  * - region: The region where your Nhost project is hosted (e.g., 'us-east-1')
- *
- * Usage:
- *   import { nhost, getAuthToken } from './nhostClient';
- *   const session = nhost.auth.getSession(); // access current user
- *   const token = getAuthToken();             // for manual header injection
  */
 
-import { NhostClient } from '@nhost/nhost-js';
+import { createNhostClient } from '@nhost/nhost-js';
+import {
+  getMemoryAccessToken,
+  getStoredSession,
+  setMemoryAccessToken,
+} from '../auth/tokenStorage';
 
-/**
- * Nhost client singleton.
- * Replace subdomain and region with your actual Nhost project values.
- *
- * The client handles:
- * - Authentication (sign in/up/out, token refresh)
- * - GraphQL requests (auto-injects Authorization header when authenticated)
- * - Storage operations (file uploads/downloads)
- */
-export const nhost = new NhostClient({
+export const nhost = createNhostClient({
   subdomain: 'your-nhost-subdomain', // TODO: replace with actual subdomain from Nhost dashboard
   region: 'us-east-1',               // TODO: replace with actual region from Nhost dashboard
 });
 
+// ─── Restore session from secure storage on app start ──────────────────────────
+
+(async function restoreSession() {
+  try {
+    const stored = await getStoredSession();
+    if (!stored) return;
+
+    // Seed the memory cache so getAuthToken() works synchronously
+    // before any React component mounts.
+    setMemoryAccessToken(stored.accessToken);
+
+    // Attempt to refresh the session with Nhost to obtain a fresh access token.
+    // This silently fails when offline; the stale cached token remains usable
+    // for local replication until connectivity returns.
+    try {
+      const refreshed = await nhost.refreshSession(0);
+      if (refreshed?.accessToken) {
+        setMemoryAccessToken(refreshed.accessToken);
+      }
+    } catch {
+      // Offline or invalid refresh token — silent fail.
+    }
+  } catch {
+    // Offline or invalid refresh token — silent fail.
+    // AuthGuard will redirect to login if the token is truly unusable.
+  }
+})();
+
+// ─── Auto-refresh interval ─────────────────────────────────────────────────────
+
 /**
- * Gets the current auth token from the Nhost client.
- * Used to inject Authorization header into replication requests (which use raw fetch).
+ * Periodically check if the access token is about to expire and refresh it.
+ * Runs only when online. If offline, the existing token remains cached.
+ */
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+setInterval(() => {
+  const session = nhost.getUserSession();
+  if (!session?.accessToken) return;
+
+  try {
+    const base64Payload = session.accessToken.split('.')[1];
+    if (!base64Payload) return;
+    const payload = JSON.parse(atob(base64Payload));
+    const expiresIn = payload.exp * 1000 - Date.now();
+    // Refresh if token expires in the next 10 minutes
+    if (expiresIn < 10 * 60 * 1000) {
+      nhost.refreshSession(0).catch(() => {
+        // Silent fail — will retry on next interval
+      });
+    }
+  } catch {
+    // Malformed token — ignore
+  }
+}, REFRESH_INTERVAL_MS);
+
+// ─── Token accessors ───────────────────────────────────────────────────────────
+
+/**
+ * Gets the current auth token for raw fetch requests (replication layer).
  *
- * The replication layer in sync.ts uses native fetch rather than nhost.graphql.client
- * so we need to extract and manually inject the token.
- *
- * @returns {string | null} The Bearer token, or null if not authenticated
+ * Returns the Nhost in-memory session token first; falls back to the
+ * memory-cached token from secure storage. This is synchronous because
+ * the replication query builders call it inline.
  */
 export function getAuthToken(): string | null {
-  const session = nhost.auth.getSession();
-  return session?.accessToken ?? null;
+  const session = nhost.getUserSession();
+  if (session?.accessToken) {
+    return session.accessToken;
+  }
+  return getMemoryAccessToken();
+}
+
+/**
+ * Async variant for contexts where awaiting is acceptable.
+ * Ensures the latest token is returned, including after a fresh restore.
+ */
+export async function getAuthTokenAsync(): Promise<string | null> {
+  const session = nhost.getUserSession();
+  if (session?.accessToken) {
+    return session.accessToken;
+  }
+  return getMemoryAccessToken();
 }
