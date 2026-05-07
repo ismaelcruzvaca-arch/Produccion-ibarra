@@ -1,2 +1,8 @@
+# Dependencies
+node_modules/
+
 # Skill registry (AI agent infrastructure)
 .atl/
+
+# Engram backups
+engram-backup*.json
