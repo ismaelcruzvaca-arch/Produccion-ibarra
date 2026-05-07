@@ -17,7 +17,7 @@
  * by network-level naming conventions.
  */
 
-import type { IAsset, IAssetType, IWorkOrder } from '../core/types';
+import type { IAsset, IAssetType, IWorkOrder, IReport } from '../core/types';
 
 // ─── Asset Mappers ─────────────────────────────────────────────────────────────
 
@@ -177,5 +177,49 @@ export function fromGraphQLWorkOrder(gql: GraphQLWorkOrder): IWorkOrder {
     completed_date: gql.completed_date ? parseInt(gql.completed_date, 10) : undefined,
     client_updated_at: parseInt(gql.client_updated_at, 10),
     deleted: gql.deleted,
+  };
+}
+
+// ─── Report Mappers ────────────────────────────────────────────────────────────
+
+/**
+ * GraphQL representation of a Report as returned by Hasura.
+ */
+export interface GraphQLReport {
+  id: string;
+  updated_at: string; // BIGINT as string from Hasura
+  deleted: boolean;
+  template_id: string;
+  data: {
+    line_id: string;
+    total_pieces: number;
+    rejected_pieces: number;
+    downtime_minutes: number;
+  };
+}
+
+/**
+ * Maps a local RxDB report to GraphQL input format (snake_case).
+ */
+export function toGraphQLReport(report: IReport): Record<string, unknown> {
+  return {
+    id: report.id,
+    updated_at: report.updated_at.toString(),
+    deleted: report.deleted,
+    template_id: report.template_id,
+    data: report.data,
+  };
+}
+
+/**
+ * Maps a GraphQL report response to local RxDB format (camelCase).
+ */
+export function fromGraphQLReport(gql: GraphQLReport): IReport {
+  return {
+    id: gql.id,
+    updated_at: parseInt(gql.updated_at, 10),
+    deleted: gql.deleted,
+    template_id: gql.template_id,
+    data: gql.data,
   };
 }

@@ -105,3 +105,32 @@ export interface IWorkOrder extends IBaseDocument {
 }
 
 export type RxWorkOrder = RxDocument<IWorkOrder>;
+
+// ─── Reports ───────────────────────────────────────────────────────────────────
+
+export interface ReportData {
+  line_id: string;
+  total_pieces: number;
+  rejected_pieces: number;
+  downtime_minutes: number;
+}
+
+/**
+ * Report entity — represents a production report with flexible data payload.
+ *
+ * Fields:
+ * - template_id: identifies the report template (e.g., 'oee-basic')
+ * - data: flexible payload containing report-specific metrics
+ *
+ * Uses `updated_at` (not `client_updated_at`) per the approved data contract
+ * for new collections.
+ */
+export interface IReport {
+  id: string;
+  updated_at: number;
+  deleted: boolean;
+  template_id: string;
+  data: ReportData;
+}
+
+export type RxReport = RxDocument<IReport>;

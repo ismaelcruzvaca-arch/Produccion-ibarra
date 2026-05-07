@@ -14,7 +14,7 @@
  */
 
 import type { RxJsonSchema } from 'rxdb';
-import type { IAsset, IAssetType, IWorkOrder } from '../core/types';
+import type { IAsset, IAssetType, IWorkOrder, IReport } from '../core/types';
 
 /**
  * Asset collection schema.
@@ -84,4 +84,32 @@ export const workOrderSchema: RxJsonSchema<IWorkOrder> = {
     deleted: { type: 'boolean' },
   },
   indexes: [],
+};
+
+/**
+ * Report collection schema.
+ * Uses `updated_at` (not `client_updated_at`) per the new data contract.
+ * The `data` field is a flexible object for template-specific payloads.
+ */
+export const reportSchema: RxJsonSchema<IReport> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'updated_at', 'deleted', 'template_id', 'data'],
+  properties: {
+    id: { type: 'string', maxLength: 100 },
+    updated_at: { type: 'number' },
+    deleted: { type: 'boolean' },
+    template_id: { type: 'string' },
+    data: {
+      type: 'object',
+      properties: {
+        line_id: { type: 'string' },
+        total_pieces: { type: 'number' },
+        rejected_pieces: { type: 'number' },
+        downtime_minutes: { type: 'number' },
+      },
+    },
+  },
+  indexes: ['updated_at'],
 };

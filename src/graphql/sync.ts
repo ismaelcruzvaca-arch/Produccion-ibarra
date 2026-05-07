@@ -28,10 +28,13 @@ import {
   fromGraphQLAsset,
   fromGraphQLWorkOrder,
   toGraphQLWorkOrder,
+  toGraphQLReport,
+  fromGraphQLReport,
   type GraphQLAsset,
   type GraphQLWorkOrder,
+  type GraphQLReport,
 } from './dto';
-import type { IAsset, IWorkOrder } from '../core/types';
+import type { IAsset, IWorkOrder, IReport } from '../core/types';
 import type { ChocolateIbarraDatabase } from '../data/database';
 
 /**
@@ -219,6 +222,61 @@ function pushMutationBuilderWorkOrders(docs: IWorkOrder[]) {
   };
 }
 
+// ─── Pull Query Builder (Reports) ──────────────────────────────────────────────
+
+function pullQueryBuilderReports(checkpoint: { updated_at: number } | null) {
+  return {
+    query: `
+      query PullReports($lastCheckpoint: bigint!) {
+        reports(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          updated_at
+          deleted
+          template_id
+          data
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ?? 0 },
+    headers: getHeaders(),
+    url: getGraphQLUrl(),
+    fetch: fetch,
+  };
+}
+
+// ─── Push Mutation Builder (Reports Upsert) ─────────────────────────────────────
+
+function pushMutationBuilderReports(docs: IReport[]) {
+  const objects = docs.map(toGraphQLReport);
+  return {
+    query: `
+      mutation UpsertReports($objects: [reports_insert_input!]!) {
+        insert_reports(
+          objects: $objects,
+          on_conflict: {
+            constraint: reports_pkey,
+            update_columns: [
+              updated_at,
+              deleted,
+              template_id,
+              data
+            ]
+          }
+        ) {
+          affected_rows
+        }
+      }
+    `,
+    variables: { objects },
+    headers: getHeaders(),
+    url: getGraphQLUrl(),
+    fetch: fetch,
+  };
+}
+
 // ─── Replication Start Function ────────────────────────────────────────────────
 
 /**
@@ -243,6 +301,7 @@ function pushMutationBuilderWorkOrders(docs: IWorkOrder[]) {
 export interface ReplicationStates {
   assets: ReplicationState<IAsset, GraphQLAsset>;
   workOrders: ReplicationState<IWorkOrder, GraphQLWorkOrder>;
+  reports: ReplicationState<IReport, GraphQLReport>;
 }
 
 export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates {
@@ -287,8 +346,28 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
     pullBatchSize: 100,
   });
 
+  // ── Reports replication ────────────────────────────────────────────────────
+  const replicationReports: ReplicationState<IReport, GraphQLReport> = replicateGraphQL<
+    IReport,
+    GraphQLReport
+  >({
+    name: 'reports-graphql-replication',
+    collection: db.collections.reports,
+    pull: {
+      queryBuilder: pullQueryBuilderReports,
+      modifier: (doc: GraphQLReport) => fromGraphQLReport(doc),
+    },
+    push: {
+      queryBuilder: pushMutationBuilderReports,
+    },
+    liveInterval: 30000,
+    retryTime: 5000,
+    autoStart: true,
+    pullBatchSize: 100,
+  });
+
   // Asset Types replication would follow the same pattern.
   // TODO: Add asset_types replication once Nhost tables are created.
 
-  return { assets: replicationAssets, workOrders: replicationWorkOrders };
+  return { assets: replicationAssets, workOrders: replicationWorkOrders, reports: replicationReports };
 }

@@ -18,7 +18,7 @@ import { createRxDatabase, addRxPlugin, type RxDatabase } from 'rxdb';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode';
 
-import { assetSchema, assetTypeSchema, workOrderSchema } from './schemas';
+import { assetSchema, assetTypeSchema, workOrderSchema, reportSchema } from './schemas';
 
 // ─── Database Collections Type ──────────────────────────────────────────────────
 
@@ -27,6 +27,7 @@ export type ChocolateIbarraDatabase = RxDatabase<{
   assets: typeof assetSchema;
   asset_types: typeof assetTypeSchema;
   work_orders: typeof workOrderSchema;
+  reports: typeof reportSchema;
 }>;
 
 // ─── Database Singleton ────────────────────────────────────────────────────────
@@ -65,6 +66,7 @@ export async function getDatabase(): Promise<ChocolateIbarraDatabase> {
         assets: { schema: assetSchema },
         asset_types: { schema: assetTypeSchema },
         work_orders: { schema: workOrderSchema },
+        reports: { schema: reportSchema },
       });
       return db as ChocolateIbarraDatabase;
     });
