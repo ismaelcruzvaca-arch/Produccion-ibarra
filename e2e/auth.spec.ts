@@ -1,6 +1,18 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Authentication', () => {
+  test.beforeEach(async ({ page }) => {
+    page.on('console', (msg) =>
+      console.log('\uD83C\uDF10 BROWSER:', msg.type(), msg.text())
+    );
+    page.on('pageerror', (error) =>
+      console.log('\u274C BROWSER CRASH:', error.message)
+    );
+    page.on('requestfailed', (request) =>
+      console.log('\u26A0\uFE0F BROWSER NETWORK FAIL:', request.url(), request.failure()?.errorText)
+    );
+  });
+
   test('login page renders correctly', async ({ page }) => {
     await page.goto('/login');
     // Wait for the login form to be visible
