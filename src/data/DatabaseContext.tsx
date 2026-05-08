@@ -50,10 +50,22 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
     getDatabase()
       .then((database) => {
         if (!mounted) return;
-        
+
+        // Bypass replication in CI — RxDB WebSocket crashes without a live Nhost backend
+        if (process.env.CI === 'true') {
+          console.warn(
+            'CI environment detected: skipping RxDB GraphQL replication to prevent WS crash.'
+          );
+          if (mounted) {
+            setDb(database);
+            setReplication(undefined);
+          }
+          return;
+        }
+
         // Start replication after database is ready
         const replicationStates = startReplication(database);
-        
+
         if (mounted) {
           setDb(database);
           setReplication(replicationStates);
