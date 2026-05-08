@@ -45,6 +45,7 @@ export default function LoginScreen() {
 
       <TextInput
         label="Correo electrónico"
+        placeholder="tu@correo.com"
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -57,6 +58,7 @@ export default function LoginScreen() {
 
       <TextInput
         label="Contraseña"
+        placeholder="Tu contraseña"
         value={password}
         onChangeText={setPassword}
         secureTextEntry

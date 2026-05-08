@@ -13,3 +13,6 @@ dist/
 # SDD artifacts
 openspec/
 sdd/
+
+.vercel
+.env*.local
