@@ -1,0 +1,34 @@
+import { test, expect } from '@playwright/test';
+
+test.describe('Authentication', () => {
+  test('login page renders correctly', async ({ page }) => {
+    await page.goto('/login');
+    // Wait for the login form to be visible
+    await expect(page.getByLabel('Correo electrónico')).toBeVisible();
+    await expect(page.getByLabel('Contraseña')).toBeVisible();
+    await expect(page.getByRole('button', { name: /iniciar sesión/i })).toBeVisible();
+  });
+
+  test('invalid credentials show error message', async ({ page }) => {
+    await page.goto('/login');
+
+    // Fill in invalid credentials
+    await page.getByLabel('Correo electrónico').fill('test@example.com');
+    await page.getByLabel('Contraseña').fill('wrongpassword');
+
+    // Click login button
+    await page.getByRole('button', { name: /iniciar sesión/i }).click();
+
+    // Wait for error state (loading then error)
+    await expect(page.getByText(/error|incorrecto|fallido/i)).toBeVisible({ timeout: 10000 });
+  });
+
+  test('unauthenticated user is redirected to login', async ({ page }) => {
+    // Try to access protected route without auth
+    await page.goto('/');
+
+    // Should be redirected to login
+    await expect(page).toHaveURL(/.*login.*/);
+    await expect(page.getByLabel('Correo electrónico')).toBeVisible();
+  });
+});
