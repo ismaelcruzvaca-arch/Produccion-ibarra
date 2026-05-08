@@ -45,9 +45,15 @@ jobs:
         run: bunx playwright install --with-deps chromium
 
       - name: Build PWA
+        env:
+          EXPO_PUBLIC_NHOST_SUBDOMAIN: ${{ secrets.EXPO_PUBLIC_NHOST_SUBDOMAIN }}
+          EXPO_PUBLIC_NHOST_REGION: ${{ secrets.EXPO_PUBLIC_NHOST_REGION }}
         run: bunx expo export -p web
 
       - name: Run E2E tests
+        env:
+          EXPO_PUBLIC_NHOST_SUBDOMAIN: ${{ secrets.EXPO_PUBLIC_NHOST_SUBDOMAIN }}
+          EXPO_PUBLIC_NHOST_REGION: ${{ secrets.EXPO_PUBLIC_NHOST_REGION }}
         run: bunx playwright test
 
       - name: Deploy to Vercel

@@ -28,8 +28,8 @@ import {
 } from '../auth/tokenStorage';
 
 export const nhost = createNhostClient({
-  subdomain: 'your-nhost-subdomain', // TODO: replace with actual subdomain from Nhost dashboard
-  region: 'us-east-1',               // TODO: replace with actual region from Nhost dashboard
+  subdomain: process.env.EXPO_PUBLIC_NHOST_SUBDOMAIN ?? 'your-nhost-subdomain',
+  region: process.env.EXPO_PUBLIC_NHOST_REGION ?? 'us-east-1',
 });
 
 // ─── Restore session from secure storage on app start ──────────────────────────
