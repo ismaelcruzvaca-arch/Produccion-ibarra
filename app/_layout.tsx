@@ -84,18 +84,13 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Show nothing while checking session or during redirect to avoid flash
-  // of unauthorised content.
+  // Show nothing while checking session to avoid flash of unauthorised content.
   if (isLoading) {
     return null;
   }
 
-  const isLoginRoute = segments[0] === 'login';
-  const needsRedirect = (!isAuthenticated && !isLoginRoute) || (isAuthenticated && isLoginRoute);
-  if (needsRedirect) {
-    return null;
-  }
-
+  // Always render children — the Slot MUST mount for Expo Router to work.
+  // Navigation is handled asynchronously in the useEffect above.
   return <>{children}</>;
 }
 

@@ -16,8 +16,8 @@ test.describe('Authentication', () => {
   test('login page renders correctly', async ({ page }) => {
     await page.goto('/login');
     // Wait for the login form to be visible
-    await expect(page.getByLabel('Correo electrónico')).toBeVisible();
-    await expect(page.getByLabel('Contraseña')).toBeVisible();
+    await expect(page.getByPlaceholder('Correo electrónico')).toBeVisible();
+    await expect(page.getByPlaceholder('Contraseña')).toBeVisible();
     await expect(page.getByRole('button', { name: /iniciar sesión/i })).toBeVisible();
   });
 
@@ -25,8 +25,8 @@ test.describe('Authentication', () => {
     await page.goto('/login');
 
     // Fill in invalid credentials
-    await page.getByLabel('Correo electrónico').fill('test@example.com');
-    await page.getByLabel('Contraseña').fill('wrongpassword');
+    await page.getByPlaceholder('Correo electrónico').fill('test@example.com');
+    await page.getByPlaceholder('Contraseña').fill('wrongpassword');
 
     // Click login button
     await page.getByRole('button', { name: /iniciar sesión/i }).click();
@@ -41,6 +41,6 @@ test.describe('Authentication', () => {
 
     // Should be redirected to login
     await expect(page).toHaveURL(/.*login.*/);
-    await expect(page.getByLabel('Correo electrónico')).toBeVisible();
+    await expect(page.getByPlaceholder('Correo electrónico')).toBeVisible();
   });
 });
