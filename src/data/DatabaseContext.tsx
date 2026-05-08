@@ -51,10 +51,11 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
       .then((database) => {
         if (!mounted) return;
 
-        // Bypass replication in CI — RxDB WebSocket crashes without a live Nhost backend
-        if (process.env.CI === 'true') {
+        // Bypass replication in E2E CI — RxDB WebSocket crashes without a live Nhost backend.
+        // EXPO_PUBLIC_ prefix is required for Expo Web to inline the variable into the client bundle.
+        if (process.env.EXPO_PUBLIC_SKIP_SYNC === 'true') {
           console.warn(
-            'CI environment detected: skipping RxDB GraphQL replication to prevent WS crash.'
+            'E2E mode detected: skipping RxDB GraphQL replication to prevent WS crash.'
           );
           if (mounted) {
             setDb(database);

@@ -48,6 +48,7 @@ jobs:
         env:
           EXPO_PUBLIC_NHOST_SUBDOMAIN: ${{ secrets.EXPO_PUBLIC_NHOST_SUBDOMAIN }}
           EXPO_PUBLIC_NHOST_REGION: ${{ secrets.EXPO_PUBLIC_NHOST_REGION }}
+          EXPO_PUBLIC_SKIP_SYNC: "true"
         run: bunx expo export -p web
 
       - name: Run E2E tests
