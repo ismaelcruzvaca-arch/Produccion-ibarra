@@ -6,3 +6,10 @@ node_modules/
 
 # Engram backups
 engram-backup*.json
+
+# Build output
+dist/
+
+# SDD artifacts
+openspec/
+sdd/
