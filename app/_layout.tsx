@@ -18,7 +18,7 @@
  * 5. Slot — renders the current route
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { DatabaseProvider } from '../src/data/DatabaseContext';
@@ -47,17 +47,42 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
   const router = useRouter();
 
+  const mountedRef = useRef(false);
+
   useEffect(() => {
+    mountedRef.current = true;
+
     if (isLoading) return;
 
     const isLoginRoute = segments[0] === 'login';
+    const shouldRedirectToLogin = !isAuthenticated && !isLoginRoute;
+    const shouldRedirectToHome = isAuthenticated && isLoginRoute;
 
-    if (!isAuthenticated && !isLoginRoute) {
-      router.replace('/login');
-    } else if (isAuthenticated && isLoginRoute) {
-      router.replace('/');
-    }
+    if (!shouldRedirectToLogin && !shouldRedirectToHome) return;
+
+    // Defer navigation to the next tick so Slot has time to mount first.
+    // Without this, Expo Router throws "Attempted to navigate before mounting
+    // the Root Layout component" because DatabaseProvider returns null while
+    // the DB is initialising, delaying Slot's first render.
+    const id = setTimeout(() => {
+      if (!mountedRef.current) return;
+      if (shouldRedirectToLogin) {
+        router.replace('/login');
+      } else {
+        router.replace('/');
+      }
+    }, 0);
+
+    return () => {
+      clearTimeout(id);
+    };
   }, [isAuthenticated, isLoading, segments, router]);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Show nothing while checking session or during redirect to avoid flash
   // of unauthorised content.
