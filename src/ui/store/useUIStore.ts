@@ -10,11 +10,16 @@
 import { create } from 'zustand';
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline';
+export type DashboardTimeFilter = 'all' | 'shift' | '24h';
 
 interface UIState {
   // Theme
   isDarkMode: boolean;
   toggleDarkMode: () => void;
+
+  // Dashboard time filter
+  dashboardTimeFilter: DashboardTimeFilter;
+  setDashboardTimeFilter: (filter: DashboardTimeFilter) => void;
 
   // Sync monitor visibility
   showSyncMonitor: boolean;
@@ -44,6 +49,10 @@ export const useUIStore = create<UIState>((set) => ({
   // Theme
   isDarkMode: false,
   toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
+
+  // Dashboard time filter
+  dashboardTimeFilter: 'all',
+  setDashboardTimeFilter: (filter) => set({ dashboardTimeFilter: filter }),
 
   // Sync monitor visibility
   showSyncMonitor: true,

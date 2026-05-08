@@ -6,12 +6,13 @@
  * - Sync status indicator per report
  * - Quick delete action with confirmation
  * - Empty state with CTA to capture form
+ * - Dashboard KPIs and production bar chart
  *
  * Optimised for industrial tablets with large touch targets (≥48 dp).
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, FlatList } from 'react-native';
+import { View, StyleSheet, FlatList, ScrollView } from 'react-native';
 import {
   Text,
   Card,
@@ -30,6 +31,11 @@ import { useReplication } from '../../src/data/DatabaseContext';
 import type { IReport } from '../../src/core/types';
 import { ConnectionBadge } from '../../src/ui/components/ConnectionBadge';
 import { SyncMonitor } from '../../src/ui/components/SyncMonitor';
+import { useUIStore } from '../../src/ui/store/useUIStore';
+import { useDashboardData } from '../../src/ui/hooks/useDashboardData';
+import { TimeFilter } from '../../src/ui/components/TimeFilter';
+import { KpiCards } from '../../src/ui/components/KpiCards';
+import { ProductionBarChart } from '../../src/ui/components/ProductionBarChart';
 
 function formatCaptureTime(timestamp: number): string {
   return new Date(timestamp).toLocaleString('es-MX', {
@@ -76,10 +82,11 @@ function useReportsReplicationState() {
   return { lastSyncTime, hasError };
 }
 
-export default function HomeScreen() {
+export default function DashboardScreen() {
   const router = useRouter();
   const { docs$, remove } = useReportsRepository();
   const { lastSyncTime, hasError } = useReportsReplicationState();
+  const { dashboardTimeFilter, setDashboardTimeFilter } = useUIStore();
 
   const [reports, setReports] = useState<IReport[]>([]);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
@@ -93,6 +100,11 @@ export default function HomeScreen() {
     });
     return () => subscription.unsubscribe();
   }, [docs$]);
+
+  const { kpis, barChartData, filteredReports } = useDashboardData(
+    reports,
+    dashboardTimeFilter
+  );
 
   const handleDeletePress = useCallback((report: IReport) => {
     setReportToDelete(report);
@@ -190,7 +202,10 @@ export default function HomeScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+    >
       <View style={styles.header}>
         <Text variant="headlineMedium" style={styles.title}>
           Chocolate Ibarra
@@ -199,16 +214,31 @@ export default function HomeScreen() {
       </View>
 
       <Text variant="titleMedium" style={styles.subtitle}>
-        PRODUCCIÓN — Historial de Reportes
+        PRODUCCIÓN — Dashboard
+      </Text>
+
+      <TimeFilter
+        value={dashboardTimeFilter}
+        onValueChange={setDashboardTimeFilter}
+      />
+
+      <KpiCards kpis={kpis} />
+
+      <ProductionBarChart data={barChartData} />
+
+      <Text variant="titleMedium" style={styles.sectionTitle}>
+        Reportes Recientes
       </Text>
 
       <FlatList
-        style={{ flex: 1 }}
-        data={reports}
+        scrollEnabled={false}
+        data={filteredReports}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={
-          reports.length === 0 ? styles.emptyListContent : styles.listContent
+          filteredReports.length === 0
+            ? styles.emptyListContent
+            : styles.listContent
         }
         ListEmptyComponent={renderEmptyState}
       />
@@ -249,15 +279,18 @@ export default function HomeScreen() {
       </Snackbar>
 
       <SyncMonitor />
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
     backgroundColor: '#FAFAFA',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    padding: 16,
   },
   header: {
     flexDirection: 'row',
@@ -273,6 +306,11 @@ const styles = StyleSheet.create({
   subtitle: {
     marginBottom: 16,
     color: '#757575',
+  },
+  sectionTitle: {
+    marginTop: 8,
+    marginBottom: 12,
+    color: '#5D4037',
   },
   listContent: {
     paddingBottom: 16,
