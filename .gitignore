@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Expo cache
+.expo/
+
 # Skill registry (AI agent infrastructure)
 .atl/
 
