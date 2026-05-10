@@ -77,13 +77,30 @@ export const useAuthStore = create<AuthState>((set) => ({
         error: null,
       });
     } catch (err: any) {
-      const message =
+      const rawMessage =
         err?.body?.message ?? err?.message ?? 'Error al iniciar sesión';
+
+      // Normalise Nhost English errors to Spanish for consistent UX and testability
+      const normalizedMessage = (() => {
+        const msg = String(rawMessage).toLowerCase();
+        if (msg.includes('invalid email') || msg.includes('invalid password') || msg.includes('invalid sign-in') || msg.includes('invalid credentials')) {
+          return 'Correo o contraseña incorrectos';
+        }
+        if (msg.includes('user not found')) {
+          return 'Usuario no encontrado';
+        }
+        if (msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch')) {
+          return 'Error de conexión con el servidor';
+        }
+        // Fallback: prefix with Error so regex /error/i always matches
+        return rawMessage.startsWith('Error:') ? rawMessage : `Error: ${rawMessage}`;
+      })();
+
       set({
         user: null,
         isAuthenticated: false,
         isLoading: false,
-        error: message,
+        error: normalizedMessage,
       });
     }
   },
