@@ -16,3 +16,5 @@ sdd/
 
 .vercel
 .env*.local
+.env.production
+.env
