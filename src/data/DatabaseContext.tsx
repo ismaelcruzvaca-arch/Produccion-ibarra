@@ -51,11 +51,17 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
       .then((database) => {
         if (!mounted) return;
 
-        // Bypass replication in E2E CI — RxDB WebSocket crashes without a live Nhost backend.
-        // EXPO_PUBLIC_ prefix is required for Expo Web to inline the variable into the client bundle.
-        if (process.env.EXPO_PUBLIC_SKIP_SYNC === 'true') {
+        // Bypass replication on Web/E2E — RxDB GraphQL replication requires the Node.js 'ws'
+        // (WebSocket) module which does NOT exist in the browser. This causes a fatal bundle
+        // crash that cannot be caught with try/catch because it happens inside the RxDB
+        // replication-graphql plugin during module resolution.
+        //
+        // On native (iOS/Android) 'ws' is available, so replication will work there.
+        // On web we run 100% offline-first (Dexie/IndexedDB) with manual sync later.
+        const isWeb = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+        if (isWeb || process.env.EXPO_PUBLIC_SKIP_SYNC === 'true') {
           console.warn(
-            'E2E mode detected: skipping RxDB GraphQL replication to prevent WS crash.'
+            'Web/E2E mode: skipping RxDB GraphQL replication. App runs offline-first.'
           );
           if (mounted) {
             setDb(database);
@@ -65,7 +71,14 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
         }
 
         // Start replication after database is ready
-        const replicationStates = startReplication(database);
+        // Wrap in try/catch so a replication error (e.g. missing ws module in browser)
+        // does NOT crash the entire React tree. The app must render even if sync fails.
+        let replicationStates: ReplicationStates | undefined = undefined;
+        try {
+          replicationStates = startReplication(database);
+        } catch (syncErr) {
+          console.warn('RxDB replication failed to start — app will run offline:', syncErr);
+        }
 
         if (mounted) {
           setDb(database);

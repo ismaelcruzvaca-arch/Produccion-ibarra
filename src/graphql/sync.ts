@@ -39,14 +39,13 @@ import type { ChocolateIbarraDatabase } from '../data/database';
 
 /**
  * GraphQL endpoint URL for Nhost (Hasura).
- * Format: https://<subdomain>.hasura.app/v1/graphql
+ * Format: https://<subdomain>.nhost.run/v1/graphql
  *
- * TODO: Replace with actual values from nhostClient after subdomain is configured.
+ * Uses EXPO_PUBLIC_ env vars so Expo inlines them into the client bundle.
  */
 function getGraphQLUrl(): string {
-  // nhost.storage.getUrl() gives the Nhost API URL; append /v1/graphql
-  // Since nhostClient uses a placeholder subdomain, we construct the URL directly.
-  return 'https://your-nhost-subdomain.hasura.app/v1/graphql';
+  const subdomain = process.env.EXPO_PUBLIC_NHOST_SUBDOMAIN ?? 'your-nhost-subdomain';
+  return `https://${subdomain}.nhost.run/v1/graphql`;
 }
 
 /**
@@ -306,65 +305,77 @@ export interface ReplicationStates {
 
 export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates {
   // ── Assets replication ──────────────────────────────────────────────────────
-  const replicationAssets: ReplicationState<IAsset, GraphQLAsset> = replicateGraphQL<
-    IAsset,
-    GraphQLAsset
-  >({
-    name: 'assets-graphql-replication',
-    collection: db.collections.assets,
-    pull: {
-      queryBuilder: pullQueryBuilderAssets,
-      // modifier: transforms raw GraphQL response before RxDB insertion
-      modifier: (doc: GraphQLAsset) => fromGraphQLAsset(doc),
-    },
-    push: {
-      queryBuilder: pushMutationBuilderAssets,
-    },
-    liveInterval: 30000, // poll every 30 seconds when app is in foreground
-    retryTime: 5000, // retry on failure after 5 seconds
-    autoStart: true,
-    pullBatchSize: 100,
-  });
+  let replicationAssets: ReplicationState<IAsset, GraphQLAsset>;
+  try {
+    replicationAssets = replicateGraphQL<IAsset, GraphQLAsset>({
+      name: 'assets-graphql-replication',
+      collection: db.collections.assets,
+      pull: {
+        queryBuilder: pullQueryBuilderAssets,
+        modifier: (doc: GraphQLAsset) => fromGraphQLAsset(doc),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderAssets,
+      },
+      live: false, // disable live WebSocket polling to avoid 'ws' module crash in browser
+      liveInterval: 30000,
+      retryTime: 5000,
+      autoStart: true,
+      pullBatchSize: 100,
+    });
+  } catch (err) {
+    console.warn('Assets replication failed to initialise:', err);
+    // Create a minimal stub so the rest of the app doesn't crash
+    replicationAssets = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
 
   // ── Work Orders replication ────────────────────────────────────────────────
-  const replicationWorkOrders: ReplicationState<IWorkOrder, GraphQLWorkOrder> = replicateGraphQL<
-    IWorkOrder,
-    GraphQLWorkOrder
-  >({
-    name: 'work-orders-graphql-replication',
-    collection: db.collections.work_orders,
-    pull: {
-      queryBuilder: pullQueryBuilderWorkOrders,
-      modifier: (doc: GraphQLWorkOrder) => fromGraphQLWorkOrder(doc),
-    },
-    push: {
-      queryBuilder: pushMutationBuilderWorkOrders,
-    },
-    liveInterval: 30000,
-    retryTime: 5000,
-    autoStart: true,
-    pullBatchSize: 100,
-  });
+  let replicationWorkOrders: ReplicationState<IWorkOrder, GraphQLWorkOrder>;
+  try {
+    replicationWorkOrders = replicateGraphQL<IWorkOrder, GraphQLWorkOrder>({
+      name: 'work-orders-graphql-replication',
+      collection: db.collections.work_orders,
+      pull: {
+        queryBuilder: pullQueryBuilderWorkOrders,
+        modifier: (doc: GraphQLWorkOrder) => fromGraphQLWorkOrder(doc),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderWorkOrders,
+      },
+      live: false,
+      liveInterval: 30000,
+      retryTime: 5000,
+      autoStart: true,
+      pullBatchSize: 100,
+    });
+  } catch (err) {
+    console.warn('WorkOrders replication failed to initialise:', err);
+    replicationWorkOrders = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
 
   // ── Reports replication ────────────────────────────────────────────────────
-  const replicationReports: ReplicationState<IReport, GraphQLReport> = replicateGraphQL<
-    IReport,
-    GraphQLReport
-  >({
-    name: 'reports-graphql-replication',
-    collection: db.collections.reports,
-    pull: {
-      queryBuilder: pullQueryBuilderReports,
-      modifier: (doc: GraphQLReport) => fromGraphQLReport(doc),
-    },
-    push: {
-      queryBuilder: pushMutationBuilderReports,
-    },
-    liveInterval: 30000,
-    retryTime: 5000,
-    autoStart: true,
-    pullBatchSize: 100,
-  });
+  let replicationReports: ReplicationState<IReport, GraphQLReport>;
+  try {
+    replicationReports = replicateGraphQL<IReport, GraphQLReport>({
+      name: 'reports-graphql-replication',
+      collection: db.collections.reports,
+      pull: {
+        queryBuilder: pullQueryBuilderReports,
+        modifier: (doc: GraphQLReport) => fromGraphQLReport(doc),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderReports,
+      },
+      live: false,
+      liveInterval: 30000,
+      retryTime: 5000,
+      autoStart: true,
+      pullBatchSize: 100,
+    });
+  } catch (err) {
+    console.warn('Reports replication failed to initialise:', err);
+    replicationReports = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
 
   // Asset Types replication would follow the same pattern.
   // TODO: Add asset_types replication once Nhost tables are created.
