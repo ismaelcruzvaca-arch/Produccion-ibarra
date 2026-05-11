@@ -23,6 +23,7 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { DatabaseProvider } from '../src/data/DatabaseContext';
 import { AuthProvider, useAuthContext } from '../src/auth/AuthContext';
+import { SentryErrorBoundary, SentryFallback } from '../src/lib/sentry';
 
 const theme = {
   ...MD3LightTheme,
@@ -96,14 +97,16 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   return (
-    <PaperProvider theme={theme}>
-      <AuthProvider>
-        <DatabaseProvider>
-          <AuthGuard>
-            <Slot />
-          </AuthGuard>
-        </DatabaseProvider>
-      </AuthProvider>
-    </PaperProvider>
+    <SentryErrorBoundary fallback={({ error, resetError }) => <SentryFallback error={error} resetError={resetError} />}>
+      <PaperProvider theme={theme}>
+        <AuthProvider>
+          <DatabaseProvider>
+            <AuthGuard>
+              <Slot />
+            </AuthGuard>
+          </DatabaseProvider>
+        </AuthProvider>
+      </PaperProvider>
+    </SentryErrorBoundary>
   );
 }

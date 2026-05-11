@@ -8,6 +8,7 @@
         "@expo/metro-runtime": "~4.0.1",
         "@nhost/nhost-js": "^4.7.0",
         "@react-native-async-storage/async-storage": "^3.0.2",
+        "@sentry/react": "^10.52.0",
         "expo": "~52.0.0",
         "expo-constants": "~17.0.0",
         "expo-linking": "~7.0.0",
@@ -734,6 +735,20 @@
     "@rollup/pluginutils": ["@rollup/pluginutils@5.3.0", "", { "dependencies": { "@types/estree": "^1.0.0", "estree-walker": "^2.0.2", "picomatch": "^4.0.2" }, "peerDependencies": { "rollup": "^1.20.0||^2.0.0||^3.0.0||^4.0.0" }, "optionalPeers": ["rollup"] }, "sha512-5EdhGZtnu3V88ces7s53hhfK5KSASnJZv8Lulpc04cWO3REESroJXg73DFsOmgbU2BhwV0E20bu2IDZb3VKW4Q=="],
 
     "@segment/loosely-validate-event": ["@segment/loosely-validate-event@2.0.0", "", { "dependencies": { "component-type": "^1.2.1", "join-component": "^1.1.0" } }, "sha512-ZMCSfztDBqwotkl848ODgVcAmN4OItEWDCkshcKz0/W6gGSQayuuCtWV/MlodFivAZD793d6UgANd6wCXUfrIw=="],
+
+    "@sentry-internal/browser-utils": ["@sentry-internal/browser-utils@10.52.0", "", { "dependencies": { "@sentry/core": "10.52.0" } }, "sha512-x/yEPZdpH6NGQeoeQnV9tj8reAH8twNttiltGZl2o8Rk7sQeUfe7E8yuYP2XbJ2RqyZK5qRS3COrNyMPzf6KFA=="],
+
+    "@sentry-internal/feedback": ["@sentry-internal/feedback@10.52.0", "", { "dependencies": { "@sentry/core": "10.52.0" } }, "sha512-5kAn1W8ZvCuHtEHXpq6iRkUMdNCilwww+YxaN2yofVrCivAbB3Ha5JJUMqmWOPW0pC27zGYmoJMIDvG+PczUxA=="],
+
+    "@sentry-internal/replay": ["@sentry-internal/replay@10.52.0", "", { "dependencies": { "@sentry-internal/browser-utils": "10.52.0", "@sentry/core": "10.52.0" } }, "sha512-diywyuc/H7VTUR+W5ryVmLF+0X4UP1OskMqb6V8RSAvJHcj2JmIm7uP+Fc6ACTno+b6AUShwT/L4xVXzO6X9Cw=="],
+
+    "@sentry-internal/replay-canvas": ["@sentry-internal/replay-canvas@10.52.0", "", { "dependencies": { "@sentry-internal/replay": "10.52.0", "@sentry/core": "10.52.0" } }, "sha512-BI5ie4dxPuUJ344CXVSnAxY1xZCbghglPSCIlTOYODpR9so9yo5IZh+Mwspt0oWsUMaxWJiQSNYlbPWi7WDavg=="],
+
+    "@sentry/browser": ["@sentry/browser@10.52.0", "", { "dependencies": { "@sentry-internal/browser-utils": "10.52.0", "@sentry-internal/feedback": "10.52.0", "@sentry-internal/replay": "10.52.0", "@sentry-internal/replay-canvas": "10.52.0", "@sentry/core": "10.52.0" } }, "sha512-ijL9jN86oXwXQWbwhPlEb70ODJSEmjxQEQdnZkC4gDWbjswcwvRsVJPYk+1xl2ir2iZixRIHipVxDcLwian35g=="],
+
+    "@sentry/core": ["@sentry/core@10.52.0", "", {}, "sha512-VA/kAqLhkMnRWY2RXdBLyTemR9D4m7MVRy/gyapoq9yvllVPx9WXbvKgnMP2LQp7mFgT/oLFvw58aQKaYTGn3A=="],
+
+    "@sentry/react": ["@sentry/react@10.52.0", "", { "dependencies": { "@sentry/browser": "10.52.0", "@sentry/core": "10.52.0" }, "peerDependencies": { "react": "^16.14.0 || 17.x || 18.x || 19.x" } }, "sha512-2m72QCsja2cJJHD0ALxRnVt0qMEC2FV4LSi6AAiEdEG4lTb6mgcxavx5pJrW90jE+6dMGPbUz4q8c9vi4jh1qQ=="],
 
     "@sinclair/typebox": ["@sinclair/typebox@0.25.24", "", {}, "sha512-XJfwUVUKDHF5ugKwIcxEgc9k8b7HbznCp6eUfWgu710hMPNIO4aw4/zB5RogDQz8nd6gyCDpU9O/m6qYEWY6yQ=="],
 
