@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 
-function triggerSentryTestError() {
-  throw new Error('Simulacro de falla en Producción Ibarra - Sentry Test');
-}
-
 export default function SettingsScreen() {
+  const [shouldCrash, setShouldCrash] = useState(false);
+
+  if (shouldCrash) {
+    throw new Error('Simulacro de falla en Producción Ibarra - Error Boundary Test');
+  }
+
   return (
     <View style={styles.container}>
       <Text variant="headlineMedium">Ajustes</Text>
@@ -19,7 +21,7 @@ export default function SettingsScreen() {
         buttonColor="#D32F2F"
         textColor="#FFFFFF"
         icon="alert-circle"
-        onPress={triggerSentryTestError}
+        onPress={() => setShouldCrash(true)}
         style={styles.dangerButton}
       >
         ⚠️ Simular Error Crítico
