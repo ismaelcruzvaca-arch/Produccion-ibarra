@@ -49,9 +49,13 @@ jobs:
           echo "EXPO_PUBLIC_NHOST_SUBDOMAIN=${{ secrets.EXPO_PUBLIC_NHOST_SUBDOMAIN }}" > .env.production
           echo "EXPO_PUBLIC_NHOST_REGION=${{ secrets.EXPO_PUBLIC_NHOST_REGION }}" >> .env.production
           echo "EXPO_PUBLIC_SKIP_SYNC=true" >> .env.production
+          # Sentry DSN se inyecta automáticamente cuando secrets.EXPO_PUBLIC_SENTRY_DSN esté configurado
+          if [ -n "${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}" ]; then
+            echo "EXPO_PUBLIC_SENTRY_DSN=${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}" >> .env.production
+          fi
 
       - name: Build PWA
-        run: bunx expo export -p web -c
+        run: bun run build:web
 
       - name: Run E2E tests
         run: bunx playwright test
