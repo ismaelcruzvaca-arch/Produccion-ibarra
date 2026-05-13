@@ -14,20 +14,22 @@
  * violations early. This must be stripped in production to avoid runtime overhead.
  */
 
-import { createRxDatabase, addRxPlugin, type RxDatabase } from 'rxdb';
+import { createRxDatabase, addRxPlugin, type RxDatabase, type RxCollection } from 'rxdb';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode';
 
-import { assetSchema, assetTypeSchema, workOrderSchema, reportSchema } from './schemas';
+import { assetSchema, assetTypeSchema, workOrderSchema, reportSchema, oeeEventSchema } from './schemas';
+import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent } from '../core/types';
 
 // ─── Database Collections Type ──────────────────────────────────────────────────
 
-/** Typing for the database and its collections, inferred from schemas. */
+/** Typing for the database and its collections. */
 export type ChocolateIbarraDatabase = RxDatabase<{
-  assets: typeof assetSchema;
-  asset_types: typeof assetTypeSchema;
-  work_orders: typeof workOrderSchema;
-  reports: typeof reportSchema;
+  assets: RxCollection<IAsset>;
+  asset_types: RxCollection<IAssetType>;
+  work_orders: RxCollection<IWorkOrder>;
+  reports: RxCollection<IReport>;
+  oee_events: RxCollection<IOeeEvent>;
 }>;
 
 // ─── Database Singleton ────────────────────────────────────────────────────────
@@ -67,6 +69,7 @@ export async function getDatabase(): Promise<ChocolateIbarraDatabase> {
         asset_types: { schema: assetTypeSchema },
         work_orders: { schema: workOrderSchema },
         reports: { schema: reportSchema },
+        oee_events: { schema: oeeEventSchema },
       });
       return db as ChocolateIbarraDatabase;
     });

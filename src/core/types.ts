@@ -134,3 +134,46 @@ export interface IReport {
 }
 
 export type RxReport = RxDocument<IReport>;
+
+// ─── OEE Events ────────────────────────────────────────────────────────────────
+
+export type OeeEventType =
+  | 'shift_start'
+  | 'shift_end'
+  | 'downtime_start'
+  | 'downtime_end'
+  | 'box_count'
+  | 'reject_count';
+
+/**
+ * OEE Event — atomic production event for OEE calculation.
+ *
+ * Uses `updated_at` (not `client_updated_at`) per the new data contract.
+ */
+export interface IOeeEvent {
+  id: string;
+  updated_at: number;
+  deleted: boolean;
+
+  // Context
+  line_id: string;
+  machine_id: string;
+  operator_id?: string;
+  shift_id: string;
+
+  // Evento atómico
+  event_type: OeeEventType;
+  timestamp: number;
+
+  // Datos del evento
+  reason_code?: string;
+  quantity?: number;
+  planned_boxes?: number;
+  notes?: string;
+
+  // Retroactivo
+  is_retroactive?: boolean;
+  related_event_id?: string;
+}
+
+export type RxOeeEvent = RxDocument<IOeeEvent>;

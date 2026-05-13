@@ -22,7 +22,7 @@
  * - This preserves history and enables the server to apply LWW correctly.
  */
 
-import { useState, useEffect, useCallback, type useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Observable } from 'rxjs';
 import type { RxDocument } from 'rxdb';
 

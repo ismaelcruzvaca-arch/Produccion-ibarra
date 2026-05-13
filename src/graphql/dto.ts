@@ -17,7 +17,7 @@
  * by network-level naming conventions.
  */
 
-import type { IAsset, IAssetType, IWorkOrder, IReport } from '../core/types';
+import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent } from '../core/types';
 
 // ─── Asset Mappers ─────────────────────────────────────────────────────────────
 
@@ -221,5 +221,65 @@ export function fromGraphQLReport(gql: GraphQLReport): IReport {
     deleted: gql.deleted,
     template_id: gql.template_id,
     data: gql.data,
+  };
+}
+
+// ─── OEE Event Mappers ─────────────────────────────────────────────────────────
+
+export interface GraphQLOeeEvent {
+  id: string;
+  updated_at: string; // BIGINT as string
+  deleted: boolean;
+  line_id: string;
+  machine_id: string;
+  operator_id?: string;
+  shift_id: string;
+  event_type: string;
+  timestamp: string; // BIGINT as string
+  reason_code?: string;
+  quantity?: number;
+  planned_boxes?: number;
+  notes?: string;
+  is_retroactive?: boolean;
+  related_event_id?: string;
+}
+
+export function toGraphQLOeeEvent(event: IOeeEvent): Record<string, unknown> {
+  return {
+    id: event.id,
+    updated_at: event.updated_at.toString(),
+    deleted: event.deleted,
+    line_id: event.line_id,
+    machine_id: event.machine_id,
+    operator_id: event.operator_id,
+    shift_id: event.shift_id,
+    event_type: event.event_type,
+    timestamp: event.timestamp.toString(),
+    reason_code: event.reason_code,
+    quantity: event.quantity,
+    planned_boxes: event.planned_boxes,
+    notes: event.notes,
+    is_retroactive: event.is_retroactive,
+    related_event_id: event.related_event_id,
+  };
+}
+
+export function fromGraphQLOeeEvent(gql: GraphQLOeeEvent): IOeeEvent {
+  return {
+    id: gql.id,
+    updated_at: parseInt(gql.updated_at, 10),
+    deleted: gql.deleted,
+    line_id: gql.line_id,
+    machine_id: gql.machine_id,
+    operator_id: gql.operator_id,
+    shift_id: gql.shift_id,
+    event_type: gql.event_type as IOeeEvent['event_type'],
+    timestamp: parseInt(gql.timestamp, 10),
+    reason_code: gql.reason_code,
+    quantity: gql.quantity,
+    planned_boxes: gql.planned_boxes,
+    notes: gql.notes,
+    is_retroactive: gql.is_retroactive,
+    related_event_id: gql.related_event_id,
   };
 }

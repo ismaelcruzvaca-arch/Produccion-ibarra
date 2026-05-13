@@ -3,7 +3,7 @@
  *
  * Routes:
  * - Inicio     → Production dashboard (OEE overview)
- * - Reportes   → OEE and Production reports
+ * - OEE        → OEE capture and metrics
  * - Ajustes    → Application settings
  *
  * Optimised for industrial tablets:
@@ -41,11 +41,11 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="reports"
+        name="oee"
         options={{
-          title: 'Reportes',
+          title: 'OEE',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialCommunityIcons name="chart-bar" color={color} size={size} />
+            <MaterialCommunityIcons name="chart-line" color={color} size={size} />
           ),
         }}
       />

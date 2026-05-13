@@ -14,7 +14,7 @@
  */
 
 import type { RxJsonSchema } from 'rxdb';
-import type { IAsset, IAssetType, IWorkOrder, IReport } from '../core/types';
+import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent } from '../core/types';
 
 /**
  * Asset collection schema.
@@ -112,4 +112,34 @@ export const reportSchema: RxJsonSchema<IReport> = {
     },
   },
   indexes: ['updated_at'],
+};
+
+/**
+ * OEE Event collection schema.
+ * Uses `updated_at` (not `client_updated_at`) per the new data contract.
+ * Indexes: timestamp, [line_id, timestamp], [shift_id, timestamp] for performance.
+ */
+export const oeeEventSchema: RxJsonSchema<IOeeEvent> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'updated_at', 'deleted', 'line_id', 'machine_id', 'shift_id', 'event_type', 'timestamp'],
+  properties: {
+    id:               { type: 'string', maxLength: 100 },
+    updated_at:       { type: 'number' },
+    deleted:          { type: 'boolean' },
+    line_id:          { type: 'string' },
+    machine_id:       { type: 'string' },
+    operator_id:      { type: 'string' },
+    shift_id:         { type: 'string' },
+    event_type:       { type: 'string', enum: ['shift_start','shift_end','downtime_start','downtime_end','box_count','reject_count'] },
+    timestamp:        { type: 'number' },
+    reason_code:      { type: 'string' },
+    quantity:         { type: 'number' },
+    planned_boxes:    { type: 'number' },
+    notes:            { type: 'string' },
+    is_retroactive:   { type: 'boolean' },
+    related_event_id: { type: 'string' },
+  },
+  indexes: ['timestamp', ['line_id', 'timestamp'], ['shift_id', 'timestamp']],
 };

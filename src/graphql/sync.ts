@@ -30,11 +30,14 @@ import {
   toGraphQLWorkOrder,
   toGraphQLReport,
   fromGraphQLReport,
+  toGraphQLOeeEvent,
+  fromGraphQLOeeEvent,
   type GraphQLAsset,
   type GraphQLWorkOrder,
   type GraphQLReport,
+  type GraphQLOeeEvent,
 } from './dto';
-import type { IAsset, IWorkOrder, IReport } from '../core/types';
+import type { IAsset, IWorkOrder, IReport, IOeeEvent } from '../core/types';
 import type { ChocolateIbarraDatabase } from '../data/database';
 
 /**
@@ -276,6 +279,70 @@ function pushMutationBuilderReports(docs: IReport[]) {
   };
 }
 
+// ─── Pull Query Builder (OEE Events) ───────────────────────────────────────────
+
+function pullQueryBuilderOeeEvents(checkpoint: { updated_at: number } | null) {
+  return {
+    query: `
+      query PullOeeEvents($lastCheckpoint: bigint!) {
+        oee_events(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          updated_at
+          deleted
+          line_id
+          machine_id
+          operator_id
+          shift_id
+          event_type
+          timestamp
+          reason_code
+          quantity
+          planned_boxes
+          notes
+          is_retroactive
+          related_event_id
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ?? 0 },
+    headers: getHeaders(),
+    url: getGraphQLUrl(),
+    fetch: fetch,
+  };
+}
+
+// ─── Push Mutation Builder (OEE Events Upsert) ─────────────────────────────────
+
+function pushMutationBuilderOeeEvents(docs: IOeeEvent[]) {
+  const objects = docs.map(toGraphQLOeeEvent);
+  return {
+    query: `
+      mutation UpsertOeeEvents($objects: [oee_events_insert_input!]!) {
+        insert_oee_events(
+          objects: $objects,
+          on_conflict: {
+            constraint: oee_events_pkey,
+            update_columns: [
+              updated_at, deleted, line_id, machine_id, operator_id,
+              shift_id, event_type, timestamp, reason_code, quantity,
+              planned_boxes, notes, is_retroactive, related_event_id
+            ]
+          }
+        ) {
+          affected_rows
+        }
+      }
+    `,
+    variables: { objects },
+    headers: getHeaders(),
+    url: getGraphQLUrl(),
+    fetch: fetch,
+  };
+}
+
 // ─── Replication Start Function ────────────────────────────────────────────────
 
 /**
@@ -301,6 +368,7 @@ export interface ReplicationStates {
   assets: ReplicationState<IAsset, GraphQLAsset>;
   workOrders: ReplicationState<IWorkOrder, GraphQLWorkOrder>;
   reports: ReplicationState<IReport, GraphQLReport>;
+  oeeEvents: ReplicationState<IOeeEvent, GraphQLOeeEvent>;
 }
 
 export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates {
@@ -377,8 +445,32 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
     replicationReports = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
   }
 
+  // ── OEE Events replication ─────────────────────────────────────────────────
+  let replicationOeeEvents: ReplicationState<IOeeEvent, GraphQLOeeEvent>;
+  try {
+    replicationOeeEvents = replicateGraphQL<IOeeEvent, GraphQLOeeEvent>({
+      name: 'oee-events-graphql-replication',
+      collection: db.collections.oee_events,
+      pull: {
+        queryBuilder: pullQueryBuilderOeeEvents,
+        modifier: (doc: GraphQLOeeEvent) => fromGraphQLOeeEvent(doc),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderOeeEvents,
+      },
+      live: false, // EXPLICIT: table does NOT exist in Hasura yet
+      liveInterval: 30000,
+      retryTime: 5000,
+      autoStart: true,
+      pullBatchSize: 100,
+    });
+  } catch (err) {
+    console.warn('OeeEvents replication failed to initialise:', err);
+    replicationOeeEvents = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
+
   // Asset Types replication would follow the same pattern.
   // TODO: Add asset_types replication once Nhost tables are created.
 
-  return { assets: replicationAssets, workOrders: replicationWorkOrders, reports: replicationReports };
+  return { assets: replicationAssets, workOrders: replicationWorkOrders, reports: replicationReports, oeeEvents: replicationOeeEvents };
 }
