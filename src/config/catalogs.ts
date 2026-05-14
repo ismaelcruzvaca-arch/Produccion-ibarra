@@ -82,9 +82,9 @@ export interface Turno {
 }
 
 export const TURNOS: readonly Turno[] = [
-  { id: '1', label: 'Turno 1 (06-14)', startHour: 6,  endHour: 14 },
-  { id: '2', label: 'Turno 2 (14-22)', startHour: 14, endHour: 22 },
-  { id: '3', label: 'Turno 3 (22-06)', startHour: 22, endHour: 6  },
+  { id: 'c7d7760b-d3f2-596a-b0ee-88e4f2ab8b34', label: 'Turno 1 (06-14)', startHour: 6,  endHour: 14 },
+  { id: '17efa643-1ca5-585c-ab03-7ea8711efca0', label: 'Turno 2 (14-22)', startHour: 14, endHour: 22 },
+  { id: '85c10e19-6f06-5866-a031-00515a69a8c0', label: 'Turno 3 (22-06)', startHour: 22, endHour: 6  },
 ] as const;
 
 export function getCurrentTurno(): Turno {
@@ -109,8 +109,8 @@ export interface Producto {
 }
 
 export const PRODUCTOS: readonly Producto[] = [
-  { id: '1', code: 'CHOC-500', name: 'Chocolate 500g', theoreticalPpm: 2.5 },
-  { id: '2', code: 'CHOC-250', name: 'Chocolate 250g', theoreticalPpm: 3.0 },
+  { id: '9f5558cc-06fa-5aa5-aa03-9d74e7121526', code: 'CHOC-500', name: 'Chocolate 500g', theoreticalPpm: 2.5 },
+  { id: '887476c0-218b-5131-bf2a-63dd7cdf3861', code: 'CHOC-250', name: 'Chocolate 250g', theoreticalPpm: 3.0 },
 ] as const;
 
 export const DEFAULT_PPM = 1.0;

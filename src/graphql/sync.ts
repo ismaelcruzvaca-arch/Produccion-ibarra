@@ -458,8 +458,8 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
       push: {
         queryBuilder: pushMutationBuilderOeeEvents,
       },
-      live: false, // EXPLICIT: table does NOT exist in Hasura yet
-      liveInterval: 30000,
+      live: false, // WebSocket disabled for browser compatibility
+      liveInterval: 10000, // 10s interval for near-real-time OEE event sync
       retryTime: 5000,
       autoStart: true,
       pullBatchSize: 100,

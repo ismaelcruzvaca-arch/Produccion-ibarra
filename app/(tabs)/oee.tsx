@@ -32,9 +32,9 @@ export default function OeeScreen() {
   const repositoryRef = useRef(repository);
   repositoryRef.current = repository;
 
-  // Machine / line context
-  const [machineId] = useState('CAVEMIL-03');
-  const [lineId] = useState('LINEA-1');
+  // Machine / line context — deterministic UUIDs matching DB seeds
+  const [machineId] = useState('415c3fb5-be74-56b9-852f-9057597634c9'); // CAVEMIL-03
+  const [lineId] = useState('93054368-92ea-5bb8-acd0-2993da58f7c9');    // LINEA-1
 
   // Shift state
   const [shiftId, setShiftId] = useState<string>('');
@@ -93,16 +93,15 @@ export default function OeeScreen() {
   // ─── Shift Start ───────────────────────────────────────────────────────────
   const handleStartShift = useCallback(async () => {
     const currentTurno = getCurrentTurno();
-    const newShiftId = generateUuid();
     await repository.createEvent({
       line_id: lineId,
       machine_id: machineId,
-      shift_id: newShiftId,
+      shift_id: currentTurno.id,
       event_type: 'shift_start',
       timestamp: nowMs(),
       planned_boxes: 480,
     });
-    setShiftId(newShiftId);
+    setShiftId(currentTurno.id);
     setShiftStarted(true);
     setSnackbarMessage(`Turno iniciado: ${currentTurno.label}`);
     setSnackbarVisible(true);

@@ -5,10 +5,10 @@ CREATE TABLE IF NOT EXISTS public.oee_events (
     id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     updated_at       bigint NOT NULL,
     deleted          boolean NOT NULL DEFAULT false,
-    line_id          text NOT NULL,
-    machine_id       text NOT NULL,
+    line_id          uuid NOT NULL REFERENCES public.lines(id),
+    machine_id       uuid NOT NULL REFERENCES public.machines(id),
     operator_id      uuid REFERENCES auth.users(id),
-    shift_id         text NOT NULL,
+    shift_id         uuid NOT NULL REFERENCES public.shifts(id),
     event_type       text NOT NULL CHECK (event_type IN (
         'shift_start', 'shift_end', 'downtime_start',
         'downtime_end', 'box_count', 'reject_count'

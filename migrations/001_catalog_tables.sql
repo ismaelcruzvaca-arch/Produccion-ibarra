@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS public.stop_reasons (
 
 -- Products (Epicor catalog)
 CREATE TABLE IF NOT EXISTS public.products (
-    id              text PRIMARY KEY,
+    id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     code            text NOT NULL UNIQUE,
     name            text NOT NULL,
     theoretical_ppm numeric(6,2) NOT NULL DEFAULT 1.0,
@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS public.products (
 
 -- Shifts (turnos)
 CREATE TABLE IF NOT EXISTS public.shifts (
-    id         text PRIMARY KEY,
-    label      text NOT NULL,
+    id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    label      text NOT NULL UNIQUE,
     start_hour integer NOT NULL CHECK (start_hour BETWEEN 0 AND 23),
     end_hour   integer NOT NULL CHECK (end_hour BETWEEN 0 AND 23),
     is_active  boolean NOT NULL DEFAULT true
@@ -33,16 +33,16 @@ CREATE TABLE IF NOT EXISTS public.shifts (
 
 -- Production lines
 CREATE TABLE IF NOT EXISTS public.lines (
-    id          text PRIMARY KEY,
-    name        text NOT NULL,
+    id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    name        text NOT NULL UNIQUE,
     description text,
     is_active   boolean NOT NULL DEFAULT true
 );
 
 -- Machines per line
 CREATE TABLE IF NOT EXISTS public.machines (
-    id          text PRIMARY KEY,
-    line_id     text NOT NULL REFERENCES public.lines(id),
+    id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    line_id     uuid NOT NULL REFERENCES public.lines(id),
     name        text NOT NULL,
     description text,
     is_active   boolean NOT NULL DEFAULT true

@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS public.user_line_assignments (
     user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
-    line_id text NOT NULL,
+    line_id uuid NOT NULL REFERENCES public.lines(id),
     assigned_at timestamptz DEFAULT now(),
     assigned_by uuid REFERENCES auth.users(id),
     PRIMARY KEY (user_id, line_id)
