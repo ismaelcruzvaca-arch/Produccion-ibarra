@@ -1,0 +1,257 @@
+{
+  "type": "bulk",
+  "args": [
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "oee_events" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "id", "updated_at", "deleted", "line_id", "machine_id",
+            "operator_id", "shift_id", "event_type", "timestamp",
+            "reason_code", "quantity", "planned_boxes", "notes",
+            "is_retroactive", "related_event_id"
+          ],
+          "filter": {
+            "_and": [
+              {
+                "_exists": {
+                  "_table": { "schema": "public", "name": "user_line_assignments" },
+                  "_where": {
+                    "_and": [
+                      { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                      { "line_id": { "_eq": "$line_id" } }
+                    ]
+                  }
+                }
+              },
+              { "deleted": { "_eq": false } }
+            ]
+          },
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "oee_events" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "updated_at", "deleted", "line_id", "machine_id",
+            "operator_id", "shift_id", "event_type", "timestamp",
+            "reason_code", "quantity", "planned_boxes", "notes",
+            "is_retroactive", "related_event_id"
+          ],
+          "filter": { "deleted": { "_eq": false } },
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "oee_events" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "updated_at", "deleted", "line_id", "machine_id",
+            "operator_id", "shift_id", "event_type", "timestamp",
+            "reason_code", "quantity", "planned_boxes", "notes",
+            "is_retroactive", "related_event_id"
+          ],
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "oee_events" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "id", "updated_at", "deleted", "line_id", "machine_id",
+            "operator_id", "shift_id", "event_type", "timestamp",
+            "reason_code", "quantity", "planned_boxes", "notes",
+            "is_retroactive", "related_event_id"
+          ],
+          "check": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          },
+          "set": {
+            "operator_id": "X-Hasura-User-Id"
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "oee_events" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "updated_at", "deleted", "line_id", "machine_id",
+            "operator_id", "shift_id", "event_type", "timestamp",
+            "reason_code", "quantity", "planned_boxes", "notes",
+            "is_retroactive", "related_event_id"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "oee_events" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "updated_at", "deleted", "line_id", "machine_id",
+            "operator_id", "shift_id", "event_type", "timestamp",
+            "reason_code", "quantity", "planned_boxes", "notes",
+            "is_retroactive", "related_event_id"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "oee_events" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "updated_at", "deleted", "line_id", "machine_id",
+            "shift_id", "event_type", "timestamp", "reason_code",
+            "quantity", "planned_boxes", "notes", "is_retroactive",
+            "related_event_id"
+          ],
+          "filter": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          },
+          "check": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "oee_events" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "updated_at", "deleted", "line_id", "machine_id",
+            "operator_id", "shift_id", "event_type", "timestamp",
+            "reason_code", "quantity", "planned_boxes", "notes",
+            "is_retroactive", "related_event_id"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "oee_events" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "updated_at", "deleted", "line_id", "machine_id",
+            "operator_id", "shift_id", "event_type", "timestamp",
+            "reason_code", "quantity", "planned_boxes", "notes",
+            "is_retroactive", "related_event_id"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "oee_events" },
+        "role": "operator",
+        "permission": {
+          "filter": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "oee_events" },
+        "role": "supervisor",
+        "permission": {
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "oee_events" },
+        "role": "admin",
+        "permission": {
+          "filter": {}
+        }
+      }
+    }
+  ]
+}

@@ -177,3 +177,53 @@ export interface IOeeEvent {
 }
 
 export type RxOeeEvent = RxDocument<IOeeEvent>;
+
+// ─── Catalog Types (from Hasura) ────────────────────────────────────────────────
+
+/**
+ * Catalog interfaces for data fetched from Hasura reference tables.
+ * These are NOT RxDB documents — they live in Zustand + AsyncStorage.
+ * They mirror the DB schema (snake_case) for direct mapping from GraphQL.
+ */
+
+export interface ICatalogLine {
+  id: string;
+  name: string;
+  description?: string;
+  is_active: boolean;
+}
+
+export interface ICatalogMachine {
+  id: string;
+  line_id: string;
+  name: string;
+  description?: string;
+  is_active: boolean;
+}
+
+export interface ICatalogShift {
+  id: string;
+  label: string;
+  start_hour: number;
+  end_hour: number;
+  is_active: boolean;
+}
+
+export interface ICatalogProduct {
+  id: string;
+  code: string;
+  name: string;
+  theoretical_ppm: number;
+  is_active: boolean;
+}
+
+export interface ICatalogStopReason {
+  id: string;
+  code: string;
+  label: string;
+  category: string;
+  macro: string;
+  stops_line: boolean;
+  sort_order: number;
+  is_active: boolean;
+}

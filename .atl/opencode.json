@@ -1,0 +1,25 @@
+{
+  "project": "Produccion-ibarra",
+  "stack": {
+    "frontend": "React Native + TypeScript + Zustand",
+    "backend": "Hasura GraphQL + Nhost Auth + PostgreSQL",
+    "database": "PostgreSQL with deterministic UUID v5"
+  },
+  "artifact_store": {
+    "mode": "openspec"
+  },
+  "progress": {
+    "phase_2_oee_capture": "100%",
+    "phase_3_wave_1_schema": "100%",
+    "phase_3_wave_2_rls": "100%",
+    "phase_3_wave_3_frontend": "100%",
+    "current_phase": "wave_4_explore"
+  },
+  "notes": [
+    "Phase 2: OEE capture logic complete",
+    "Wave 1: Catalog tables (001), seed data (002), lines/machines (003) applied",
+    "Wave 2: OEE events table (004), user line assignments (005), operator profiles (006), RLS policies configured",
+    "Wave 3: Frontend auth (useAuthStore, AuthContext) and catalog store (catalogStore.ts) complete",
+    "Next: Wave 4 (Sync & Replication) - sdd-explore pending"
+  ]
+}

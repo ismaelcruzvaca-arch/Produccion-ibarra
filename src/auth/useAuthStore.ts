@@ -22,14 +22,42 @@ import {
   setMemoryAccessToken,
 } from './tokenStorage';
 
+// ─── GraphQL Queries for Operator Profile ────────────────────────────────────────
+
+const GET_OPERATOR_PROFILE = `
+  query GetOperatorProfile($userId: uuid!) {
+    operator_profiles_by_pk(id: $userId) {
+      id
+      full_name
+      role
+    }
+  }
+`;
+
+const GET_USER_LINE_ASSIGNMENTS = `
+  query GetUserLineAssignments($userId: uuid!) {
+    user_line_assignments(where: { user_id: { _eq: $userId } }) {
+      line_id
+    }
+  }
+`;
+
 export interface AuthState {
   user: unknown | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+
+  // Operator profile (populated after login via fetchOperatorProfile)
+  operatorId: string | null;
+  assignedLines: string[];
+  selectedLine: string | null;
+
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   checkSession: () => Promise<void>;
+  fetchOperatorProfile: () => Promise<void>;
+  setSelectedLine: (lineId: string) => void;
 }
 
 /**
@@ -48,11 +76,14 @@ function isTokenValid(token: string): boolean {
   }
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
   error: null,
+  operatorId: null,
+  assignedLines: [],
+  selectedLine: null,
 
   signIn: async (email: string, password: string) => {
     set({ isLoading: true, error: null });
@@ -116,7 +147,15 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Silent fail — we clear local state regardless
     }
     await clearSession();
-    set({ user: null, isAuthenticated: false, isLoading: false, error: null });
+    set({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+      operatorId: null,
+      assignedLines: [],
+      selectedLine: null,
+    });
   },
 
   checkSession: async () => {
@@ -155,5 +194,51 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch {
       set({ isAuthenticated: false, isLoading: false, user: null });
     }
+  },
+
+  /**
+   * Fetches the operator profile and line assignments from Hasura.
+   * Call this after successful login or session restore.
+   * Populates operatorId and assignedLines.
+   */
+  fetchOperatorProfile: async () => {
+    const { user } = get();
+    if (!user) return;
+
+    const userId = (user as any)?.id;
+    if (!userId) return;
+
+    try {
+      const [profileRes, assignmentsRes] = await Promise.all([
+        nhost.graphql.request<{ operator_profiles_by_pk: { id: string; full_name: string; role: string } | null }>(
+          GET_OPERATOR_PROFILE,
+          { userId },
+        ),
+        nhost.graphql.request<{ user_line_assignments: { line_id: string }[] }>(
+          GET_USER_LINE_ASSIGNMENTS,
+          { userId },
+        ),
+      ]);
+
+      const profile = (profileRes as any)?.data?.operator_profiles_by_pk;
+      const assignments = (assignmentsRes as any)?.data?.user_line_assignments ?? [];
+
+      const lineIds = assignments.map((a: { line_id: string }) => a.line_id);
+
+      set({
+        operatorId: profile?.id ?? userId,
+        assignedLines: lineIds,
+      });
+    } catch (err: any) {
+      console.warn('[useAuthStore] fetchOperatorProfile failed:', err?.message);
+      // Keep existing state — offline-safe
+    }
+  },
+
+  /**
+   * Persists the selected line ID.
+   */
+  setSelectedLine: (lineId: string) => {
+    set({ selectedLine: lineId });
   },
 }));

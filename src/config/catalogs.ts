@@ -114,3 +114,59 @@ export const PRODUCTOS: readonly Producto[] = [
 ] as const;
 
 export const DEFAULT_PPM = 1.0;
+
+// ─── DB → UI Mapping Helpers ────────────────────────────────────────────────────
+
+/**
+ * Maps a DB stop_reasons row (from Hasura GraphQL) to the UI ParoReason interface.
+ * Enables the existing type-safe catalog interfaces while data comes from the DB.
+ */
+export function mapDbStopReasonToParoReason(dbRow: {
+  code: string;
+  label: string;
+  category: string;
+  macro: string;
+  stops_line: boolean;
+}): ParoReason {
+  return {
+    code: dbRow.code,
+    label: dbRow.label,
+    category: dbRow.category as ParoCategory,
+    macro: dbRow.macro as ParoMacro,
+    stopsLine: dbRow.stops_line,
+  };
+}
+
+/**
+ * Maps a DB products row (from Hasura GraphQL) to the UI Producto interface.
+ */
+export function mapDbProductToProducto(dbRow: {
+  id: string;
+  code: string;
+  name: string;
+  theoretical_ppm: number;
+}): Producto {
+  return {
+    id: dbRow.id,
+    code: dbRow.code,
+    name: dbRow.name,
+    theoreticalPpm: dbRow.theoretical_ppm,
+  };
+}
+
+/**
+ * Maps a DB shifts row (from Hasura GraphQL) to the UI Turno interface.
+ */
+export function mapDbShiftToTurno(dbRow: {
+  id: string;
+  label: string;
+  start_hour: number;
+  end_hour: number;
+}): Turno {
+  return {
+    id: dbRow.id,
+    label: dbRow.label,
+    startHour: dbRow.start_hour,
+    endHour: dbRow.end_hour,
+  };
+}
