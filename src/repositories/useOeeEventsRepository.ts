@@ -26,6 +26,7 @@ import { generateUuid } from '../utils/uuid';
 import { nowMs } from '../utils/timestamp';
 import type { IOeeEvent } from '../core/types';
 import { useDatabase } from '../data/DatabaseContext';
+import { getDeviceId } from '../sync/deviceId';
 
 export interface OeeEventsRepository {
   /** Emits the current list of non-deleted OEE events on every change. */
@@ -38,7 +39,7 @@ export interface OeeEventsRepository {
    * @param event - Event payload (omit id, updated_at, deleted)
    * @returns Promise<RxDocument<IOeeEvent>> the newly created document
    */
-  createEvent: (event: Omit<IOeeEvent, 'id' | 'updated_at' | 'deleted'>) => Promise<RxDocument<IOeeEvent>>;
+  createEvent: (event: Omit<IOeeEvent, 'id' | 'updated_at' | 'deleted' | 'device_id'> & { device_id?: string }) => Promise<RxDocument<IOeeEvent>>;
 
   /**
    * Updates an existing OEE event in place.
@@ -96,11 +97,13 @@ export function useOeeEventsRepository(): OeeEventsRepository {
   );
 
   const createEvent = useCallback(
-    async (event: Omit<IOeeEvent, 'id' | 'updated_at' | 'deleted'>) => {
+    async (event: Omit<IOeeEvent, 'id' | 'updated_at' | 'deleted' | 'device_id'> & { device_id?: string }) => {
+      const deviceId = event.device_id ?? await getDeviceId();
       const newDoc: IOeeEvent = {
         id: generateUuid(),
         updated_at: nowMs(),
         deleted: false,
+        device_id: deviceId,
         ...event,
       };
       const result = await db.collections.oee_events.insert(newDoc);

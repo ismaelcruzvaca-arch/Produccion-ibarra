@@ -14,7 +14,7 @@
  */
 
 import type { RxJsonSchema } from 'rxdb';
-import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent } from '../core/types';
+import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent, ISyncError } from '../core/types';
 
 /**
  * Asset collection schema.
@@ -120,10 +120,10 @@ export const reportSchema: RxJsonSchema<IReport> = {
  * Indexes: timestamp, [line_id, timestamp], [shift_id, timestamp] for performance.
  */
 export const oeeEventSchema: RxJsonSchema<IOeeEvent> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'updated_at', 'deleted', 'line_id', 'machine_id', 'shift_id', 'event_type', 'timestamp'],
+  required: ['id', 'updated_at', 'deleted', 'line_id', 'machine_id', 'shift_id', 'event_type', 'timestamp', 'device_id'],
   properties: {
     id:               { type: 'string', maxLength: 100 },
     updated_at:       { type: 'number' },
@@ -140,6 +140,26 @@ export const oeeEventSchema: RxJsonSchema<IOeeEvent> = {
     notes:            { type: 'string' },
     is_retroactive:   { type: 'boolean' },
     related_event_id: { type: 'string' },
+    device_id:        { type: 'string' },
   },
   indexes: ['timestamp', ['line_id', 'timestamp'], ['shift_id', 'timestamp']],
+};
+
+/**
+ * Sync Error collection schema (dead-letter queue).
+ * Stores events that failed server-side validation during push.
+ */
+export const syncErrorSchema: RxJsonSchema<ISyncError> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'id_evento', 'payload_original', 'mensaje_error', 'fecha'],
+  properties: {
+    id:               { type: 'string', maxLength: 100 },
+    id_evento:        { type: 'string', maxLength: 100 },
+    payload_original: { type: 'object' },
+    mensaje_error:    { type: 'string' },
+    fecha:            { type: 'number' },
+  },
+  indexes: ['id_evento', 'fecha'],
 };

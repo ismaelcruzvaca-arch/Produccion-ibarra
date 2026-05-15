@@ -19,6 +19,12 @@ jest.mock('../../utils/timestamp', () => ({
   nowMs: () => 1234567890,
 }));
 
+// Mock deviceId
+jest.mock('../../sync/deviceId', () => ({
+  getDeviceId: jest.fn().mockResolvedValue('device-test-1'),
+  getDeviceIdSync: jest.fn().mockReturnValue('device-test-1'),
+}));
+
 // Create a mock RxDB collection
 const createMockCollection = () => {
   const docs = new Map<string, Record<string, unknown>>();

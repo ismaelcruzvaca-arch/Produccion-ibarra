@@ -7,31 +7,31 @@ describe('generateShiftReport', () => {
   const shiftStart = (timestamp: number): IOeeEvent => ({
     id: 'ev-1', updated_at: timestamp, deleted: false,
     line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
-    event_type: 'shift_start', timestamp, planned_boxes: 480,
+    event_type: 'shift_start', timestamp, planned_boxes: 480, device_id: 'device-1',
   });
 
   const shiftEnd = (timestamp: number): IOeeEvent => ({
     id: 'ev-2', updated_at: timestamp, deleted: false,
     line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
-    event_type: 'shift_end', timestamp,
+    event_type: 'shift_end', timestamp, device_id: 'device-1',
   });
 
   const boxCount = (timestamp: number, qty: number): IOeeEvent => ({
     id: `box-${timestamp}`, updated_at: timestamp, deleted: false,
     line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
-    event_type: 'box_count', timestamp, quantity: qty,
+    event_type: 'box_count', timestamp, quantity: qty, device_id: 'device-1',
   });
 
   const downtimeStart = (timestamp: number, reason: string, id: string): IOeeEvent => ({
     id, updated_at: timestamp, deleted: false,
     line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
-    event_type: 'downtime_start', timestamp, reason_code: reason,
+    event_type: 'downtime_start', timestamp, reason_code: reason, device_id: 'device-1',
   });
 
   const downtimeEnd = (timestamp: number, relatedId: string): IOeeEvent => ({
     id: `end-${relatedId}`, updated_at: timestamp, deleted: false,
     line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
-    event_type: 'downtime_end', timestamp, related_event_id: relatedId,
+    event_type: 'downtime_end', timestamp, related_event_id: relatedId, device_id: 'device-1',
   });
 
   it('generates report with correct template_id', () => {

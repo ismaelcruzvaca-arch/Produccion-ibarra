@@ -174,9 +174,28 @@ export interface IOeeEvent {
   // Retroactivo
   is_retroactive?: boolean;
   related_event_id?: string;
+
+  // Wave 4: device audit
+  device_id: string;
 }
 
 export type RxOeeEvent = RxDocument<IOeeEvent>;
+
+// ─── Sync Error (Dead Letter Queue) ─────────────────────────────────────────────
+
+/**
+ * Sync Error — quarantined event that failed server-side validation.
+ * Stored locally for supervisor review and retry.
+ */
+export interface ISyncError {
+  id: string;
+  id_evento: string;
+  payload_original: Record<string, unknown>;
+  mensaje_error: string;
+  fecha: number;
+}
+
+export type RxSyncError = RxDocument<ISyncError>;
 
 // ─── Catalog Types (from Hasura) ────────────────────────────────────────────────
 

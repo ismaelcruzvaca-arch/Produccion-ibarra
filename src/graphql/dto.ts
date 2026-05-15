@@ -242,6 +242,7 @@ export interface GraphQLOeeEvent {
   notes?: string;
   is_retroactive?: boolean;
   related_event_id?: string;
+  device_id?: string;
 }
 
 export function toGraphQLOeeEvent(event: IOeeEvent): Record<string, unknown> {
@@ -261,6 +262,7 @@ export function toGraphQLOeeEvent(event: IOeeEvent): Record<string, unknown> {
     notes: event.notes,
     is_retroactive: event.is_retroactive,
     related_event_id: event.related_event_id,
+    device_id: event.device_id,
   };
 }
 
@@ -281,5 +283,6 @@ export function fromGraphQLOeeEvent(gql: GraphQLOeeEvent): IOeeEvent {
     notes: gql.notes,
     is_retroactive: gql.is_retroactive,
     related_event_id: gql.related_event_id,
+    device_id: gql.device_id ?? '',
   };
 }

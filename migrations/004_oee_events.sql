@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS public.oee_events (
     planned_boxes    integer,
     notes            text,
     is_retroactive   boolean DEFAULT false,
-    related_event_id uuid
+    related_event_id uuid,
+    device_id        text
 );
 
 -- Indexes for performance (matching RxDB indexes)

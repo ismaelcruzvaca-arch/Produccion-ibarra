@@ -18,8 +18,8 @@ import { createRxDatabase, addRxPlugin, type RxDatabase, type RxCollection } fro
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode';
 
-import { assetSchema, assetTypeSchema, workOrderSchema, reportSchema, oeeEventSchema } from './schemas';
-import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent } from '../core/types';
+import { assetSchema, assetTypeSchema, workOrderSchema, reportSchema, oeeEventSchema, syncErrorSchema } from './schemas';
+import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent, ISyncError } from '../core/types';
 
 // ─── Database Collections Type ──────────────────────────────────────────────────
 
@@ -30,6 +30,7 @@ export type ChocolateIbarraDatabase = RxDatabase<{
   work_orders: RxCollection<IWorkOrder>;
   reports: RxCollection<IReport>;
   oee_events: RxCollection<IOeeEvent>;
+  sync_errors: RxCollection<ISyncError>;
 }>;
 
 // ─── Database Singleton ────────────────────────────────────────────────────────
@@ -70,6 +71,7 @@ export async function getDatabase(): Promise<ChocolateIbarraDatabase> {
         work_orders: { schema: workOrderSchema },
         reports: { schema: reportSchema },
         oee_events: { schema: oeeEventSchema },
+        sync_errors: { schema: syncErrorSchema },
       });
       return db as ChocolateIbarraDatabase;
     });
