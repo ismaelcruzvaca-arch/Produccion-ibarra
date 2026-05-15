@@ -5,17 +5,14 @@
  * Why:
  * - The OEE Dashboard needs to display the count of unsynced OEE events.
  * - This service subscribes to the oee_events RxDB collection and counts
- *   documents that appear to be local-only (not yet confirmed synced by the server).
+ *   documents that have been modified locally AFTER the last successful sync.
  * - The count is written to useUIStore.setPendingOeeCount() so the UI can react.
  * - Optionally subscribes to the replication state's active$ to detect when
  *   sync completes and reset the counter.
  *
- * Heuristic for "unsynced" detection:
- * - Documents where `_rev` (RxDB internal revision) starts with a digit-dash
- *   pattern are local-only docs that haven't been acknowledged by the server.
- * - This is a heuristic; in practice, ALL docs in a local-first setup start
- *   with a local revision prefix. When replication is active, the count resets
- *   to 0 on successful sync completion.
+ * Business rule: count ONLY unsynced documents (updated_at > lastSyncTimestamp).
+ * Using lastSyncTimestamp from the UI store is more reliable than _rev heuristics,
+ * which vary across RxDB versions and server responses.
  */
 
 import { map, distinctUntilChanged } from 'rxjs/operators';
@@ -52,15 +49,16 @@ export function startPendingCountService(
     .$.pipe(
       map((docs) => {
         // Count ONLY documents that haven't been synced yet.
-        // Heuristic: RxDB local-only documents have _rev in format
-        // "{instanceToken}-{hash}". After server acknowledgment via
-        // replicateGraphQL, the revision structure changes.
-        // We filter for _rev starting with digit+dash (e.g. "1-abc123...")
-        // which is the local-only revision pattern.
+        // Business rule: a document is "pending" if its updated_at is newer
+        // than the last successful sync timestamp. If we have never synced,
+        // all local documents are considered pending.
+        const lastSync = useUIStore.getState().lastSyncTimestamp;
         return docs.filter((doc) => {
           try {
-            const rev: string = (doc as any)._rev;
-            return typeof rev === 'string' && /^\d+-/.test(rev);
+            const updatedAt = (doc as any).updated_at ?? (doc as any).client_updated_at;
+            if (typeof updatedAt !== 'number') return false;
+            if (!lastSync) return true; // never synced → everything is pending
+            return updatedAt > lastSync.getTime();
           } catch {
             return false;
           }

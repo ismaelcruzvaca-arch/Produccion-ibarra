@@ -82,8 +82,10 @@ interface CatalogState {
   products: ICatalogProduct[];
   stopReasons: ICatalogStopReason[];
 
-  // Persisted line selection
+  // Persisted selections
   selectedLine: string | null;
+  selectedMachine: string | null;
+  selectedShift: string | null;
 
   // Cache metadata
   lastFetchedAt: number | null;
@@ -93,6 +95,8 @@ interface CatalogState {
   // Actions
   loadCatalogs: () => Promise<void>;
   setSelectedLine: (lineId: string | null) => void;
+  setSelectedMachine: (machineId: string | null) => void;
+  setSelectedShift: (shiftId: string | null) => void;
 
   // Selectors (called as functions, not hooks)
   getStopReasons: () => ICatalogStopReason[];
@@ -117,6 +121,8 @@ export const useCatalogStore = create<CatalogState>()(
       products: [],
       stopReasons: [],
       selectedLine: null,
+      selectedMachine: null,
+      selectedShift: null,
       lastFetchedAt: null,
       isLoading: false,
       error: null,
@@ -182,7 +188,15 @@ export const useCatalogStore = create<CatalogState>()(
       },
 
       setSelectedLine: (lineId: string | null) => {
-        set({ selectedLine: lineId });
+        set({ selectedLine: lineId, selectedMachine: null });
+      },
+
+      setSelectedMachine: (machineId: string | null) => {
+        set({ selectedMachine: machineId });
+      },
+
+      setSelectedShift: (shiftId: string | null) => {
+        set({ selectedShift: shiftId });
       },
 
       // ── Selectors ────────────────────────────────────────────────────────────
@@ -209,6 +223,8 @@ export const useCatalogStore = create<CatalogState>()(
         products: state.products,
         stopReasons: state.stopReasons,
         selectedLine: state.selectedLine,
+        selectedMachine: state.selectedMachine,
+        selectedShift: state.selectedShift,
         lastFetchedAt: state.lastFetchedAt,
       }),
     },
