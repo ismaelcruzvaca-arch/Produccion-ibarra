@@ -10,7 +10,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { Text, Button, Portal, Dialog, IconButton, Snackbar } from 'react-native-paper';
+import { Text, Button, Portal, Dialog, IconButton, Snackbar, Badge } from 'react-native-paper';
 import type { RxDocument } from 'rxdb';
 
 import { useOeeEventsRepository } from '../../src/repositories/useOeeEventsRepository';
@@ -19,6 +19,7 @@ import { useOeeCalculator } from '../../src/ui/hooks/useOeeCalculator';
 import { OeeDashboard } from '../../src/ui/components/OeeDashboard';
 import { StopReasonModal } from '../../src/ui/components/StopReasonModal';
 import { ConfirmEventModal } from '../../src/ui/components/ConfirmEventModal';
+import { useUIStore } from '../../src/ui/store/useUIStore';
 import type { IOeeEvent } from '../../src/core/types';
 import type { ParoReason } from '../../src/config/catalogs';
 import { getCurrentTurno, PARO_BY_CODE } from '../../src/config/catalogs';
@@ -31,6 +32,9 @@ export default function OeeScreen() {
   const reportsRepository = useReportsRepository();
   const repositoryRef = useRef(repository);
   repositoryRef.current = repository;
+
+  // Pending sync count from Zustand (Wave 4)
+  const pendingOeeCount = useUIStore((s) => s.pendingOeeCount);
 
   // Machine / line context — deterministic UUIDs matching DB seeds
   const [machineId] = useState('415c3fb5-be74-56b9-852f-9057597634c9'); // CAVEMIL-03
@@ -247,6 +251,22 @@ export default function OeeScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Sync badge header (Wave 4) — shows pending OEE events count */}
+      {pendingOeeCount > 0 && (
+        <View style={styles.syncBadgeHeader}>
+          <IconButton
+            icon="cloud-upload-outline"
+            size={20}
+            iconColor="#FF9800"
+          />
+          <Text variant="bodyMedium" style={styles.syncBadgeText}>
+            {pendingOeeCount} evento{pendingOeeCount !== 1 ? 's' : ''} pendiente{pendingOeeCount !== 1 ? 's' : ''} de sincronización
+          </Text>
+          <Badge size={22} style={styles.syncBadgeCount}>
+            {pendingOeeCount}
+          </Badge>
+        </View>
+      )}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <OeeDashboard
           isActiveDowntime={!!activeDowntime}
@@ -344,6 +364,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FAFAFA',
+  },
+  syncBadgeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFE0B2',
+  },
+  syncBadgeText: {
+    color: '#E65100',
+    fontWeight: '600',
+    marginHorizontal: 4,
+  },
+  syncBadgeCount: {
+    backgroundColor: '#FF9800',
+    color: '#FFFFFF',
+    fontWeight: 'bold',
   },
   scrollContent: {
     padding: 16,

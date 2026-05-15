@@ -19,8 +19,7 @@
  *       The Authorization: Bearer <token> header is injected via getAuthToken().
  */
 
-import { replicateGraphQL, type ReplicationState } from 'rxdb/plugins/replication-graphql';
-import type { RxDatabase } from 'rxdb';
+import { replicateGraphQL, type RxGraphQLReplicationState } from 'rxdb/plugins/replication-graphql';
 
 import { nhost, getAuthToken } from './nhostClient';
 import {
@@ -39,6 +38,7 @@ import {
 } from './dto';
 import type { IAsset, IWorkOrder, IReport, IOeeEvent } from '../core/types';
 import type { ChocolateIbarraDatabase } from '../data/database';
+import { createResilientReplication, type ResilientState } from '../sync/resilientReplication';
 
 /**
  * GraphQL endpoint URL for Nhost (Hasura).
@@ -46,7 +46,7 @@ import type { ChocolateIbarraDatabase } from '../data/database';
  *
  * Uses EXPO_PUBLIC_ env vars so Expo inlines them into the client bundle.
  */
-function getGraphQLUrl(): string {
+export function getGraphQLUrl(): string {
   const subdomain = process.env.EXPO_PUBLIC_NHOST_SUBDOMAIN ?? 'your-nhost-subdomain';
   return `https://${subdomain}.nhost.run/v1/graphql`;
 }
@@ -58,7 +58,7 @@ function getGraphQLUrl(): string {
  * The token is extracted from the Nhost client's session (which handles refresh).
  * Replication uses raw fetch (not nhost.graphql.request) so we must inject manually.
  */
-function getHeaders(): Record<string, string> {
+export function getHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -82,7 +82,7 @@ function getHeaders(): Record<string, string> {
  * - Subsequent syncs: query records where client_updated_at > last checkpoint
  * - Results ordered by client_updated_at ascending to avoid missing updates
  */
-function pullQueryBuilderAssets(checkpoint: { client_updated_at: number } | null) {
+function pullQueryBuilderAssets(checkpoint: GraphQLAsset | undefined, _limit: number) {
   return {
     query: `
       query PullAssets($lastCheckpoint: bigint!) {
@@ -105,10 +105,7 @@ function pullQueryBuilderAssets(checkpoint: { client_updated_at: number } | null
         }
       }
     `,
-    variables: { lastCheckpoint: checkpoint?.client_updated_at ?? 0 },
-    headers: getHeaders(),
-    url: getGraphQLUrl(),
-    fetch: fetch,
+    variables: { lastCheckpoint: checkpoint?.client_updated_at ? parseInt(checkpoint.client_updated_at, 10) : 0 },
   };
 }
 
@@ -124,7 +121,7 @@ function pullQueryBuilderAssets(checkpoint: { client_updated_at: number } | null
  * All mutable fields are included; id and client_updated_at are always updated
  * (client_updated_at drives LWW conflict resolution).
  */
-function pushMutationBuilderAssets(docs: IAsset[]) {
+function pushMutationBuilderAssets(docs: any[]) {
   const objects = docs.map(toGraphQLAsset);
   return {
     query: `
@@ -153,15 +150,12 @@ function pushMutationBuilderAssets(docs: IAsset[]) {
       }
     `,
     variables: { objects },
-    headers: getHeaders(),
-    url: getGraphQLUrl(),
-    fetch: fetch,
   };
 }
 
 // ─── Pull Query Builder (Work Orders) ─────────────────────────────────────────
 
-function pullQueryBuilderWorkOrders(checkpoint: { client_updated_at: number } | null) {
+function pullQueryBuilderWorkOrders(checkpoint: GraphQLWorkOrder | undefined, _limit: number) {
   return {
     query: `
       query PullWorkOrders($lastCheckpoint: bigint!) {
@@ -182,16 +176,13 @@ function pullQueryBuilderWorkOrders(checkpoint: { client_updated_at: number } | 
         }
       }
     `,
-    variables: { lastCheckpoint: checkpoint?.client_updated_at ?? 0 },
-    headers: getHeaders(),
-    url: getGraphQLUrl(),
-    fetch: fetch,
+    variables: { lastCheckpoint: checkpoint?.client_updated_at ? parseInt(checkpoint.client_updated_at, 10) : 0 },
   };
 }
 
 // ─── Push Mutation Builder (Work Orders Upsert) ────────────────────────────────
 
-function pushMutationBuilderWorkOrders(docs: IWorkOrder[]) {
+function pushMutationBuilderWorkOrders(docs: any[]) {
   const objects = docs.map(toGraphQLWorkOrder);
   return {
     query: `
@@ -218,15 +209,12 @@ function pushMutationBuilderWorkOrders(docs: IWorkOrder[]) {
       }
     `,
     variables: { objects },
-    headers: getHeaders(),
-    url: getGraphQLUrl(),
-    fetch: fetch,
   };
 }
 
 // ─── Pull Query Builder (Reports) ──────────────────────────────────────────────
 
-function pullQueryBuilderReports(checkpoint: { updated_at: number } | null) {
+function pullQueryBuilderReports(checkpoint: GraphQLReport | undefined, _limit: number) {
   return {
     query: `
       query PullReports($lastCheckpoint: bigint!) {
@@ -242,16 +230,13 @@ function pullQueryBuilderReports(checkpoint: { updated_at: number } | null) {
         }
       }
     `,
-    variables: { lastCheckpoint: checkpoint?.updated_at ?? 0 },
-    headers: getHeaders(),
-    url: getGraphQLUrl(),
-    fetch: fetch,
+    variables: { lastCheckpoint: checkpoint?.updated_at ? parseInt(checkpoint.updated_at, 10) : 0 },
   };
 }
 
 // ─── Push Mutation Builder (Reports Upsert) ─────────────────────────────────────
 
-function pushMutationBuilderReports(docs: IReport[]) {
+function pushMutationBuilderReports(docs: any[]) {
   const objects = docs.map(toGraphQLReport);
   return {
     query: `
@@ -273,15 +258,12 @@ function pushMutationBuilderReports(docs: IReport[]) {
       }
     `,
     variables: { objects },
-    headers: getHeaders(),
-    url: getGraphQLUrl(),
-    fetch: fetch,
   };
 }
 
 // ─── Pull Query Builder (OEE Events) ───────────────────────────────────────────
 
-function pullQueryBuilderOeeEvents(checkpoint: { updated_at: number } | null) {
+function pullQueryBuilderOeeEvents(checkpoint: GraphQLOeeEvent | undefined, _limit: number) {
   return {
     query: `
       query PullOeeEvents($lastCheckpoint: bigint!) {
@@ -304,19 +286,17 @@ function pullQueryBuilderOeeEvents(checkpoint: { updated_at: number } | null) {
           notes
           is_retroactive
           related_event_id
+          device_id
         }
       }
     `,
-    variables: { lastCheckpoint: checkpoint?.updated_at ?? 0 },
-    headers: getHeaders(),
-    url: getGraphQLUrl(),
-    fetch: fetch,
+    variables: { lastCheckpoint: checkpoint?.updated_at ? parseInt(checkpoint.updated_at, 10) : 0 },
   };
 }
 
 // ─── Push Mutation Builder (OEE Events Upsert) ─────────────────────────────────
 
-function pushMutationBuilderOeeEvents(docs: IOeeEvent[]) {
+function pushMutationBuilderOeeEvents(docs: any[]) {
   const objects = docs.map(toGraphQLOeeEvent);
   return {
     query: `
@@ -328,7 +308,7 @@ function pushMutationBuilderOeeEvents(docs: IOeeEvent[]) {
             update_columns: [
               updated_at, deleted, line_id, machine_id, operator_id,
               shift_id, event_type, timestamp, reason_code, quantity,
-              planned_boxes, notes, is_retroactive, related_event_id
+              planned_boxes, notes, is_retroactive, related_event_id, device_id
             ]
           }
         ) {
@@ -337,9 +317,6 @@ function pushMutationBuilderOeeEvents(docs: IOeeEvent[]) {
       }
     `,
     variables: { objects },
-    headers: getHeaders(),
-    url: getGraphQLUrl(),
-    fetch: fetch,
   };
 }
 
@@ -365,31 +342,33 @@ function pushMutationBuilderOeeEvents(docs: IOeeEvent[]) {
  * ```
  */
 export interface ReplicationStates {
-  assets: ReplicationState<IAsset, GraphQLAsset>;
-  workOrders: ReplicationState<IWorkOrder, GraphQLWorkOrder>;
-  reports: ReplicationState<IReport, GraphQLReport>;
-  oeeEvents: ReplicationState<IOeeEvent, GraphQLOeeEvent>;
+  assets: RxGraphQLReplicationState<IAsset, GraphQLAsset>;
+  workOrders: RxGraphQLReplicationState<IWorkOrder, GraphQLWorkOrder>;
+  reports: RxGraphQLReplicationState<IReport, GraphQLReport>;
+  oeeEvents: RxGraphQLReplicationState<IOeeEvent, GraphQLOeeEvent>;
+  /** Resilient replication controller for OEE events (backoff, circuit breaker, DLQ). */
+  resilientOeeController?: { cleanup: () => void; getState: () => ResilientState };
 }
 
 export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates {
   // ── Assets replication ──────────────────────────────────────────────────────
-  let replicationAssets: ReplicationState<IAsset, GraphQLAsset>;
+  let replicationAssets: RxGraphQLReplicationState<IAsset, GraphQLAsset>;
   try {
     replicationAssets = replicateGraphQL<IAsset, GraphQLAsset>({
-      name: 'assets-graphql-replication',
+      replicationIdentifier: 'assets-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
       collection: db.collections.assets,
       pull: {
         queryBuilder: pullQueryBuilderAssets,
-        modifier: (doc: GraphQLAsset) => fromGraphQLAsset(doc),
+        modifier: (doc: GraphQLAsset) => ({ ...fromGraphQLAsset(doc), _deleted: doc.deleted ?? false }),
       },
       push: {
         queryBuilder: pushMutationBuilderAssets,
       },
       live: false, // disable live WebSocket polling to avoid 'ws' module crash in browser
-      liveInterval: 30000,
       retryTime: 5000,
       autoStart: true,
-      pullBatchSize: 100,
     });
   } catch (err) {
     console.warn('Assets replication failed to initialise:', err);
@@ -398,23 +377,23 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
   }
 
   // ── Work Orders replication ────────────────────────────────────────────────
-  let replicationWorkOrders: ReplicationState<IWorkOrder, GraphQLWorkOrder>;
+  let replicationWorkOrders: RxGraphQLReplicationState<IWorkOrder, GraphQLWorkOrder>;
   try {
     replicationWorkOrders = replicateGraphQL<IWorkOrder, GraphQLWorkOrder>({
-      name: 'work-orders-graphql-replication',
+      replicationIdentifier: 'work-orders-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
       collection: db.collections.work_orders,
       pull: {
         queryBuilder: pullQueryBuilderWorkOrders,
-        modifier: (doc: GraphQLWorkOrder) => fromGraphQLWorkOrder(doc),
+        modifier: (doc: GraphQLWorkOrder) => ({ ...fromGraphQLWorkOrder(doc), _deleted: doc.deleted ?? false }),
       },
       push: {
         queryBuilder: pushMutationBuilderWorkOrders,
       },
       live: false,
-      liveInterval: 30000,
       retryTime: 5000,
       autoStart: true,
-      pullBatchSize: 100,
     });
   } catch (err) {
     console.warn('WorkOrders replication failed to initialise:', err);
@@ -422,23 +401,23 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
   }
 
   // ── Reports replication ────────────────────────────────────────────────────
-  let replicationReports: ReplicationState<IReport, GraphQLReport>;
+  let replicationReports: RxGraphQLReplicationState<IReport, GraphQLReport>;
   try {
     replicationReports = replicateGraphQL<IReport, GraphQLReport>({
-      name: 'reports-graphql-replication',
+      replicationIdentifier: 'reports-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
       collection: db.collections.reports,
       pull: {
         queryBuilder: pullQueryBuilderReports,
-        modifier: (doc: GraphQLReport) => fromGraphQLReport(doc),
+        modifier: (doc: GraphQLReport) => ({ ...fromGraphQLReport(doc), _deleted: doc.deleted ?? false }),
       },
       push: {
         queryBuilder: pushMutationBuilderReports,
       },
       live: false,
-      liveInterval: 30000,
       retryTime: 5000,
       autoStart: true,
-      pullBatchSize: 100,
     });
   } catch (err) {
     console.warn('Reports replication failed to initialise:', err);
@@ -446,24 +425,32 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
   }
 
   // ── OEE Events replication ─────────────────────────────────────────────────
-  let replicationOeeEvents: ReplicationState<IOeeEvent, GraphQLOeeEvent>;
+  let replicationOeeEvents: RxGraphQLReplicationState<IOeeEvent, GraphQLOeeEvent>;
+  let resilientOeeController: { cleanup: () => void; getState: () => ResilientState } | undefined;
   try {
     replicationOeeEvents = replicateGraphQL<IOeeEvent, GraphQLOeeEvent>({
-      name: 'oee-events-graphql-replication',
+      replicationIdentifier: 'oee-events-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
       collection: db.collections.oee_events,
       pull: {
         queryBuilder: pullQueryBuilderOeeEvents,
-        modifier: (doc: GraphQLOeeEvent) => fromGraphQLOeeEvent(doc),
+        modifier: (doc: GraphQLOeeEvent) => ({ ...fromGraphQLOeeEvent(doc), _deleted: doc.deleted ?? false }),
       },
       push: {
         queryBuilder: pushMutationBuilderOeeEvents,
       },
       live: false, // WebSocket disabled for browser compatibility
-      liveInterval: 10000, // 10s interval for near-real-time OEE event sync
       retryTime: 5000,
       autoStart: true,
-      pullBatchSize: 100,
     });
+
+    // Wrap OEE replication with resilience layer (backoff, circuit breaker, DLQ)
+    resilientOeeController = createResilientReplication(
+      replicationOeeEvents,
+      db,
+      { url: getGraphQLUrl(), getHeaders },
+    );
   } catch (err) {
     console.warn('OeeEvents replication failed to initialise:', err);
     replicationOeeEvents = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
@@ -472,5 +459,5 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
   // Asset Types replication would follow the same pattern.
   // TODO: Add asset_types replication once Nhost tables are created.
 
-  return { assets: replicationAssets, workOrders: replicationWorkOrders, reports: replicationReports, oeeEvents: replicationOeeEvents };
+  return { assets: replicationAssets, workOrders: replicationWorkOrders, reports: replicationReports, oeeEvents: replicationOeeEvents, resilientOeeController };
 }
