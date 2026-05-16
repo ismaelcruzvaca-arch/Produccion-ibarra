@@ -6,6 +6,8 @@
  * - Context-aware dashboard (Operando vs Paro Activo)
  * - Two-step stop reason selection
  * - Shift end blocker when downtime is active
+ *
+ * Wave 5: Replaced hardcoded line/machine/shift IDs with store-driven selectors.
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -16,14 +18,16 @@ import type { RxDocument } from 'rxdb';
 import { useOeeEventsRepository } from '../../src/repositories/useOeeEventsRepository';
 import { useReportsRepository } from '../../src/repositories/useReportsRepository';
 import { useOeeCalculator } from '../../src/ui/hooks/useOeeCalculator';
+import { useOeeValidation } from '../../src/ui/hooks/useOeeValidation';
 import { OeeDashboard } from '../../src/ui/components/OeeDashboard';
+import { OeeSelectorBar } from '../../src/ui/components/OeeSelectorBar';
 import { StopReasonModal } from '../../src/ui/components/StopReasonModal';
 import { ConfirmEventModal } from '../../src/ui/components/ConfirmEventModal';
+import { useCatalogStore } from '../../src/ui/store/catalogStore';
 import { useUIStore } from '../../src/ui/store/useUIStore';
 import type { IOeeEvent } from '../../src/core/types';
 import type { ParoReason } from '../../src/config/catalogs';
 import { getCurrentTurno, PARO_BY_CODE } from '../../src/config/catalogs';
-import { generateUuid } from '../../src/utils/uuid';
 import { nowMs } from '../../src/utils/timestamp';
 import { generateShiftReport } from '../../src/core/shiftReportGenerator';
 
@@ -36,17 +40,28 @@ export default function OeeScreen() {
   // Pending sync count from Zustand (Wave 4)
   const pendingOeeCount = useUIStore((s) => s.pendingOeeCount);
 
-  // Machine / line context — deterministic UUIDs matching DB seeds
-  const [machineId] = useState('415c3fb5-be74-56b9-852f-9057597634c9'); // CAVEMIL-03
-  const [lineId] = useState('93054368-92ea-5bb8-acd0-2993da58f7c9');    // LINEA-1
+  // ── Store-driven context (Wave 5) ───────────────────────────────────────
+  const lineId = useCatalogStore((s) => s.selectedLine);
+  const machineId = useCatalogStore((s) => s.selectedMachine);
+  const selectedShiftId = useCatalogStore((s) => s.selectedShift);
+  const effectiveShiftId = selectedShiftId ?? getCurrentTurno().id;
 
-  // Shift state
+  // Shift runtime state
   const [shiftId, setShiftId] = useState<string>('');
   const [shiftStarted, setShiftStarted] = useState(false);
 
   // Events
   const [events, setEvents] = useState<IOeeEvent[]>([]);
   const [activeDowntime, setActiveDowntime] = useState<RxDocument<IOeeEvent> | null>(null);
+
+  // Validation (Wave 5)
+  const validation = useOeeValidation({
+    lineId,
+    machineId,
+    shiftId: effectiveShiftId,
+    shiftStarted,
+    activeDowntime: !!activeDowntime,
+  });
 
   // Modal states
   const [showStopModal, setShowStopModal] = useState(false);
@@ -56,6 +71,7 @@ export default function OeeScreen() {
   const [confirmLabel, setConfirmLabel] = useState('Confirmar');
   const [pendingEvent, setPendingEvent] = useState<Partial<IOeeEvent> | null>(null);
   const [showShiftBlocker, setShowShiftBlocker] = useState(false);
+  const [showLineChangeBlocker, setShowLineChangeBlocker] = useState(false);
 
   // Production counter modal
   const [showProductionModal, setShowProductionModal] = useState(false);
@@ -75,7 +91,7 @@ export default function OeeScreen() {
 
   // Poll active downtime
   useEffect(() => {
-    if (!shiftStarted) {
+    if (!shiftStarted || !machineId) {
       setActiveDowntime(null);
       return;
     }
@@ -96,23 +112,36 @@ export default function OeeScreen() {
 
   // ─── Shift Start ───────────────────────────────────────────────────────────
   const handleStartShift = useCallback(async () => {
-    const currentTurno = getCurrentTurno();
+    if (!validation.canStartShift) {
+      setSnackbarMessage(validation.validationMessage ?? 'Seleccione línea, máquina y turno');
+      setSnackbarVisible(true);
+      return;
+    }
+    if (!lineId || !machineId || !effectiveShiftId) return;
+
     await repository.createEvent({
       line_id: lineId,
       machine_id: machineId,
-      shift_id: currentTurno.id,
+      shift_id: effectiveShiftId,
       event_type: 'shift_start',
       timestamp: nowMs(),
       planned_boxes: 480,
     });
-    setShiftId(currentTurno.id);
+    setShiftId(effectiveShiftId);
     setShiftStarted(true);
-    setSnackbarMessage(`Turno iniciado: ${currentTurno.label}`);
+    const shiftLabel = useCatalogStore.getState().shifts.find((s) => s.id === effectiveShiftId)?.label ?? getCurrentTurno().label;
+    setSnackbarMessage(`Turno iniciado: ${shiftLabel}`);
     setSnackbarVisible(true);
-  }, [repository, lineId, machineId]);
+  }, [repository, lineId, machineId, effectiveShiftId, validation]);
 
   // ─── Shift End ─────────────────────────────────────────────────────────────
   const handleEndShift = useCallback(async () => {
+    if (!validation.canEndShift) {
+      setSnackbarMessage(validation.validationMessage ?? 'No puede cerrar turno en este momento');
+      setSnackbarVisible(true);
+      return;
+    }
+    if (!machineId) return;
     const dt = await repository.findActiveDowntime(machineId);
     if (dt) {
       setShowShiftBlocker(true);
@@ -123,10 +152,10 @@ export default function OeeScreen() {
     setConfirmLabel('Cerrar Turno');
     setPendingEvent({ event_type: 'shift_end' });
     setShowConfirmModal(true);
-  }, [repository, machineId]);
+  }, [repository, machineId, validation]);
 
   const executeShiftEnd = useCallback(async () => {
-    if (!shiftId) return;
+    if (!shiftId || !lineId || !machineId) return;
     await repository.createEvent({
       line_id: lineId,
       machine_id: machineId,
@@ -153,8 +182,13 @@ export default function OeeScreen() {
 
   // ─── Downtime Start ────────────────────────────────────────────────────────
   const handleStartDowntime = useCallback(() => {
+    if (!validation.canStartDowntime) {
+      setSnackbarMessage(validation.validationMessage ?? 'No puede iniciar paro en este momento');
+      setSnackbarVisible(true);
+      return;
+    }
     setShowStopModal(true);
-  }, []);
+  }, [validation]);
 
   const handleSelectStopReason = useCallback((reason: ParoReason) => {
     setShowStopModal(false);
@@ -169,7 +203,7 @@ export default function OeeScreen() {
   }, []);
 
   const executeDowntimeStart = useCallback(async () => {
-    if (!pendingEvent || !shiftId) return;
+    if (!pendingEvent || !shiftId || !lineId || !machineId) return;
     await repository.createEvent({
       line_id: lineId,
       machine_id: machineId,
@@ -200,7 +234,7 @@ export default function OeeScreen() {
   }, [activeDowntime]);
 
   const executeDowntimeEnd = useCallback(async () => {
-    if (!pendingEvent || !shiftId) return;
+    if (!pendingEvent || !shiftId || !lineId || !machineId) return;
     await repository.createEvent({
       line_id: lineId,
       machine_id: machineId,
@@ -217,12 +251,17 @@ export default function OeeScreen() {
 
   // ─── Production ────────────────────────────────────────────────────────────
   const handleRegisterProduction = useCallback(() => {
+    if (!validation.canRegisterProduction) {
+      setSnackbarMessage(validation.validationMessage ?? 'No puede registrar producción en este momento');
+      setSnackbarVisible(true);
+      return;
+    }
     setBoxCount(0);
     setShowProductionModal(true);
-  }, []);
+  }, [validation]);
 
   const executeProduction = useCallback(async () => {
-    if (!shiftId || boxCount <= 0) return;
+    if (!shiftId || !lineId || !machineId || boxCount <= 0) return;
     await repository.createEvent({
       line_id: lineId,
       machine_id: machineId,
@@ -251,22 +290,39 @@ export default function OeeScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Sync badge header (Wave 4) — shows pending OEE events count */}
-      {pendingOeeCount > 0 && (
-        <View style={styles.syncBadgeHeader}>
-          <IconButton
-            icon="cloud-upload-outline"
-            size={20}
-            iconColor="#FF9800"
-          />
-          <Text variant="bodyMedium" style={styles.syncBadgeText}>
-            {pendingOeeCount} evento{pendingOeeCount !== 1 ? 's' : ''} pendiente{pendingOeeCount !== 1 ? 's' : ''} de sincronización
-          </Text>
+      {/* Sync badge header (Wave 4) — shows pending OEE events count or synced status */}
+      <View style={pendingOeeCount > 0 ? styles.syncBadgeHeader : styles.syncBadgeHeaderSynced}>
+        <IconButton
+          icon={pendingOeeCount > 0 ? 'cloud-upload-outline' : 'check-circle'}
+          size={20}
+          iconColor={pendingOeeCount > 0 ? '#FF9800' : '#4CAF50'}
+        />
+        <Text
+          variant="bodyMedium"
+          style={pendingOeeCount > 0 ? styles.syncBadgeText : styles.syncBadgeTextSynced}
+        >
+          {pendingOeeCount > 0
+            ? `${pendingOeeCount} evento${pendingOeeCount !== 1 ? 's' : ''} pendiente${pendingOeeCount !== 1 ? 's' : ''} de sincronización`
+            : 'Sincronizado'}
+        </Text>
+        {pendingOeeCount > 0 && (
           <Badge size={22} style={styles.syncBadgeCount}>
             {pendingOeeCount}
           </Badge>
-        </View>
-      )}
+        )}
+      </View>
+
+      {/* Wave 5: Store-driven selectors */}
+      <OeeSelectorBar
+        onLineChangeAttempt={() => {
+          if (shiftStarted) {
+            setShowLineChangeBlocker(true);
+            return false;
+          }
+          return true;
+        }}
+      />
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <OeeDashboard
           isActiveDowntime={!!activeDowntime}
@@ -348,6 +404,21 @@ export default function OeeScreen() {
         </Dialog>
       </Portal>
 
+      <Portal>
+        <Dialog visible={showLineChangeBlocker} onDismiss={() => setShowLineChangeBlocker(false)}>
+          <Dialog.Icon icon="alert" />
+          <Dialog.Title>Cambio de Línea Bloqueado</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">
+              Cierre el turno antes de cambiar de línea.
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setShowLineChangeBlocker(false)}>Entendido</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
       <Snackbar
         visible={snackbarVisible}
         onDismiss={() => setSnackbarVisible(false)}
@@ -375,8 +446,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#FFE0B2',
   },
+  syncBadgeHeaderSynced: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#C8E6C9',
+  },
   syncBadgeText: {
     color: '#E65100',
+    fontWeight: '600',
+    marginHorizontal: 4,
+  },
+  syncBadgeTextSynced: {
+    color: '#2E7D32',
     fontWeight: '600',
     marginHorizontal: 4,
   },
