@@ -186,7 +186,7 @@ export default function DashboardScreen() {
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
   // Wave 8: OEE event data for live dashboard preview
-  const oeeRepo = useOeeEventsRepository();
+  const { docs$: oeeDocs$ } = useOeeEventsRepository();
   const [oeeEvents, setOeeEvents] = useState<IOeeEvent[]>([]);
 
   useEffect(() => {
@@ -197,11 +197,11 @@ export default function DashboardScreen() {
   }, [docs$]);
 
   useEffect(() => {
-    const subscription = oeeRepo.docs$.subscribe((docs) => {
+    const subscription = oeeDocs$.subscribe((docs) => {
       setOeeEvents(docs.map((doc) => doc.toJSON() as IOeeEvent));
     });
     return () => subscription.unsubscribe();
-  }, [oeeRepo]);
+  }, [oeeDocs$]);
 
   const { kpis, barChartData, filteredReports } = useDashboardData(
     reports,

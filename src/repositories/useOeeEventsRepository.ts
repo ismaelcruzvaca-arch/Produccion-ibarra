@@ -213,5 +213,8 @@ export function useOeeEventsRepository(): OeeEventsRepository {
     [db]
   );
 
-  return { docs$, createEvent, update, remove, findById, findByShift, findActiveDowntime };
+  return useMemo(
+    () => ({ docs$, createEvent, update, remove, findById, findByShift, findActiveDowntime }),
+    [docs$, createEvent, update, remove, findById, findByShift, findActiveDowntime]
+  );
 }

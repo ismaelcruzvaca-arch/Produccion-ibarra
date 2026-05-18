@@ -73,12 +73,14 @@ export default function OeeScreen() {
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
   // Subscribe to events
+  const { docs$: oeeDocs$ } = repository;
+
   useEffect(() => {
-    const subscription = repository.docs$.subscribe((docs) => {
+    const subscription = oeeDocs$.subscribe((docs) => {
       setEvents(docs.map((doc) => doc.toJSON() as IOeeEvent));
     });
     return () => subscription.unsubscribe();
-  }, [repository]);
+  }, [oeeDocs$]);
 
   // Poll active downtime
   useEffect(() => {

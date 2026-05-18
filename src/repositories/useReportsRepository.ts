@@ -165,5 +165,8 @@ export function useReportsRepository(): ReportsRepository {
     return docs as RxDocument<IReport>[];
   }, [db]);
 
-  return { docs$, createReport, update, remove, findById, findAll };
+  return useMemo(
+    () => ({ docs$, createReport, update, remove, findById, findAll }),
+    [docs$, createReport, update, remove, findById, findAll]
+  );
 }
