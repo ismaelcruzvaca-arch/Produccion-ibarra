@@ -27,8 +27,9 @@ import {
   useReportsRepository,
   getReportSyncStatus,
 } from '../../src/repositories/useReportsRepository';
+import { useOeeEventsRepository } from '../../src/repositories/useOeeEventsRepository';
 import { useReplication } from '../../src/data/DatabaseContext';
-import type { IReport } from '../../src/core/types';
+import type { IReport, IOeeEvent } from '../../src/core/types';
 import { ConnectionBadge } from '../../src/ui/components/ConnectionBadge';
 import { SyncMonitor } from '../../src/ui/components/SyncMonitor';
 import { useUIStore } from '../../src/ui/store/useUIStore';
@@ -82,6 +83,96 @@ function useReportsReplicationState() {
   return { lastSyncTime, hasError };
 }
 
+/**
+ * LiveOeeSummary — Card que muestra un resumen en vivo de los eventos OEE.
+ *
+ * Calcula totales desde los eventos crudos (box_count, reject_count, downtime)
+ * para que el dashboard muestre datos inmediatamente después del seeder,
+ * sin esperar al cierre de un turno que genere un IReport.
+ */
+function LiveOeeSummary({ events }: { events: IOeeEvent[] }) {
+  const totalBoxes = events
+    .filter((e) => e.event_type === 'box_count')
+    .reduce((sum, e) => sum + (e.quantity ?? 0), 0);
+
+  const totalRejects = events
+    .filter((e) => e.event_type === 'reject_count')
+    .reduce((sum, e) => sum + (e.quantity ?? 0), 0);
+
+  const downtimes = events.filter((e) => e.event_type === 'downtime_start');
+  const closedDowntimes = new Set(
+    events
+      .filter((e) => e.event_type === 'downtime_end' && e.related_event_id)
+      .map((e) => e.related_event_id)
+  );
+  const activeDowntimes = downtimes.filter((e) => !closedDowntimes.has(e.id));
+
+  const hasShiftStart = events.some((e) => e.event_type === 'shift_start');
+  const hasShiftEnd = events.some((e) => e.event_type === 'shift_end');
+  const shiftActive = hasShiftStart && !hasShiftEnd;
+
+  return (
+    <Card style={styles.liveCard}>
+      <Card.Content>
+        <View style={styles.liveHeader}>
+          <Text variant="titleMedium" style={styles.liveTitle}>
+            Producción en Vivo
+          </Text>
+          <View
+            style={[
+              styles.liveDot,
+              { backgroundColor: shiftActive ? '#4CAF50' : '#9E9E9E' },
+            ]}
+          />
+        </View>
+
+        <View style={styles.liveMetricsRow}>
+          <View style={styles.liveMetric}>
+            <Text variant="titleLarge" style={styles.liveValue}>
+              {totalBoxes}
+            </Text>
+            <Text variant="bodySmall" style={styles.liveLabel}>
+              Cajas
+            </Text>
+          </View>
+          <View style={styles.liveMetric}>
+            <Text variant="titleLarge" style={styles.liveValue}>
+              {totalRejects}
+            </Text>
+            <Text variant="bodySmall" style={styles.liveLabel}>
+              Rechazo
+            </Text>
+          </View>
+          <View style={styles.liveMetric}>
+            <Text variant="titleLarge" style={styles.liveValue}>
+              {downtimes.length}
+            </Text>
+            <Text variant="bodySmall" style={styles.liveLabel}>
+              Paros
+            </Text>
+          </View>
+          <View style={styles.liveMetric}>
+            <Text
+              variant="titleLarge"
+              style={[
+                styles.liveValue,
+                {
+                  color: activeDowntimes.length > 0 ? '#D32F2F' : '#4CAF50',
+                },
+              ]}
+            >
+              {activeDowntimes.length}
+            </Text>
+            <Text variant="bodySmall" style={styles.liveLabel}>
+              Paro Activo
+            </Text>
+          </View>
+        </View>
+      </Card.Content>
+    </Card>
+  );
+}
+
 export default function DashboardScreen() {
   const router = useRouter();
   const { docs$, remove } = useReportsRepository();
@@ -94,12 +185,23 @@ export default function DashboardScreen() {
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
+  // Wave 8: OEE event data for live dashboard preview
+  const oeeRepo = useOeeEventsRepository();
+  const [oeeEvents, setOeeEvents] = useState<IOeeEvent[]>([]);
+
   useEffect(() => {
     const subscription = docs$.subscribe((docs) => {
       setReports(docs.map((doc) => doc.toJSON() as IReport));
     });
     return () => subscription.unsubscribe();
   }, [docs$]);
+
+  useEffect(() => {
+    const subscription = oeeRepo.docs$.subscribe((docs) => {
+      setOeeEvents(docs.map((doc) => doc.toJSON() as IOeeEvent));
+    });
+    return () => subscription.unsubscribe();
+  }, [oeeRepo]);
 
   const { kpis, barChartData, filteredReports } = useDashboardData(
     reports,
@@ -190,7 +292,7 @@ export default function DashboardScreen() {
         </Text>
         <Button
           mode="contained"
-          onPress={() => router.push('/(tabs)/reports')}
+          onPress={() => router.push('/(tabs)/oee')}
           style={styles.emptyButton}
           contentStyle={styles.emptyButtonContent}
         >
@@ -225,6 +327,11 @@ export default function DashboardScreen() {
       <KpiCards kpis={kpis} />
 
       <ProductionBarChart data={barChartData} />
+
+      {/* Vista Rápida: Producción en Vivo desde OEE events */}
+      {oeeEvents.length > 0 && (
+        <LiveOeeSummary events={oeeEvents} />
+      )}
 
       <Text variant="titleMedium" style={styles.sectionTitle}>
         Reportes Recientes
@@ -377,5 +484,44 @@ const styles = StyleSheet.create({
   snackbar: {
     marginBottom: 16,
     marginHorizontal: 16,
+  },
+
+  // Live OEE Summary styles
+  liveCard: {
+    marginBottom: 16,
+    backgroundColor: '#E8F5E9',
+    borderColor: '#A5D6A7',
+    borderWidth: 1,
+  },
+  liveHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  liveTitle: {
+    fontWeight: 'bold',
+    color: '#2E7D32',
+  },
+  liveDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  liveMetricsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  liveMetric: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  liveValue: {
+    fontWeight: 'bold',
+    color: '#2E7D32',
+  },
+  liveLabel: {
+    color: '#558B2F',
+    marginTop: 2,
   },
 });
