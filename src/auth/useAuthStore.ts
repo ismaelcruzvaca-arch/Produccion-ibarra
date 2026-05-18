@@ -15,6 +15,7 @@
 
 import { create } from 'zustand';
 import { nhost } from '../graphql/nhostClient';
+import { withTimeout } from '../graphql/withTimeout';
 import {
   saveSession,
   getStoredSession,
@@ -200,6 +201,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
    * Fetches the operator profile and line assignments from Hasura.
    * Call this after successful login or session restore.
    * Populates operatorId and assignedLines.
+   *
+   * HOTFIX (2026-05-18): Added 5s timeout via withTimeout().
+   * If Nhost is unresponsive, falls back gracefully with userId + empty assignedLines
+   * instead of silently hanging and blocking the entire auth bootstrap.
    */
   fetchOperatorProfile: async () => {
     const { user } = get();
@@ -209,16 +214,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!userId) return;
 
     try {
-      const [profileRes, assignmentsRes] = await Promise.all([
-        nhost.graphql.request<{ operator_profiles_by_pk: { id: string; full_name: string; role: string } | null }>(
-          GET_OPERATOR_PROFILE,
-          { userId },
-        ),
-        nhost.graphql.request<{ user_line_assignments: { line_id: string }[] }>(
-          GET_USER_LINE_ASSIGNMENTS,
-          { userId },
-        ),
-      ]);
+      const [profileRes, assignmentsRes] = await withTimeout(
+        Promise.all([
+          nhost.graphql.request<{ operator_profiles_by_pk: { id: string; full_name: string; role: string } | null }>(
+            GET_OPERATOR_PROFILE,
+            { userId },
+          ),
+          nhost.graphql.request<{ user_line_assignments: { line_id: string }[] }>(
+            GET_USER_LINE_ASSIGNMENTS,
+            { userId },
+          ),
+        ]),
+        5_000,
+      );
 
       const profile = (profileRes as any)?.data?.operator_profiles_by_pk;
       const assignments = (assignmentsRes as any)?.data?.user_line_assignments ?? [];
@@ -230,8 +238,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         assignedLines: lineIds,
       });
     } catch (err: any) {
-      console.warn('[useAuthStore] fetchOperatorProfile failed:', err?.message);
-      // Keep existing state — offline-safe
+      console.warn(
+        '[useAuthStore] fetchOperatorProfile fallback — Nhost no disponible:',
+        err?.message ?? err,
+      );
+      // HOTFIX: Fallback con userId como operatorId + assignedLines vacío
+      // Permite que la UI continúe hacia loadCatalogs() sin bloquearse.
+      set({
+        operatorId: userId,
+        assignedLines: [],
+        error: 'Modo sin conexión — perfiles no disponibles',
+      });
     }
   },
 

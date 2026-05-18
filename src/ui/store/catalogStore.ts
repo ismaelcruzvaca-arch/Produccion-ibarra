@@ -18,6 +18,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { nhost } from '../../graphql/nhostClient';
+import { withTimeout } from '../../graphql/withTimeout';
 import type {
   ICatalogLine,
   ICatalogMachine,
@@ -151,15 +152,20 @@ export const useCatalogStore = create<CatalogState>()(
         set({ isLoading: true, error: null });
 
         try {
-          // Fetch all catalogs in parallel
+          // Fetch all catalogs in parallel with 5s timeout.
+          // HOTFIX (2026-05-18): wrapped in withTimeout() so unresponsive Nhost
+          // doesn't freeze the app — the catch block below provides demo data.
           const [linesRes, machinesRes, shiftsRes, productsRes, stopReasonsRes] =
-            await Promise.all([
-              nhost.graphql.request<{ lines: ICatalogLine[] }>(GET_LINES),
-              nhost.graphql.request<{ machines: ICatalogMachine[] }>(GET_MACHINES),
-              nhost.graphql.request<{ shifts: ICatalogShift[] }>(GET_SHIFTS),
-              nhost.graphql.request<{ products: ICatalogProduct[] }>(GET_PRODUCTS),
-              nhost.graphql.request<{ stop_reasons: ICatalogStopReason[] }>(GET_STOP_REASONS),
-            ]);
+            await withTimeout(
+              Promise.all([
+                nhost.graphql.request<{ lines: ICatalogLine[] }>(GET_LINES),
+                nhost.graphql.request<{ machines: ICatalogMachine[] }>(GET_MACHINES),
+                nhost.graphql.request<{ shifts: ICatalogShift[] }>(GET_SHIFTS),
+                nhost.graphql.request<{ products: ICatalogProduct[] }>(GET_PRODUCTS),
+                nhost.graphql.request<{ stop_reasons: ICatalogStopReason[] }>(GET_STOP_REASONS),
+              ]),
+              5_000,
+            );
 
           // Check for GraphQL errors
           const errors = [linesRes, machinesRes, shiftsRes, productsRes, stopReasonsRes]

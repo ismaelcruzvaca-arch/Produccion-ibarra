@@ -76,7 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    bootstrap();
+    bootstrap().catch((err) => {
+      console.warn('[AuthContext] Bootstrap falló — continuando con datos locales:', err?.message ?? err);
+    });
   }, [isAuthenticated, isLoading, fetchOperatorProfile, loadCatalogs, setSelectedLine, setCatalogSelectedLine]);
 
   // ── Sync selectedLine to catalogStore when it changes ──────────────────────
