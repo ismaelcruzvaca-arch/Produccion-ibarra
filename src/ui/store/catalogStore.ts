@@ -25,6 +25,7 @@ import type {
   ICatalogProduct,
   ICatalogStopReason,
 } from '../../core/types';
+import { TURNOS, PRODUCTOS, PARO_REASONS } from '../../config/catalogs';
 
 // ─── TTL: 1 hour in ms ──────────────────────────────────────────────────────────
 
@@ -189,8 +190,45 @@ export const useCatalogStore = create<CatalogState>()(
           });
         } catch (err: any) {
           console.warn('[catalogStore] Fetch failed (offline?):', err?.message);
-          // Keep cached data — don't clear the store
-          set({ isLoading: false, error: 'Sin conexión — usando datos en caché' });
+          // Fallback: use local static catalog data so the UI is usable in dev/demo
+          set({
+            lines: [
+              { id: 'LINEA-DEMO-1', name: 'Línea 1 (Demo)', description: 'Línea de producción demo', is_active: true },
+              { id: 'LINEA-DEMO-2', name: 'Línea 2 (Demo)', description: 'Línea de producción demo', is_active: true },
+            ],
+            machines: [
+              { id: 'MACH-DEMO-01', line_id: 'LINEA-DEMO-1', name: 'Máquina 1A', description: 'Máquina demo', is_active: true },
+              { id: 'MACH-DEMO-02', line_id: 'LINEA-DEMO-1', name: 'Máquina 1B', description: 'Máquina demo', is_active: true },
+              { id: 'MACH-DEMO-03', line_id: 'LINEA-DEMO-2', name: 'Máquina 2A', description: 'Máquina demo', is_active: true },
+            ],
+            shifts: TURNOS.map((t: any) => ({
+              id: t.id,
+              label: t.label,
+              start_hour: t.startHour,
+              end_hour: t.endHour,
+              is_active: true,
+            })),
+            products: PRODUCTOS.map((p: any) => ({
+              id: p.id,
+              code: p.code,
+              name: p.name,
+              theoretical_ppm: p.theoreticalPpm,
+              is_active: true,
+            })),
+            stopReasons: PARO_REASONS.map((r: any) => ({
+              id: r.code,
+              code: r.code,
+              label: r.label,
+              category: r.category,
+              macro: r.macro,
+              stops_line: r.stopsLine,
+              sort_order: 0,
+              is_active: true,
+            })),
+            lastFetchedAt: Date.now(),
+            isLoading: false,
+            error: 'Usando datos locales (demo) — Nhost no disponible',
+          });
         }
       },
 
