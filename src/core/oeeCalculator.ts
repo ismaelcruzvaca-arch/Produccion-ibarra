@@ -22,6 +22,7 @@ export interface OeeMetrics {
   cajasBuenas: number;
   ppmUtilizado: number;
   usandoFallbackPpm: boolean;
+  hasAnomalies: boolean;
 }
 
 export function computeOee(
@@ -98,12 +99,12 @@ export function computeOee(
 
   const cajasBuenas = Math.max(0, totalCajas - totalRechazos);
 
-  // 6. Calculate metrics
+  // 6. Calculate metrics (Raw/Crudo)
   const disponibilidad = tiempoPlanificadoMin > 0
     ? (tiempoOperandoMin / tiempoPlanificadoMin) * 100
     : 0;
 
-  const rendimiento = tiempoOperandoMin > 0 && productoPpm > 0
+  const rendimientoCrudo = tiempoOperandoMin > 0 && productoPpm > 0
     ? ((totalCajas / tiempoOperandoMin) / productoPpm) * 100
     : 0;
 
@@ -111,13 +112,16 @@ export function computeOee(
     ? (cajasBuenas / totalCajas) * 100
     : 0;
 
-  const oee = (disponibilidad / 100) * (rendimiento / 100) * (calidad / 100) * 100;
+  const oeeCrudo = (disponibilidad / 100) * (rendimientoCrudo / 100) * (calidad / 100) * 100;
+
+  // Anomaly Detection
+  const hasAnomalies = rendimientoCrudo > 100 || oeeCrudo > 100;
 
   return {
     disponibilidad: Math.min(100, Math.max(0, disponibilidad)),
-    rendimiento: Math.min(100, Math.max(0, rendimiento)),
+    rendimiento: Math.min(100, Math.max(0, rendimientoCrudo)),
     calidad: Math.min(100, Math.max(0, calidad)),
-    oee: Math.min(100, Math.max(0, oee)),
+    oee: Math.min(100, Math.max(0, oeeCrudo)),
     tiempoPlanificadoMin,
     tiempoParoProdMin,
     tiempoParoMttoMin,
@@ -127,5 +131,6 @@ export function computeOee(
     cajasBuenas,
     ppmUtilizado: productoPpm,
     usandoFallbackPpm: productoPpm === DEFAULT_PPM,
+    hasAnomalies,
   };
 }

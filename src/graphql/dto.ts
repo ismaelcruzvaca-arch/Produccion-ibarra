@@ -62,7 +62,7 @@ export function toGraphQLAsset(asset: IAsset): Record<string, unknown> {
     warranty_expiration: asset.warranty_expiration?.toString(),
     // client_updated_at MUST be a string for BIGINT columns in Hasura
     client_updated_at: asset.client_updated_at.toString(),
-    deleted: asset.deleted,
+    deleted: asset.is_deleted,
   };
 }
 
@@ -89,7 +89,7 @@ export function fromGraphQLAsset(gql: GraphQLAsset): IAsset {
       ? parseInt(gql.warranty_expiration, 10)
       : undefined,
     client_updated_at: parseInt(gql.client_updated_at, 10),
-    deleted: gql.deleted,
+    is_deleted: gql.deleted,
   };
 }
 
@@ -111,7 +111,7 @@ export function toGraphQLAssetType(at: IAssetType): Record<string, unknown> {
     description: at.description,
     is_active: at.is_active,
     client_updated_at: at.client_updated_at.toString(),
-    deleted: at.deleted,
+    deleted: at.is_deleted,
   };
 }
 
@@ -122,7 +122,7 @@ export function fromGraphQLAssetType(gql: GraphQLAssetType): IAssetType {
     description: gql.description,
     is_active: gql.is_active,
     client_updated_at: parseInt(gql.client_updated_at, 10),
-    deleted: gql.deleted,
+    is_deleted: gql.deleted,
   };
 }
 
@@ -158,7 +158,7 @@ export function toGraphQLWorkOrder(wo: IWorkOrder): Record<string, unknown> {
     scheduled_date: wo.scheduled_date?.toString(),
     completed_date: wo.completed_date?.toString(),
     client_updated_at: wo.client_updated_at.toString(),
-    deleted: wo.deleted,
+    deleted: wo.is_deleted,
   };
 }
 
@@ -176,7 +176,7 @@ export function fromGraphQLWorkOrder(gql: GraphQLWorkOrder): IWorkOrder {
     scheduled_date: gql.scheduled_date ? parseInt(gql.scheduled_date, 10) : undefined,
     completed_date: gql.completed_date ? parseInt(gql.completed_date, 10) : undefined,
     client_updated_at: parseInt(gql.client_updated_at, 10),
-    deleted: gql.deleted,
+    is_deleted: gql.deleted,
   };
 }
 
@@ -205,7 +205,7 @@ export function toGraphQLReport(report: IReport): Record<string, unknown> {
   return {
     id: report.id,
     updated_at: report.updated_at.toString(),
-    deleted: report.deleted,
+    deleted: report.is_deleted,
     template_id: report.template_id,
     data: report.data,
   };
@@ -218,7 +218,7 @@ export function fromGraphQLReport(gql: GraphQLReport): IReport {
   return {
     id: gql.id,
     updated_at: parseInt(gql.updated_at, 10),
-    deleted: gql.deleted,
+    is_deleted: gql.deleted,
     template_id: gql.template_id,
     data: gql.data,
   };
@@ -249,7 +249,7 @@ export function toGraphQLOeeEvent(event: IOeeEvent): Record<string, unknown> {
   return {
     id: event.id,
     updated_at: event.updated_at.toString(),
-    deleted: event.deleted,
+    deleted: event.is_deleted,
     line_id: event.line_id,
     machine_id: event.machine_id,
     operator_id: event.operator_id,
@@ -270,7 +270,7 @@ export function fromGraphQLOeeEvent(gql: GraphQLOeeEvent): IOeeEvent {
   return {
     id: gql.id,
     updated_at: parseInt(gql.updated_at, 10),
-    deleted: gql.deleted,
+    is_deleted: gql.deleted,
     line_id: gql.line_id,
     machine_id: gql.machine_id,
     operator_id: gql.operator_id,
@@ -284,5 +284,6 @@ export function fromGraphQLOeeEvent(gql: GraphQLOeeEvent): IOeeEvent {
     is_retroactive: gql.is_retroactive,
     related_event_id: gql.related_event_id,
     device_id: gql.device_id ?? '',
+    is_deleted: gql.deleted,
   };
 }

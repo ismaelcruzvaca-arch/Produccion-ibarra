@@ -5,31 +5,31 @@ const FIXED_NOW = 1715000000000;
 
 describe('generateShiftReport', () => {
   const shiftStart = (timestamp: number): IOeeEvent => ({
-    id: 'ev-1', updated_at: timestamp, deleted: false,
+    id: 'ev-1', updated_at: timestamp, is_deleted: false,
     line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
     event_type: 'shift_start', timestamp, planned_boxes: 480, device_id: 'device-1',
   });
 
   const shiftEnd = (timestamp: number): IOeeEvent => ({
-    id: 'ev-2', updated_at: timestamp, deleted: false,
+    id: 'ev-2', updated_at: timestamp, is_deleted: false,
     line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
     event_type: 'shift_end', timestamp, device_id: 'device-1',
   });
 
   const boxCount = (timestamp: number, qty: number): IOeeEvent => ({
-    id: `box-${timestamp}`, updated_at: timestamp, deleted: false,
+    id: `box-${timestamp}`, updated_at: timestamp, is_deleted: false,
     line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
     event_type: 'box_count', timestamp, quantity: qty, device_id: 'device-1',
   });
 
   const downtimeStart = (timestamp: number, reason: string, id: string): IOeeEvent => ({
-    id, updated_at: timestamp, deleted: false,
+    id, updated_at: timestamp, is_deleted: false,
     line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
     event_type: 'downtime_start', timestamp, reason_code: reason, device_id: 'device-1',
   });
 
   const downtimeEnd = (timestamp: number, relatedId: string): IOeeEvent => ({
-    id: `end-${relatedId}`, updated_at: timestamp, deleted: false,
+    id: `end-${relatedId}`, updated_at: timestamp, is_deleted: false,
     line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
     event_type: 'downtime_end', timestamp, related_event_id: relatedId, device_id: 'device-1',
   });
@@ -45,7 +45,7 @@ describe('generateShiftReport', () => {
       events, shiftId: 'shift-1', lineId: 'LINEA-1',
     });
     expect(report.template_id).toBe('oee-shift-summary');
-    expect(report.deleted).toBe(false);
+    expect(report.is_deleted).toBe(false);
     expect(report.data.line_id).toBe('LINEA-1');
   });
 
@@ -81,18 +81,33 @@ describe('generateShiftReport', () => {
     expect(report.data.total_pieces).toBe(80);
   });
 
-  it('uses product PPM when productoId provided', () => {
+  it('uses product PPM when ppm provided directly', () => {
     const start = FIXED_NOW;
+    // 1h shift, 100 boxes at 2.5 ppm → 150 boxes planned
     const events = [
       shiftStart(start),
       boxCount(start + 1000, 100),
       shiftEnd(start + 60 * 60 * 1000),
     ];
     const report = generateShiftReport({
-      events, shiftId: 'shift-1', lineId: 'LINEA-1', productoId: '1', // CHOC-500 = 2.5 PPM
+      events, shiftId: 'shift-1', lineId: 'LINEA-1', ppm: 2.5,
     });
-    // Report data should reflect PPM-based calculations
+    // Core assertion: pieces are registered correctly regardless of ppm
     expect(report.data.total_pieces).toBe(100);
+  });
+
+  it('falls back to DEFAULT_PPM when ppm is undefined', () => {
+    const start = FIXED_NOW;
+    const events = [
+      shiftStart(start),
+      boxCount(start + 1000, 50),
+      shiftEnd(start + 60 * 60 * 1000),
+    ];
+    const report = generateShiftReport({
+      events, shiftId: 'shift-1', lineId: 'LINEA-1',
+      // ppm intentionally omitted — should use DEFAULT_PPM without error
+    });
+    expect(report.data.total_pieces).toBe(50);
   });
 
   it('handles empty events gracefully', () => {

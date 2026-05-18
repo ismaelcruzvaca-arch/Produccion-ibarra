@@ -43,7 +43,7 @@ const GET_LINES = `
 const GET_MACHINES = `
   query GetMachines {
     machines(where: { is_active: { _eq: true } }, order_by: { name: asc }) {
-      id line_id name description is_active
+      id line_id name description is_active is_iot_enabled
     }
   }
 `;
@@ -82,8 +82,14 @@ interface CatalogState {
   products: ICatalogProduct[];
   stopReasons: ICatalogStopReason[];
 
-  // Persisted line selection
+  // Persisted selections
   selectedLine: string | null;
+  selectedMachine: string | null;
+  selectedShift: string | null;
+
+  // Non-persisted: resets on line/machine change or shift_end
+  // (see design decision: changeover safety for PPM integrity)
+  selectedProduct: string | null;
 
   // Cache metadata
   lastFetchedAt: number | null;
@@ -93,6 +99,9 @@ interface CatalogState {
   // Actions
   loadCatalogs: () => Promise<void>;
   setSelectedLine: (lineId: string | null) => void;
+  setSelectedMachine: (machineId: string | null) => void;
+  setSelectedShift: (shiftId: string | null) => void;
+  setSelectedProduct: (productId: string | null) => void;
 
   // Selectors (called as functions, not hooks)
   getStopReasons: () => ICatalogStopReason[];
@@ -103,6 +112,7 @@ interface CatalogState {
   getLineById: (id: string) => ICatalogLine | undefined;
   getMachineById: (id: string) => ICatalogMachine | undefined;
   getMachinesByLine: (lineId: string) => ICatalogMachine[];
+  getProductById: (id: string) => ICatalogProduct | undefined;
 }
 
 // ─── Store ───────────────────────────────────────────────────────────────────────
@@ -117,6 +127,9 @@ export const useCatalogStore = create<CatalogState>()(
       products: [],
       stopReasons: [],
       selectedLine: null,
+      selectedMachine: null,
+      selectedShift: null,
+      selectedProduct: null,
       lastFetchedAt: null,
       isLoading: false,
       error: null,
@@ -182,7 +195,18 @@ export const useCatalogStore = create<CatalogState>()(
       },
 
       setSelectedLine: (lineId: string | null) => {
-        set({ selectedLine: lineId });
+        // Reset machine AND product when line changes (PPM integrity)
+        set({ selectedLine: lineId, selectedMachine: null, selectedProduct: null });
+      },
+      setSelectedMachine: (machineId: string | null) => {
+        // Reset product when machine changes (changeover safety)
+        set({ selectedMachine: machineId, selectedProduct: null });
+      },
+      setSelectedShift: (shiftId: string | null) => {
+        set({ selectedShift: shiftId });
+      },
+      setSelectedProduct: (productId: string | null) => {
+        set({ selectedProduct: productId });
       },
 
       // ── Selectors ────────────────────────────────────────────────────────────
@@ -197,6 +221,7 @@ export const useCatalogStore = create<CatalogState>()(
       getMachineById: (id: string) => get().machines.find((m) => m.id === id),
       getMachinesByLine: (lineId: string) =>
         get().machines.filter((m) => m.line_id === lineId),
+      getProductById: (id: string) => get().products.find((p) => p.id === id),
     }),
     {
       name: 'catalog-storage',
@@ -209,6 +234,9 @@ export const useCatalogStore = create<CatalogState>()(
         products: state.products,
         stopReasons: state.stopReasons,
         selectedLine: state.selectedLine,
+        selectedMachine: state.selectedMachine,
+        selectedShift: state.selectedShift,
+        // selectedProduct intentionally NOT persisted — see design decision
         lastFetchedAt: state.lastFetchedAt,
       }),
     },

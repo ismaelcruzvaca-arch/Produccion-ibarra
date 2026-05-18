@@ -24,7 +24,7 @@ export const assetSchema: RxJsonSchema<IAsset> = {
   version: 0,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'client_updated_at', 'deleted'],
+  required: ['id', 'client_updated_at', 'is_deleted'],
   properties: {
     id: { type: 'string', maxLength: 100 },
     name: { type: 'string' },
@@ -37,7 +37,7 @@ export const assetSchema: RxJsonSchema<IAsset> = {
     in_service_date: { type: 'number' },
     warranty_expiration: { type: 'number' },
     client_updated_at: { type: 'number' },
-    deleted: { type: 'boolean' },
+    is_deleted: { type: 'boolean' },
   },
   indexes: [],
 };
@@ -50,14 +50,14 @@ export const assetTypeSchema: RxJsonSchema<IAssetType> = {
   version: 0,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'client_updated_at', 'deleted'],
+  required: ['id', 'client_updated_at', 'is_deleted'],
   properties: {
     id: { type: 'string', maxLength: 100 },
     code: { type: 'string' },
     description: { type: 'string' },
     is_active: { type: 'boolean' },
     client_updated_at: { type: 'number' },
-    deleted: { type: 'boolean' },
+    is_deleted: { type: 'boolean' },
   },
   indexes: [],
 };
@@ -70,7 +70,7 @@ export const workOrderSchema: RxJsonSchema<IWorkOrder> = {
   version: 0,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'client_updated_at', 'deleted'],
+  required: ['id', 'client_updated_at', 'is_deleted'],
   properties: {
     id: { type: 'string', maxLength: 100 },
     equipment_id: { type: 'string' },
@@ -81,7 +81,7 @@ export const workOrderSchema: RxJsonSchema<IWorkOrder> = {
     scheduled_date: { type: 'number' },
     completed_date: { type: 'number' },
     client_updated_at: { type: 'number' },
-    deleted: { type: 'boolean' },
+    is_deleted: { type: 'boolean' },
   },
   indexes: [],
 };
@@ -95,11 +95,11 @@ export const reportSchema: RxJsonSchema<IReport> = {
   version: 0,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'updated_at', 'deleted', 'template_id', 'data'],
+  required: ['id', 'updated_at', 'is_deleted', 'template_id', 'data'],
   properties: {
     id: { type: 'string', maxLength: 100 },
-    updated_at: { type: 'number' },
-    deleted: { type: 'boolean' },
+    updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted: { type: 'boolean' },
     template_id: { type: 'string' },
     data: {
       type: 'object',
@@ -120,20 +120,20 @@ export const reportSchema: RxJsonSchema<IReport> = {
  * Indexes: timestamp, [line_id, timestamp], [shift_id, timestamp] for performance.
  */
 export const oeeEventSchema: RxJsonSchema<IOeeEvent> = {
-  version: 1,
+  version: 0,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'updated_at', 'deleted', 'line_id', 'machine_id', 'shift_id', 'event_type', 'timestamp', 'device_id'],
+  required: ['id', 'updated_at', 'is_deleted', 'line_id', 'machine_id', 'shift_id', 'event_type', 'timestamp', 'device_id'],
   properties: {
     id:               { type: 'string', maxLength: 100 },
-    updated_at:       { type: 'number' },
-    deleted:          { type: 'boolean' },
-    line_id:          { type: 'string' },
+    updated_at:       { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted:       { type: 'boolean' },
+    line_id:          { type: 'string', maxLength: 100 },
     machine_id:       { type: 'string' },
     operator_id:      { type: 'string' },
-    shift_id:         { type: 'string' },
+    shift_id:         { type: 'string', maxLength: 100 },
     event_type:       { type: 'string', enum: ['shift_start','shift_end','downtime_start','downtime_end','box_count','reject_count'] },
-    timestamp:        { type: 'number' },
+    timestamp:        { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     reason_code:      { type: 'string' },
     quantity:         { type: 'number' },
     planned_boxes:    { type: 'number' },
@@ -159,7 +159,7 @@ export const syncErrorSchema: RxJsonSchema<ISyncError> = {
     id_evento:        { type: 'string', maxLength: 100 },
     payload_original: { type: 'object' },
     mensaje_error:    { type: 'string' },
-    fecha:            { type: 'number' },
+    fecha:            { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
   },
   indexes: ['id_evento', 'fecha'],
 };

@@ -22,13 +22,13 @@ interface OeeDashboardProps {
   isActiveDowntime: boolean;
   activeDowntimeEvent?: RxDocument<IOeeEvent> | null;
   metrics: OeeMetrics;
-  isUsingFallbackPpm: boolean;
   onRegisterProduction: () => void;
   onStartDowntime: () => void;
   onEndDowntime: () => void;
   onStartShift: () => void;
   onEndShift: () => void;
   shiftStarted: boolean;
+  isIotMachine?: boolean;
 }
 
 function formatDuration(minutes: number): string {
@@ -42,13 +42,13 @@ export function OeeDashboard({
   isActiveDowntime,
   activeDowntimeEvent,
   metrics,
-  isUsingFallbackPpm,
   onRegisterProduction,
   onStartDowntime,
   onEndDowntime,
   onStartShift,
   onEndShift,
   shiftStarted,
+  isIotMachine,
 }: OeeDashboardProps) {
   const [duration, setDuration] = useState(0);
 
@@ -141,39 +141,31 @@ export function OeeDashboard({
         Turno activo · CAVEMIL-03
       </Text>
 
-      {isUsingFallbackPpm && (
-        <Card style={styles.warningCard}>
-          <Card.Content style={styles.warningContent}>
-            <IconButton icon="alert" size={24} iconColor="#F57C00" />
-            <Text variant="bodyMedium" style={styles.warningText}>
-              PPM por defecto
+      {/* Fallback PPM warning removed per Wave 6 cleanup */}
+      {!isIotMachine && (
+        <Card style={styles.card}>
+          <Card.Content>
+            <Text variant="titleLarge" style={styles.cardTitle}>
+              Registrar Producción
+            </Text>
+            <Text variant="bodyMedium" style={styles.cardSubtitle}>
+              Cajas: {metrics.totalCajas}
             </Text>
           </Card.Content>
+          <Card.Actions style={styles.cardActions}>
+            <Button
+              mode="contained"
+              onPress={onRegisterProduction}
+              style={styles.actionButton}
+              contentStyle={styles.actionButtonContent}
+              labelStyle={styles.actionButtonLabel}
+              icon="package-variant-closed"
+            >
+              Registrar Producción
+            </Button>
+          </Card.Actions>
         </Card>
       )}
-
-      <Card style={styles.card}>
-        <Card.Content>
-          <Text variant="titleLarge" style={styles.cardTitle}>
-            Registrar Producción
-          </Text>
-          <Text variant="bodyMedium" style={styles.cardSubtitle}>
-            Cajas: {metrics.totalCajas}
-          </Text>
-        </Card.Content>
-        <Card.Actions style={styles.cardActions}>
-          <Button
-            mode="contained"
-            onPress={onRegisterProduction}
-            style={styles.actionButton}
-            contentStyle={styles.actionButtonContent}
-            labelStyle={styles.actionButtonLabel}
-            icon="package-variant-closed"
-          >
-            Registrar Producción
-          </Button>
-        </Card.Actions>
-      </Card>
 
       <Card style={styles.card}>
         <Card.Content>

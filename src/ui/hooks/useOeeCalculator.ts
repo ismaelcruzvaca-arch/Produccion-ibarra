@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { IOeeEvent } from '../../core/types';
 import { computeOee, type OeeMetrics } from '../../core/oeeCalculator';
-import { DEFAULT_PPM, PRODUCTOS } from '../../config/catalogs';
+import { DEFAULT_PPM } from '../../config/catalogs';
 
 export interface UseOeeCalculatorResult {
   metrics: OeeMetrics;
@@ -9,20 +9,21 @@ export interface UseOeeCalculatorResult {
   isUsingFallbackPpm: boolean; // CRITICAL: Wave 3 reads this for ⚠️ warning
 }
 
+/**
+ * Hook that computes OEE metrics from a list of events.
+ *
+ * @param events - OEE events for the current shift
+ * @param ppm - Target PPM from the selected product (theoretical_ppm).
+ *              If undefined, falls back to DEFAULT_PPM and flags usandoFallbackPpm.
+ *              Wave 8: resolved in the UI layer (oee.tsx) from catalogStore.
+ */
 export function useOeeCalculator(
   events: IOeeEvent[],
-  productoId?: string
+  ppm?: number
 ): UseOeeCalculatorResult {
   const metrics = useMemo(() => {
-    // Detect product from shift_start event or use provided productoId
-    const producto = productoId
-      ? PRODUCTOS.find(p => p.id === productoId)
-      : undefined;
-
-    const ppm = producto?.theoreticalPpm ?? DEFAULT_PPM;
-
-    return computeOee(events, ppm);
-  }, [events, productoId]);
+    return computeOee(events, ppm ?? DEFAULT_PPM);
+  }, [events, ppm]);
 
   return {
     metrics,

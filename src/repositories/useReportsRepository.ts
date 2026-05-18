@@ -103,7 +103,7 @@ export function useReportsRepository(): ReportsRepository {
   const docs$: Observable<RxDocument<IReport>[]> = useMemo(
     () =>
       db.collections.reports
-        .find({ selector: { deleted: { $eq: false } } })
+        .find({ selector: { is_deleted: { $eq: false } } })
         .$,
     [db]
   );
@@ -113,7 +113,7 @@ export function useReportsRepository(): ReportsRepository {
       const newDoc: IReport = {
         id: generateUuid(),
         updated_at: nowMs(),
-        deleted: false,
+        is_deleted: false,
         template_id: templateId,
         data,
       };
@@ -143,7 +143,7 @@ export function useReportsRepository(): ReportsRepository {
       if (!doc) return;
 
       await doc.patch({
-        deleted: true,
+        is_deleted: true,
         updated_at: nowMs(),
       });
     },
@@ -160,7 +160,7 @@ export function useReportsRepository(): ReportsRepository {
 
   const findAll = useCallback(async () => {
     const docs = await db.collections.reports
-      .find({ selector: { deleted: { $eq: false } } })
+      .find({ selector: { is_deleted: { $eq: false } } })
       .exec();
     return docs as RxDocument<IReport>[];
   }, [db]);

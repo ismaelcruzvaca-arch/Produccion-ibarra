@@ -220,4 +220,17 @@ describe('computeOee', () => {
     expect(result.oee).toBeGreaterThanOrEqual(0);
     expect(result.oee).toBeLessThanOrEqual(100);
   });
+
+  // Test 13: Anomaly detection
+  it('detects anomalies and sets hasAnomalies flag when metrics exceed 100%', () => {
+    const start = FIXED_NOW;
+    const events = [
+      shiftStart(start),
+      boxCount(start + 1000, 300), // 300 boxes in ~1 min
+      shiftEnd(start + 60 * 60 * 1000), // 1 hour shift
+    ];
+    const result = computeOee(events, 1.0); // Expected 60 boxes, got 300 (500% yield)
+    expect(result.rendimiento).toBe(100); // Clamped
+    expect(result.hasAnomalies).toBe(true);
+  });
 });

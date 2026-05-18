@@ -24,7 +24,7 @@ import type { RxDocument } from 'rxdb';
 export interface IBaseDocument {
   id: string;
   client_updated_at: number;
-  deleted: boolean;
+  is_deleted: boolean;
 }
 
 // ─── Asset Types ────────────────────────────────────────────────────────────────
@@ -128,7 +128,7 @@ export interface ReportData {
 export interface IReport {
   id: string;
   updated_at: number;
-  deleted: boolean;
+  is_deleted: boolean;
   template_id: string;
   data: ReportData;
 }
@@ -153,7 +153,7 @@ export type OeeEventType =
 export interface IOeeEvent {
   id: string;
   updated_at: number;
-  deleted: boolean;
+  is_deleted: boolean;
 
   // Context
   line_id: string;
@@ -218,6 +218,7 @@ export interface ICatalogMachine {
   name: string;
   description?: string;
   is_active: boolean;
+  is_iot_enabled?: boolean;
 }
 
 export interface ICatalogShift {

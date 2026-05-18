@@ -22,6 +22,8 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { getDatabase, type ChocolateIbarraDatabase } from './database';
 import { startReplication, type ReplicationStates } from '../graphql/sync';
+import { startPendingCountService } from '../sync/pendingCountService';
+import type { Subscription } from 'rxjs';
 
 // ─── Database Context ──────────────────────────────────────────────────────────
 
@@ -46,6 +48,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
 
   useEffect(() => {
     let mounted = true;
+    let pendingCountSub: Subscription | undefined;
 
     getDatabase()
       .then((database) => {
@@ -83,6 +86,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
         if (mounted) {
           setDb(database);
           setReplication(replicationStates);
+          pendingCountSub = startPendingCountService(database);
         }
       })
       .catch((err) => {
@@ -91,6 +95,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
 
     return () => {
       mounted = false;
+      pendingCountSub?.unsubscribe();
     };
   }, []);
 

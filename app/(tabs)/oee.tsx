@@ -19,12 +19,17 @@ import { useOeeCalculator } from '../../src/ui/hooks/useOeeCalculator';
 import { OeeDashboard } from '../../src/ui/components/OeeDashboard';
 import { StopReasonModal } from '../../src/ui/components/StopReasonModal';
 import { ConfirmEventModal } from '../../src/ui/components/ConfirmEventModal';
+import { NumpadModal } from '../../src/ui/components/NumpadModal';
+import { OEE_LIMITS } from '../../src/config/oeeLimits';
 import type { IOeeEvent } from '../../src/core/types';
 import type { ParoReason } from '../../src/config/catalogs';
-import { getCurrentTurno, PARO_BY_CODE } from '../../src/config/catalogs';
+import { PARO_BY_CODE } from '../../src/config/catalogs';
 import { generateUuid } from '../../src/utils/uuid';
 import { nowMs } from '../../src/utils/timestamp';
 import { generateShiftReport } from '../../src/core/shiftReportGenerator';
+import { useCatalogStore } from '../../src/ui/store/catalogStore';
+import { OeeSelectorBar } from '../../src/ui/components/OeeSelectorBar';
+import { useOeeValidation } from '../../src/hooks/useOeeValidation';
 
 export default function OeeScreen() {
   const repository = useOeeEventsRepository();
@@ -32,12 +37,18 @@ export default function OeeScreen() {
   const repositoryRef = useRef(repository);
   repositoryRef.current = repository;
 
-  // Machine / line context — deterministic UUIDs matching DB seeds
-  const [machineId] = useState('415c3fb5-be74-56b9-852f-9057597634c9'); // CAVEMIL-03
-  const [lineId] = useState('93054368-92ea-5bb8-acd0-2993da58f7c9');    // LINEA-1
+  // Use global state from CatalogStore instead of local UUIDs
+  const { selectedLine, selectedMachine, selectedShift } = useCatalogStore();
+  const getMachineById = useCatalogStore((s) => s.getMachineById);
+  const getProductById = useCatalogStore((s) => s.getProductById);
+  const selectedProduct = useCatalogStore((s) => s.selectedProduct);
+  const setSelectedProduct = useCatalogStore((s) => s.setSelectedProduct);
+  const isIotMachine = selectedMachine ? !!getMachineById(selectedMachine)?.is_iot_enabled : false;
+  // Wave 8: resolve ppm from selected product; undefined triggers DEFAULT_PPM fallback
+  const selectedPpm = selectedProduct ? getProductById(selectedProduct)?.theoretical_ppm : undefined;
+  const { isValid } = useOeeValidation();
 
   // Shift state
-  const [shiftId, setShiftId] = useState<string>('');
   const [shiftStarted, setShiftStarted] = useState(false);
 
   // Events
@@ -55,7 +66,7 @@ export default function OeeScreen() {
 
   // Production counter modal
   const [showProductionModal, setShowProductionModal] = useState(false);
-  const [boxCount, setBoxCount] = useState(0);
+  const [pendingAnomalousProduction, setPendingAnomalousProduction] = useState<number | null>(null);
 
   // Snackbar
   const [snackbarVisible, setSnackbarVisible] = useState(false);
@@ -71,13 +82,13 @@ export default function OeeScreen() {
 
   // Poll active downtime
   useEffect(() => {
-    if (!shiftStarted) {
+    if (!shiftStarted || !selectedMachine) {
       setActiveDowntime(null);
       return;
     }
     let isMounted = true;
     const check = async () => {
-      const dt = await repositoryRef.current.findActiveDowntime(machineId);
+      const dt = await repositoryRef.current.findActiveDowntime(selectedMachine);
       if (isMounted) setActiveDowntime(dt);
     };
     check();
@@ -86,30 +97,29 @@ export default function OeeScreen() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [shiftStarted, machineId]);
+  }, [shiftStarted, selectedMachine]);
 
-  const { metrics, isUsingFallbackPpm } = useOeeCalculator(events, undefined);
+  const { metrics } = useOeeCalculator(events, selectedPpm);
 
   // ─── Shift Start ───────────────────────────────────────────────────────────
   const handleStartShift = useCallback(async () => {
-    const currentTurno = getCurrentTurno();
+    if (!isValid || !selectedShift) return;
+    
     await repository.createEvent({
-      line_id: lineId,
-      machine_id: machineId,
-      shift_id: currentTurno.id,
+      // We explicitly pass them or let the repository pull them. Both work.
       event_type: 'shift_start',
       timestamp: nowMs(),
       planned_boxes: 480,
     });
-    setShiftId(currentTurno.id);
     setShiftStarted(true);
-    setSnackbarMessage(`Turno iniciado: ${currentTurno.label}`);
+    setSnackbarMessage('Turno iniciado');
     setSnackbarVisible(true);
-  }, [repository, lineId, machineId]);
+  }, [repository, isValid, selectedShift]);
 
   // ─── Shift End ─────────────────────────────────────────────────────────────
   const handleEndShift = useCallback(async () => {
-    const dt = await repository.findActiveDowntime(machineId);
+    if (!selectedMachine) return;
+    const dt = await repository.findActiveDowntime(selectedMachine);
     if (dt) {
       setShowShiftBlocker(true);
       return;
@@ -119,33 +129,31 @@ export default function OeeScreen() {
     setConfirmLabel('Cerrar Turno');
     setPendingEvent({ event_type: 'shift_end' });
     setShowConfirmModal(true);
-  }, [repository, machineId]);
+  }, [repository, selectedMachine]);
 
   const executeShiftEnd = useCallback(async () => {
-    if (!shiftId) return;
+    if (!selectedShift || !selectedLine) return;
     await repository.createEvent({
-      line_id: lineId,
-      machine_id: machineId,
-      shift_id: shiftId,
       event_type: 'shift_end',
       timestamp: nowMs(),
     });
 
-    const shiftEvents = await repository.findByShift(shiftId);
+    const shiftEvents = await repository.findByShift(selectedShift);
     const report = generateShiftReport({
       events: shiftEvents.map((e) => e.toJSON() as IOeeEvent),
-      shiftId,
-      lineId,
+      shiftId: selectedShift,
+      lineId: selectedLine,
+      ppm: selectedPpm, // Wave 8: inject real product PPM into the report
     });
     await reportsRepository.createReport(report.data, report.template_id);
 
+    setSelectedProduct(null); // Wave 8: clear product selection on shift end
     setShiftStarted(false);
-    setShiftId('');
     setShowConfirmModal(false);
     setPendingEvent(null);
     setSnackbarMessage('Turno cerrado y reporte generado');
     setSnackbarVisible(true);
-  }, [shiftId, repository, lineId, machineId, reportsRepository]);
+  }, [selectedShift, selectedLine, selectedPpm, repository, reportsRepository, setSelectedProduct]);
 
   // ─── Downtime Start ────────────────────────────────────────────────────────
   const handleStartDowntime = useCallback(() => {
@@ -165,11 +173,8 @@ export default function OeeScreen() {
   }, []);
 
   const executeDowntimeStart = useCallback(async () => {
-    if (!pendingEvent || !shiftId) return;
+    if (!pendingEvent || !selectedShift) return;
     await repository.createEvent({
-      line_id: lineId,
-      machine_id: machineId,
-      shift_id: shiftId,
       event_type: 'downtime_start',
       timestamp: nowMs(),
       reason_code: pendingEvent.reason_code,
@@ -178,15 +183,22 @@ export default function OeeScreen() {
     setPendingEvent(null);
     setSnackbarMessage('Paro registrado');
     setSnackbarVisible(true);
-  }, [pendingEvent, shiftId, repository, lineId, machineId]);
+  }, [pendingEvent, selectedShift, repository]);
 
   // ─── Downtime End ──────────────────────────────────────────────────────────
   const handleEndDowntime = useCallback(() => {
     if (!activeDowntime) return;
     const reasonCode = activeDowntime.get('reason_code') as string | undefined;
     const reasonLabel = reasonCode ? PARO_BY_CODE[reasonCode]?.label : 'Desconocido';
-    setConfirmTitle('Fin de Paro');
-    setConfirmMessage(`¿Cerrar paro activo: ${reasonLabel}?`);
+    const durationHours = (nowMs() - (activeDowntime.get('timestamp') as number)) / 3600000;
+    const isAtypical = durationHours > OEE_LIMITS.MAX_DOWNTIME_HOURS;
+
+    setConfirmTitle(isAtypical ? '⚠️ Paro Atípico' : 'Fin de Paro');
+    setConfirmMessage(
+      isAtypical
+        ? `Este paro duró más de ${OEE_LIMITS.MAX_DOWNTIME_HOURS}h. ¿Cerrar paro: ${reasonLabel}?`
+        : `¿Cerrar paro activo: ${reasonLabel}?`
+    );
     setConfirmLabel('Cerrar Paro');
     setPendingEvent({
       event_type: 'downtime_end',
@@ -196,11 +208,8 @@ export default function OeeScreen() {
   }, [activeDowntime]);
 
   const executeDowntimeEnd = useCallback(async () => {
-    if (!pendingEvent || !shiftId) return;
+    if (!pendingEvent || !selectedShift) return;
     await repository.createEvent({
-      line_id: lineId,
-      machine_id: machineId,
-      shift_id: shiftId,
       event_type: 'downtime_end',
       timestamp: nowMs(),
       related_event_id: pendingEvent.related_event_id,
@@ -209,29 +218,40 @@ export default function OeeScreen() {
     setPendingEvent(null);
     setSnackbarMessage('Paro cerrado');
     setSnackbarVisible(true);
-  }, [pendingEvent, shiftId, repository, lineId, machineId]);
+  }, [pendingEvent, selectedShift, repository]);
 
   // ─── Production ────────────────────────────────────────────────────────────
   const handleRegisterProduction = useCallback(() => {
-    setBoxCount(0);
     setShowProductionModal(true);
   }, []);
 
-  const executeProduction = useCallback(async () => {
-    if (!shiftId || boxCount <= 0) return;
+  const handleNumpadSubmit = useCallback((value: number) => {
+    setShowProductionModal(false);
+    if (value > OEE_LIMITS.DEFAULT_SOFT_LIMIT) {
+      setConfirmTitle('⚠️ Producción Anómala');
+      setConfirmMessage(
+        `¿Confirma registrar ${value.toLocaleString('es-MX')} cajas?\nEsta cantidad supera el límite de precaución de ${OEE_LIMITS.DEFAULT_SOFT_LIMIT.toLocaleString('es-MX')}.`
+      );
+      setConfirmLabel('Confirmar');
+      setPendingEvent({ event_type: 'box_count' });
+      setPendingAnomalousProduction(value);
+      setShowConfirmModal(true);
+    } else {
+      executeProduction(value);
+    }
+  }, []);
+
+  const executeProduction = useCallback(async (value: number) => {
+    if (!selectedShift || value <= 0) return;
     await repository.createEvent({
-      line_id: lineId,
-      machine_id: machineId,
-      shift_id: shiftId,
       event_type: 'box_count',
       timestamp: nowMs(),
-      quantity: boxCount,
+      quantity: value,
     });
-    setShowProductionModal(false);
-    setBoxCount(0);
-    setSnackbarMessage(`Producción registrada: ${boxCount} cajas`);
+    setPendingAnomalousProduction(null);
+    setSnackbarMessage(`Producción registrada: ${value} cajas`);
     setSnackbarVisible(true);
-  }, [shiftId, boxCount, repository, lineId, machineId]);
+  }, [selectedShift, repository]);
 
   // ─── Generic Confirm ───────────────────────────────────────────────────────
   const handleConfirm = useCallback(() => {
@@ -242,24 +262,31 @@ export default function OeeScreen() {
       executeDowntimeStart();
     } else if (type === 'downtime_end') {
       executeDowntimeEnd();
+    } else if (type === 'box_count' && pendingAnomalousProduction !== null) {
+      executeProduction(pendingAnomalousProduction);
+      setShowConfirmModal(false);
+      setPendingEvent(null);
     }
-  }, [pendingEvent, executeShiftEnd, executeDowntimeStart, executeDowntimeEnd]);
+  }, [pendingEvent, executeShiftEnd, executeDowntimeStart, executeDowntimeEnd, executeProduction, pendingAnomalousProduction]);
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <OeeDashboard
-          isActiveDowntime={!!activeDowntime}
-          activeDowntimeEvent={activeDowntime}
-          metrics={metrics}
-          isUsingFallbackPpm={isUsingFallbackPpm}
-          onRegisterProduction={handleRegisterProduction}
-          onStartDowntime={handleStartDowntime}
-          onEndDowntime={handleEndDowntime}
-          onStartShift={handleStartShift}
-          onEndShift={handleEndShift}
-          shiftStarted={shiftStarted}
-        />
+        <OeeSelectorBar />
+        <View pointerEvents={isValid ? 'auto' : 'none'} style={{ opacity: isValid ? 1 : 0.5, flex: 1 }}>
+          <OeeDashboard
+            isActiveDowntime={!!activeDowntime}
+            activeDowntimeEvent={activeDowntime}
+            metrics={metrics}
+            onRegisterProduction={handleRegisterProduction}
+            onStartDowntime={handleStartDowntime}
+            onEndDowntime={handleEndDowntime}
+            onStartShift={handleStartShift}
+            onEndShift={handleEndShift}
+            shiftStarted={shiftStarted}
+            isIotMachine={isIotMachine}
+          />
+        </View>
       </ScrollView>
 
       <StopReasonModal
@@ -280,38 +307,12 @@ export default function OeeScreen() {
         confirmLabel={confirmLabel}
       />
 
-      <Portal>
-        <Dialog visible={showProductionModal} onDismiss={() => setShowProductionModal(false)}>
-          <Dialog.Title>Registrar Producción</Dialog.Title>
-          <Dialog.Content>
-            <View style={styles.counterContainer}>
-              <IconButton
-                icon="minus-circle"
-                size={48}
-                onPress={() => setBoxCount((c) => Math.max(0, c - 1))}
-                style={styles.counterButton}
-                iconColor="#5D4037"
-              />
-              <Text variant="headlineLarge" style={styles.counterText}>
-                {boxCount}
-              </Text>
-              <IconButton
-                icon="plus-circle"
-                size={48}
-                onPress={() => setBoxCount((c) => c + 1)}
-                style={styles.counterButton}
-                iconColor="#5D4037"
-              />
-            </View>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setShowProductionModal(false)}>Cancelar</Button>
-            <Button onPress={executeProduction} disabled={boxCount <= 0} mode="contained">
-              Registrar
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <NumpadModal
+        visible={showProductionModal}
+        title="Registrar Producción"
+        onDismiss={() => setShowProductionModal(false)}
+        onSubmit={handleNumpadSubmit}
+      />
 
       <Portal>
         <Dialog visible={showShiftBlocker} onDismiss={() => setShowShiftBlocker(false)}>

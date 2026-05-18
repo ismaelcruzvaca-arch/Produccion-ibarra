@@ -27,6 +27,10 @@ import { nowMs } from '../utils/timestamp';
 import type { IOeeEvent } from '../core/types';
 import { useDatabase } from '../data/DatabaseContext';
 import { getDeviceId } from '../sync/deviceId';
+import { useCatalogStore } from '../ui/store/catalogStore';
+import { useAuthStore } from '../auth/useAuthStore';
+
+export type CreateEventPayload = Omit<IOeeEvent, 'id' | 'updated_at' | 'deleted' | 'device_id' | 'line_id' | 'machine_id' | 'shift_id'> & Partial<Pick<IOeeEvent, 'line_id' | 'machine_id' | 'shift_id'>> & { device_id?: string };
 
 export interface OeeEventsRepository {
   /** Emits the current list of non-deleted OEE events on every change. */
@@ -39,7 +43,7 @@ export interface OeeEventsRepository {
    * @param event - Event payload (omit id, updated_at, deleted)
    * @returns Promise<RxDocument<IOeeEvent>> the newly created document
    */
-  createEvent: (event: Omit<IOeeEvent, 'id' | 'updated_at' | 'deleted' | 'device_id'> & { device_id?: string }) => Promise<RxDocument<IOeeEvent>>;
+  createEvent: (event: CreateEventPayload) => Promise<RxDocument<IOeeEvent>>;
 
   /**
    * Updates an existing OEE event in place.
@@ -87,29 +91,35 @@ export interface OeeEventsRepository {
 
 export function useOeeEventsRepository(): OeeEventsRepository {
   const db = useDatabase();
+  const { selectedLine, selectedMachine, selectedShift } = useCatalogStore();
+  const user = useAuthStore((state) => state.user);
 
   const docs$: Observable<RxDocument<IOeeEvent>[]> = useMemo(
     () =>
       db.collections.oee_events
-        .find({ selector: { deleted: { $eq: false } } })
+        .find({ selector: { is_deleted: { $eq: false } } })
         .$,
     [db]
   );
 
   const createEvent = useCallback(
-    async (event: Omit<IOeeEvent, 'id' | 'updated_at' | 'deleted' | 'device_id'> & { device_id?: string }) => {
+    async (event: CreateEventPayload) => {
       const deviceId = event.device_id ?? await getDeviceId();
       const newDoc: IOeeEvent = {
         id: generateUuid(),
         updated_at: nowMs(),
-        deleted: false,
+        is_deleted: false,
         device_id: deviceId,
         ...event,
+        line_id: event.line_id ?? selectedLine ?? '',
+        machine_id: event.machine_id ?? selectedMachine ?? '',
+        shift_id: event.shift_id ?? selectedShift ?? '',
+        operator_id: event.operator_id ?? user?.id,
       };
       const result = await db.collections.oee_events.insert(newDoc);
       return result as RxDocument<IOeeEvent>;
     },
-    [db]
+    [db, selectedLine, selectedMachine, selectedShift, user?.id]
   );
 
   const update = useCallback(
@@ -132,7 +142,7 @@ export function useOeeEventsRepository(): OeeEventsRepository {
       if (!doc) return;
 
       await doc.patch({
-        deleted: true,
+        is_deleted: true,
         updated_at: nowMs(),
       });
     },
@@ -153,7 +163,7 @@ export function useOeeEventsRepository(): OeeEventsRepository {
         .find({
           selector: {
             shift_id: { $eq: shiftId },
-            deleted: { $eq: false },
+            is_deleted: { $eq: false },
           },
         })
         .exec();
@@ -170,7 +180,7 @@ export function useOeeEventsRepository(): OeeEventsRepository {
           selector: {
             machine_id: { $eq: machineId },
             event_type: { $eq: 'downtime_start' },
-            deleted: { $eq: false },
+            is_deleted: { $eq: false },
           },
           sort: [{ timestamp: 'desc' }],
         })
@@ -182,7 +192,7 @@ export function useOeeEventsRepository(): OeeEventsRepository {
           selector: {
             machine_id: { $eq: machineId },
             event_type: { $eq: 'downtime_end' },
-            deleted: { $eq: false },
+            is_deleted: { $eq: false },
           },
         })
         .exec();

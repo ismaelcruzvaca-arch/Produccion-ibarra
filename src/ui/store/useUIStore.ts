@@ -43,6 +43,10 @@ interface UIState {
   setSyncStatus: (status: SyncStatus) => void;
   setLastSyncTimestamp: (timestamp: Date | null) => void;
   setSyncError: (error: string | null) => void;
+  
+  // Pending sync count
+  pendingCount: number;
+  setPendingCount: (count: number) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -76,4 +80,8 @@ export const useUIStore = create<UIState>((set) => ({
   setSyncStatus: (status) => set({ syncStatus: status }),
   setLastSyncTimestamp: (timestamp) => set({ lastSyncTimestamp: timestamp }),
   setSyncError: (error) => set({ syncError: error }),
+  
+  // Pending count
+  pendingCount: 0,
+  setPendingCount: (count) => set({ pendingCount: count }),
 }));

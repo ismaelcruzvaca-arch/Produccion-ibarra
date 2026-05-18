@@ -93,6 +93,14 @@ const createMockCollection = () => {
 
 let mockDb: { collections: { oee_events: ReturnType<typeof createMockCollection> } };
 
+jest.mock('../../ui/store/catalogStore', () => ({
+  useCatalogStore: jest.fn(),
+}));
+
+jest.mock('../../auth/useAuthStore', () => ({
+  useAuthStore: jest.fn(),
+}));
+
 // Custom renderHook that works without @testing-library/react-native
 function renderHook<T>(hook: () => T): { result: { current: T } } {
   const result = { current: undefined as unknown as T };
@@ -106,6 +114,9 @@ function renderHook<T>(hook: () => T): { result: { current: T } } {
   return { result };
 }
 
+import { useCatalogStore } from '../../ui/store/catalogStore';
+import { useAuthStore } from '../../auth/useAuthStore';
+
 describe('useOeeEventsRepository', () => {
   beforeEach(() => {
     mockUuidCounter = 0;
@@ -115,25 +126,40 @@ describe('useOeeEventsRepository', () => {
         oee_events: mockCollection,
       },
     };
+    (useCatalogStore as unknown as jest.Mock).mockImplementation((selector) => {
+      const state = {
+        selectedLine: 'store-line',
+        selectedMachine: 'store-machine',
+        selectedShift: 'store-shift',
+      };
+      return selector ? selector(state) : state;
+    });
+    (useAuthStore as unknown as jest.Mock).mockImplementation((selector) => {
+      const state = {
+        user: { id: 'store-user' },
+      };
+      return selector ? selector(state) : state;
+    });
   });
 
-  it('creates event with auto-generated fields', async () => {
+  it('creates event with fields from stores', async () => {
     const { result } = renderHook(() => useOeeEventsRepository());
 
     const event = await result.current.createEvent({
-      line_id: 'LINEA-1',
-      machine_id: 'CAVEMIL-03',
-      shift_id: 'shift-1',
       event_type: 'box_count',
       timestamp: 1234567890,
       quantity: 50,
-    });
+    } as any);
 
     expect(event.id).toBe('uuid-1');
     expect(event.updated_at).toBe(1234567890);
     expect(event.deleted).toBe(false);
     expect(event.event_type).toBe('box_count');
     expect(event.quantity).toBe(50);
+    expect(event.line_id).toBe('store-line');
+    expect(event.machine_id).toBe('store-machine');
+    expect(event.shift_id).toBe('store-shift');
+    expect((event as any).operator_id).toBe('store-user');
   });
 
   it('soft-deletes event on remove', async () => {
