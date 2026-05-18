@@ -23,7 +23,7 @@ if (dsn) {
  * Fallback UI cuando Sentry Error Boundary atrapa un crash.
  * Muestra un mensaje amigable y un botón para recargar la app.
  */
-export function SentryFallback({ error, resetError }: { error: Error; resetError: () => void }) {
+export function SentryFallback({ error, resetError }: { error: unknown; resetError: () => void }) {
   return (
     <View style={styles.container}>
       <Surface style={styles.card}>
@@ -31,7 +31,7 @@ export function SentryFallback({ error, resetError }: { error: Error; resetError
         <Text style={styles.subtitle}>
           El equipo ha sido notificado automáticamente. Por favor, recarga la aplicación.
         </Text>
-        {__DEV__ && (
+        {__DEV__ && error instanceof Error && (
           <Text style={styles.details}>{error.message}</Text>
         )}
         <Button mode="contained" onPress={resetError} style={styles.button}>

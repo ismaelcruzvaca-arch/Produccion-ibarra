@@ -37,7 +37,7 @@ export function SyncMonitor() {
   useEffect(() => {
     if (!replication) return;
 
-    const { assets, workOrders } = replication;
+    const { assets, workOrders, oeeEvents } = replication;
     const subs: Array<() => void> = [];
 
     // ── Subscribe to active$ (is replication currently running?) ──
@@ -60,6 +60,12 @@ export function SyncMonitor() {
     const subWorkOrdersActive = workOrders.active$.subscribe(handleActive);
     subs.push(() => subAssetsActive.unsubscribe(), () => subWorkOrdersActive.unsubscribe());
 
+    // OEE Events replication active$
+    if (oeeEvents) {
+      const subOeeActive = oeeEvents.active$.subscribe(handleActive);
+      subs.push(() => subOeeActive.unsubscribe());
+    }
+
     // ── Subscribe to error$ (did the last sync fail?) ──
     const handleError = (err: Error | undefined) => {
       if (err) {
@@ -71,6 +77,12 @@ export function SyncMonitor() {
     const subAssetsError = assets.error$.subscribe(handleError);
     const subWorkOrdersError = workOrders.error$.subscribe(handleError);
     subs.push(() => subAssetsError.unsubscribe(), () => subWorkOrdersError.unsubscribe());
+
+    // OEE Events replication error$
+    if (oeeEvents) {
+      const subOeeError = oeeEvents.error$.subscribe(handleError);
+      subs.push(() => subOeeError.unsubscribe());
+    }
 
     return () => {
       subs.forEach((unsub) => unsub());
