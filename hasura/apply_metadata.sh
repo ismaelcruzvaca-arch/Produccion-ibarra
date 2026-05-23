@@ -87,6 +87,11 @@ apply_metadata \
   "user_line_assignments: SELECT + INSERT + DELETE permissions (operator role)" \
   "$SCRIPT_DIR/permissions_user_line_assignments.json"
 
+# 3. telemetry_raw_staging + epicor_sync_queue: track tables + admin select permissions
+apply_metadata \
+  "telemetry_raw_staging + epicor_sync_queue: track tables + select permissions (admin role)" \
+  "$SCRIPT_DIR/telemetry_permissions.json"
+
 # --- Verify ---
 echo "=== Verification ==="
 echo "Checking applied permissions..."
@@ -107,6 +112,42 @@ VERIFY_RESPONSE=$(curl -s \
   }')
 
 echo "oee_events permissions: $VERIFY_RESPONSE"
+echo ""
+
+VERIFY_RESPONSE=$(curl -s \
+  -X POST "$ENDPOINT/v1/metadata" \
+  -H "Content-Type: application/json" \
+  -H "X-Hasura-Admin-Secret: $ADMIN_SECRET" \
+  -d '{
+    "type": "pg_get_table_permissions",
+    "args": {
+      "source": "default",
+      "table": {
+        "schema": "public",
+        "name": "telemetry_raw_staging"
+      }
+    }
+  }')
+
+echo "telemetry_raw_staging permissions: $VERIFY_RESPONSE"
+echo ""
+
+VERIFY_RESPONSE=$(curl -s \
+  -X POST "$ENDPOINT/v1/metadata" \
+  -H "Content-Type: application/json" \
+  -H "X-Hasura-Admin-Secret: $ADMIN_SECRET" \
+  -d '{
+    "type": "pg_get_table_permissions",
+    "args": {
+      "source": "default",
+      "table": {
+        "schema": "public",
+        "name": "epicor_sync_queue"
+      }
+    }
+  }')
+
+echo "epicor_sync_queue permissions: $VERIFY_RESPONSE"
 echo ""
 
 echo "=== Done. RLS metadata applied successfully. ==="

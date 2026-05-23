@@ -1,0 +1,73 @@
+{
+  "type": "bulk",
+  "args": [
+    {
+      "type": "pg_track_table",
+      "args": {
+        "source": "default",
+        "table": {
+          "schema": "public",
+          "name": "telemetry_raw_staging"
+        }
+      }
+    },
+    {
+      "type": "pg_track_table",
+      "args": {
+        "source": "default",
+        "table": {
+          "schema": "public",
+          "name": "epicor_sync_queue"
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "telemetry_raw_staging" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id",
+            "machine_id",
+            "payload",
+            "received_at",
+            "processed_at",
+            "status",
+            "error_info",
+            "gateway_msg_id"
+          ],
+          "filter": {},
+          "allow_aggregations": false
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "epicor_sync_queue" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id",
+            "source_table",
+            "source_row_id",
+            "status",
+            "payload",
+            "retry_count",
+            "max_retries",
+            "error_info",
+            "created_at",
+            "updated_at",
+            "started_at",
+            "completed_at"
+          ],
+          "filter": {},
+          "allow_aggregations": false
+        }
+      }
+    }
+  ]
+}
