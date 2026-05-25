@@ -14,7 +14,11 @@
  */
 
 import type { RxJsonSchema } from 'rxdb';
-import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent, ISyncError } from '../core/types';
+import type {
+  IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent, ISyncError,
+  IQualityInspection, IDefectLog, IWeightLog, IShiftSession, IOperator,
+  IProductWeightStandard,
+} from '../core/types';
 
 /**
  * Asset collection schema.
@@ -162,4 +166,147 @@ export const syncErrorSchema: RxJsonSchema<ISyncError> = {
     fecha:            { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
   },
   indexes: ['id_evento', 'fecha'],
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Phase 3: New Collections — Quality, Shifts, Operators
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Quality Inspection schema.
+ * Matches Hasura production schema: inspector_id, disposition, shift_type, data_source.
+ *
+ * Indexes: machine_id, shift_type for filtering.
+ */
+export const qualityInspectionSchema: RxJsonSchema<IQualityInspection> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'machine_id', 'inspector_id', 'shift_type', 'disposition', 'data_source', 'updated_at', 'device_id', 'is_deleted'],
+  properties: {
+    id:           { type: 'string', maxLength: 100 },
+    machine_id:   { type: 'string', maxLength: 100 },
+    inspector_id: { type: 'string', maxLength: 100 },
+    shift_type:   { type: 'string', enum: ['matutino', 'vespertino', 'nocturno'] },
+    disposition:  { type: 'string', enum: ['pending', 'liberado', 'rechazado', 'reproceso'] },
+    notes:        { type: 'string' },
+    data_source:  { type: 'string', enum: ['vision', 'manual', 'hybrid'] },
+    updated_at:   { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    device_id:    { type: 'string' },
+    is_deleted:   { type: 'boolean' },
+  },
+  indexes: ['machine_id', 'shift_type'],
+};
+
+/**
+ * Defect Log schema — 1:N child of quality_inspections.
+ * Free-text defect_type (no catalog lookup), with severity classification.
+ */
+export const defectLogSchema: RxJsonSchema<IDefectLog> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'inspection_id', 'severity', 'defect_type', 'defect_count', 'updated_at', 'device_id', 'is_deleted'],
+  properties: {
+    id:            { type: 'string', maxLength: 100 },
+    inspection_id: { type: 'string', maxLength: 100 },
+    severity:      { type: 'string', enum: ['critical', 'major', 'minor'] },
+    defect_type:   { type: 'string' },
+    defect_count:  { type: 'number' },
+    updated_at:    { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    device_id:     { type: 'string' },
+    is_deleted:    { type: 'boolean' },
+  },
+  indexes: ['inspection_id'],
+};
+
+/**
+ * Weight Log schema — 1:N child of quality_inspections.
+ * Individual weight measurement per inspection.
+ */
+export const weightLogSchema: RxJsonSchema<IWeightLog> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'inspection_id', 'measured_weight', 'updated_at', 'device_id', 'is_deleted'],
+  properties: {
+    id:             { type: 'string', maxLength: 100 },
+    inspection_id:  { type: 'string', maxLength: 100 },
+    measured_weight:{ type: 'number' },
+    updated_at:     { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    device_id:      { type: 'string' },
+    is_deleted:     { type: 'boolean' },
+  },
+  indexes: ['inspection_id'],
+};
+
+/**
+ * Shift Session schema.
+ * Matches Hasura: shift_type (string), started_at/ended_at, planned_boxes, product_code.
+ * No more line_id, supervisor_id, notes.
+ */
+export const shiftSessionSchema: RxJsonSchema<IShiftSession> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'machine_id', 'operator_id', 'shift_type', 'status', 'started_at', 'updated_at', 'device_id', 'is_deleted'],
+  properties: {
+    id:           { type: 'string', maxLength: 100 },
+    machine_id:   { type: 'string', maxLength: 100 },
+    operator_id:  { type: 'string', maxLength: 100 },
+    shift_type:   { type: 'string', enum: ['matutino', 'vespertino', 'nocturno'] },
+    status:       { type: 'string', enum: ['active', 'closed'] },
+    started_at:   { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    ended_at:     { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    planned_boxes:{ type: 'number' },
+    product_code: { type: 'string' },
+    updated_at:   { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    device_id:    { type: 'string' },
+    is_deleted:   { type: 'boolean' },
+  },
+  indexes: ['started_at', 'status'],
+};
+
+/**
+ * Operator schema.
+ * Matches Hasura: id IS the Epicor payroll code, full_name, is_active.
+ * No more employee_code, role.
+ */
+export const operatorSchema: RxJsonSchema<IOperator> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'full_name', 'is_active', 'updated_at', 'device_id', 'is_deleted'],
+  properties: {
+    id:         { type: 'string', maxLength: 100 },
+    full_name:  { type: 'string' },
+    is_active:  { type: 'boolean' },
+    updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    device_id:  { type: 'string' },
+    is_deleted: { type: 'boolean' },
+  },
+  indexes: [],
+};
+
+/**
+ * Product Weight Standard schema (offline FK validation cache).
+ * Primary key is `sku` (natural key from Epicor), not UUID.
+ * Pull-only from Hasura (reference data, never created on device).
+ */
+export const productWeightStandardSchema: RxJsonSchema<IProductWeightStandard> = {
+  version: 0,
+  primaryKey: 'sku',
+  type: 'object',
+  required: ['sku', 'name', 'lower_limit', 'upper_limit', 'requires_tare', 'updated_at', 'device_id', 'is_deleted'],
+  properties: {
+    sku:          { type: 'string', maxLength: 100 },
+    name:         { type: 'string' },
+    lower_limit:  { type: 'number' },
+    upper_limit:  { type: 'number' },
+    requires_tare:{ type: 'boolean' },
+    updated_at:   { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    device_id:    { type: 'string' },
+    is_deleted:   { type: 'boolean' },
+  },
+  indexes: ['sku'],
 };

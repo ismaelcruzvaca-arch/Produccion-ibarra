@@ -53,7 +53,7 @@ const createMockCollection = () => {
     })),
     find: jest.fn((query?: { selector?: Record<string, any> }) => ({
       exec: jest.fn(async () => {
-        const allDocs = Array.from(docs.values()).filter(d => !d.deleted);
+        const allDocs = Array.from(docs.values()).filter(d => !d.is_deleted);
         let results: Record<string, unknown>[] = [];
         if (query?.selector?.shift_id?.$eq) {
           results = allDocs.filter(d => d.shift_id === query.selector!.shift_id.$eq);
@@ -82,7 +82,7 @@ const createMockCollection = () => {
       }),
       $: {
         subscribe: jest.fn((cb: (docs: unknown[]) => void) => {
-          cb(Array.from(docs.values()).filter(d => !d.deleted));
+          cb(Array.from(docs.values()).filter(d => !d.is_deleted));
           return { unsubscribe: jest.fn() };
         }),
       },
@@ -153,7 +153,7 @@ describe('useOeeEventsRepository', () => {
 
     expect(event.id).toBe('uuid-1');
     expect(event.updated_at).toBe(1234567890);
-    expect(event.deleted).toBe(false);
+    expect(event.is_deleted).toBe(false);
     expect(event.event_type).toBe('box_count');
     expect(event.quantity).toBe(50);
     expect(event.line_id).toBe('store-line');
@@ -182,7 +182,7 @@ describe('useOeeEventsRepository', () => {
     // After soft delete, findById should still find it but with deleted=true
     // The mock's findOne doesn't filter by deleted, so it should return the doc
     expect(found).not.toBeNull();
-    expect((found as unknown as Record<string, unknown>).deleted).toBe(true);
+    expect((found as unknown as Record<string, unknown>).is_deleted).toBe(true);
   });
 
   it('finds events by shift', async () => {

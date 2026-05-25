@@ -31,12 +31,28 @@ import {
   fromGraphQLReport,
   toGraphQLOeeEvent,
   fromGraphQLOeeEvent,
+  toGraphQLQualityInspection,
+  fromGraphQLQualityInspection,
+  toGraphQLDefectLog,
+  fromGraphQLDefectLog,
+  toGraphQLWeightLog,
+  fromGraphQLWeightLog,
+  toGraphQLShiftSession,
+  fromGraphQLShiftSession,
+  fromGraphQLOperator,
+  fromGraphQLProductWeightStandard,
   type GraphQLAsset,
   type GraphQLWorkOrder,
   type GraphQLReport,
   type GraphQLOeeEvent,
+  type GraphQLQualityInspection,
+  type GraphQLDefectLog,
+  type GraphQLWeightLog,
+  type GraphQLShiftSession,
+  type GraphQLOperator,
+  type GraphQLProductWeightStandard,
 } from './dto';
-import type { IAsset, IWorkOrder, IReport, IOeeEvent } from '../core/types';
+import type { IAsset, IWorkOrder, IReport, IOeeEvent, IQualityInspection, IDefectLog, IWeightLog, IShiftSession, IOperator, IProductWeightStandard } from '../core/types';
 import type { ChocolateIbarraDatabase } from '../data/database';
 import { createResilientReplication, type ResilientState } from '../sync/resilientReplication';
 
@@ -320,6 +336,237 @@ function pushMutationBuilderOeeEvents(docs: any[]) {
   };
 }
 
+// ─── Pull Query Builder (Operators — pull-only) ───────────────────────────────
+
+function pullQueryBuilderOperators(checkpoint: GraphQLOperator | undefined, _limit: number) {
+  return {
+    query: `
+      query PullOperators($lastCheckpoint: timestamptz!) {
+        operators(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          full_name
+          is_active
+          updated_at
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ?? '1970-01-01T00:00:00Z' },
+  };
+}
+
+// ─── Pull Query Builder (Product Weight Standards — pull-only) ───────────────
+
+function pullQueryBuilderProductWeightStandards(checkpoint: GraphQLProductWeightStandard | undefined, _limit: number) {
+  return {
+    query: `
+      query PullProductWeightStandards($lastCheckpoint: timestamptz!) {
+        product_weight_standards(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          sku
+          name
+          lower_limit
+          upper_limit
+          requires_tare
+          updated_at
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ?? '1970-01-01T00:00:00Z' },
+  };
+}
+
+// ─── Pull Query Builder (Quality Inspections) ────────────────────────────────
+
+function pullQueryBuilderQualityInspections(checkpoint: GraphQLQualityInspection | undefined, _limit: number) {
+  return {
+    query: `
+      query PullQualityInspections($lastCheckpoint: timestamptz!) {
+        quality_inspections(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          machine_id
+          inspector_id
+          shift_type
+          disposition
+          notes
+          data_source
+          updated_at
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ?? '1970-01-01T00:00:00Z' },
+  };
+}
+
+// ─── Push Mutation Builder (Quality Inspections Upsert) ───────────────────────
+
+function pushMutationBuilderQualityInspections(docs: any[]) {
+  const objects = docs.map(toGraphQLQualityInspection);
+  return {
+    query: `
+      mutation UpsertInspections($objects: [quality_inspections_insert_input!]!) {
+        insert_quality_inspections(
+          objects: $objects,
+          on_conflict: {
+            constraint: quality_inspections_pkey,
+            update_columns: [
+              machine_id, inspector_id, shift_type, disposition,
+              notes, data_source, updated_at
+            ]
+          }
+        ) { affected_rows }
+      }
+    `,
+    variables: { objects },
+  };
+}
+
+// ─── Pull Query Builder (Defect Logs) ─────────────────────────────────────────
+
+function pullQueryBuilderDefectLogs(checkpoint: GraphQLDefectLog | undefined, _limit: number) {
+  return {
+    query: `
+      query PullDefectLogs($lastCheckpoint: timestamptz!) {
+        defect_logs(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          inspection_id
+          severity
+          defect_type
+          defect_count
+          updated_at
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ?? '1970-01-01T00:00:00Z' },
+  };
+}
+
+// ─── Push Mutation Builder (Defect Logs Upsert) ───────────────────────────────
+
+function pushMutationBuilderDefectLogs(docs: any[]) {
+  const objects = docs.map(toGraphQLDefectLog);
+  return {
+    query: `
+      mutation UpsertDefectLogs($objects: [defect_logs_insert_input!]!) {
+        insert_defect_logs(
+          objects: $objects,
+          on_conflict: {
+            constraint: defect_logs_pkey,
+            update_columns: [
+              inspection_id, severity, defect_type, defect_count, updated_at
+            ]
+          }
+        ) { affected_rows }
+      }
+    `,
+    variables: { objects },
+  };
+}
+
+// ─── Pull Query Builder (Weight Logs) ─────────────────────────────────────────
+
+function pullQueryBuilderWeightLogs(checkpoint: GraphQLWeightLog | undefined, _limit: number) {
+  return {
+    query: `
+      query PullWeightLogs($lastCheckpoint: timestamptz!) {
+        weight_logs(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          inspection_id
+          measured_weight
+          updated_at
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ?? '1970-01-01T00:00:00Z' },
+  };
+}
+
+// ─── Push Mutation Builder (Weight Logs Upsert) ───────────────────────────────
+
+function pushMutationBuilderWeightLogs(docs: any[]) {
+  const objects = docs.map(toGraphQLWeightLog);
+  return {
+    query: `
+      mutation UpsertWeightLogs($objects: [weight_logs_insert_input!]!) {
+        insert_weight_logs(
+          objects: $objects,
+          on_conflict: {
+            constraint: weight_logs_pkey,
+            update_columns: [
+              inspection_id, measured_weight, updated_at
+            ]
+          }
+        ) { affected_rows }
+      }
+    `,
+    variables: { objects },
+  };
+}
+
+// ─── Pull Query Builder (Shift Sessions) ──────────────────────────────────────
+
+function pullQueryBuilderShiftSessions(checkpoint: GraphQLShiftSession | undefined, _limit: number) {
+  return {
+    query: `
+      query PullShiftSessions($lastCheckpoint: timestamptz!) {
+        shift_sessions(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          machine_id
+          operator_id
+          shift_type
+          status
+          started_at
+          ended_at
+          planned_boxes
+          product_code
+          updated_at
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ?? '1970-01-01T00:00:00Z' },
+  };
+}
+
+// ─── Push Mutation Builder (Shift Sessions Upsert) ────────────────────────────
+
+function pushMutationBuilderShiftSessions(docs: any[]) {
+  const objects = docs.map(toGraphQLShiftSession);
+  return {
+    query: `
+      mutation UpsertShiftSessions($objects: [shift_sessions_insert_input!]!) {
+        insert_shift_sessions(
+          objects: $objects,
+          on_conflict: {
+            constraint: shift_sessions_pkey,
+            update_columns: [
+              machine_id, operator_id, shift_type, status,
+              started_at, ended_at, planned_boxes, product_code,
+              updated_at
+            ]
+          }
+        ) { affected_rows }
+      }
+    `,
+    variables: { objects },
+  };
+}
+
 // ─── Replication Start Function ────────────────────────────────────────────────
 
 /**
@@ -346,6 +593,12 @@ export interface ReplicationStates {
   workOrders: RxGraphQLReplicationState<IWorkOrder, GraphQLWorkOrder>;
   reports: RxGraphQLReplicationState<IReport, GraphQLReport>;
   oeeEvents: RxGraphQLReplicationState<IOeeEvent, GraphQLOeeEvent>;
+  qualityInspections: RxGraphQLReplicationState<IQualityInspection, GraphQLQualityInspection>;
+  defectLogs: RxGraphQLReplicationState<IDefectLog, GraphQLDefectLog>;
+  weightLogs: RxGraphQLReplicationState<IWeightLog, GraphQLWeightLog>;
+  shiftSessions: RxGraphQLReplicationState<IShiftSession, GraphQLShiftSession>;
+  operators: RxGraphQLReplicationState<IOperator, GraphQLOperator>;
+  productWeightStandards: RxGraphQLReplicationState<IProductWeightStandard, GraphQLProductWeightStandard>;
   /** Resilient replication controller for OEE events (backoff, circuit breaker, DLQ). */
   resilientOeeController?: { cleanup: () => void; getState: () => ResilientState };
 }
@@ -456,8 +709,155 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
     replicationOeeEvents = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
   }
 
-  // Asset Types replication would follow the same pattern.
-  // TODO: Add asset_types replication once Nhost tables are created.
+  // ── Operators replication (pull-only) ──────────────────────────────────────
+  let replicationOperators: RxGraphQLReplicationState<IOperator, GraphQLOperator>;
+  try {
+    replicationOperators = replicateGraphQL<IOperator, GraphQLOperator>({
+      replicationIdentifier: 'operators-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
+      collection: db.collections.operators,
+      pull: {
+        queryBuilder: pullQueryBuilderOperators,
+        modifier: (doc: GraphQLOperator) => ({ ...fromGraphQLOperator(doc), _deleted: false }),
+      },
+      live: false,
+      retryTime: 5000,
+      autoStart: true,
+    });
+  } catch (err) {
+    console.warn('Operators replication failed to initialise:', err);
+    replicationOperators = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
 
-  return { assets: replicationAssets, workOrders: replicationWorkOrders, reports: replicationReports, oeeEvents: replicationOeeEvents, resilientOeeController };
+  // ── Product Weight Standards replication (pull-only) ──────────────────────
+  let replicationProductWeightStandards: RxGraphQLReplicationState<IProductWeightStandard, GraphQLProductWeightStandard>;
+  try {
+    replicationProductWeightStandards = replicateGraphQL<IProductWeightStandard, GraphQLProductWeightStandard>({
+      replicationIdentifier: 'product-weight-standards-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
+      collection: db.collections.product_weight_standards,
+      pull: {
+        queryBuilder: pullQueryBuilderProductWeightStandards,
+        modifier: (doc: GraphQLProductWeightStandard) => ({ ...fromGraphQLProductWeightStandard(doc), _deleted: false }),
+      },
+      live: false,
+      retryTime: 5000,
+      autoStart: true,
+    });
+  } catch (err) {
+    console.warn('ProductWeightStandards replication failed to initialise:', err);
+    replicationProductWeightStandards = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
+
+  // ── Quality Inspections replication ───────────────────────────────────────
+  let replicationQualityInspections: RxGraphQLReplicationState<IQualityInspection, GraphQLQualityInspection>;
+  try {
+    replicationQualityInspections = replicateGraphQL<IQualityInspection, GraphQLQualityInspection>({
+      replicationIdentifier: 'quality-inspections-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
+      collection: db.collections.quality_inspections,
+      pull: {
+        queryBuilder: pullQueryBuilderQualityInspections,
+        modifier: (doc: GraphQLQualityInspection) => ({ ...fromGraphQLQualityInspection(doc), _deleted: false }),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderQualityInspections,
+      },
+      live: false,
+      retryTime: 5000,
+      autoStart: true,
+    });
+  } catch (err) {
+    console.warn('QualityInspections replication failed to initialise:', err);
+    replicationQualityInspections = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
+
+  // ── Defect Logs replication ──────────────────────────────────────────────
+  let replicationDefectLogs: RxGraphQLReplicationState<IDefectLog, GraphQLDefectLog>;
+  try {
+    replicationDefectLogs = replicateGraphQL<IDefectLog, GraphQLDefectLog>({
+      replicationIdentifier: 'defect-logs-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
+      collection: db.collections.defect_logs,
+      pull: {
+        queryBuilder: pullQueryBuilderDefectLogs,
+        modifier: (doc: GraphQLDefectLog) => ({ ...fromGraphQLDefectLog(doc), _deleted: false }),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderDefectLogs,
+      },
+      live: false,
+      retryTime: 5000,
+      autoStart: true,
+    });
+  } catch (err) {
+    console.warn('DefectLogs replication failed to initialise:', err);
+    replicationDefectLogs = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
+
+  // ── Weight Logs replication ──────────────────────────────────────────────
+  let replicationWeightLogs: RxGraphQLReplicationState<IWeightLog, GraphQLWeightLog>;
+  try {
+    replicationWeightLogs = replicateGraphQL<IWeightLog, GraphQLWeightLog>({
+      replicationIdentifier: 'weight-logs-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
+      collection: db.collections.weight_logs,
+      pull: {
+        queryBuilder: pullQueryBuilderWeightLogs,
+        modifier: (doc: GraphQLWeightLog) => ({ ...fromGraphQLWeightLog(doc), _deleted: false }),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderWeightLogs,
+      },
+      live: false,
+      retryTime: 5000,
+      autoStart: true,
+    });
+  } catch (err) {
+    console.warn('WeightLogs replication failed to initialise:', err);
+    replicationWeightLogs = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
+
+  // ── Shift Sessions replication ───────────────────────────────────────────
+  let replicationShiftSessions: RxGraphQLReplicationState<IShiftSession, GraphQLShiftSession>;
+  try {
+    replicationShiftSessions = replicateGraphQL<IShiftSession, GraphQLShiftSession>({
+      replicationIdentifier: 'shift-sessions-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
+      collection: db.collections.shift_sessions,
+      pull: {
+        queryBuilder: pullQueryBuilderShiftSessions,
+        modifier: (doc: GraphQLShiftSession) => ({ ...fromGraphQLShiftSession(doc), _deleted: false }),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderShiftSessions,
+      },
+      live: false,
+      retryTime: 5000,
+      autoStart: true,
+    });
+  } catch (err) {
+    console.warn('ShiftSessions replication failed to initialise:', err);
+    replicationShiftSessions = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
+
+  return {
+    assets: replicationAssets,
+    workOrders: replicationWorkOrders,
+    reports: replicationReports,
+    oeeEvents: replicationOeeEvents,
+    qualityInspections: replicationQualityInspections,
+    defectLogs: replicationDefectLogs,
+    weightLogs: replicationWeightLogs,
+    shiftSessions: replicationShiftSessions,
+    operators: replicationOperators,
+    productWeightStandards: replicationProductWeightStandards,
+    resilientOeeController,
+  };
 }

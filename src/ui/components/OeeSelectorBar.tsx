@@ -5,7 +5,7 @@ import { LineSelector } from './LineSelector';
 import { MachineSelector } from './MachineSelector';
 import { ShiftSelector } from './ShiftSelector';
 import { ProductSelector } from './ProductSelector';
-import { useOeeValidation } from '../../hooks/useOeeValidation';
+import { useOeeValidation } from '../hooks/useOeeValidation';
 
 export function OeeSelectorBar() {
   const { isValid, message } = useOeeValidation();

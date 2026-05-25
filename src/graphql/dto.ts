@@ -17,7 +17,11 @@
  * by network-level naming conventions.
  */
 
-import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent } from '../core/types';
+import type {
+  IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent,
+  IQualityInspection, IDefectLog, IWeightLog, IShiftSession, IOperator,
+  IProductWeightStandard,
+} from '../core/types';
 
 // ─── Asset Mappers ─────────────────────────────────────────────────────────────
 
@@ -284,6 +288,234 @@ export function fromGraphQLOeeEvent(gql: GraphQLOeeEvent): IOeeEvent {
     is_retroactive: gql.is_retroactive,
     related_event_id: gql.related_event_id,
     device_id: gql.device_id ?? '',
-    is_deleted: gql.deleted,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Phase 3: Reconciled Collections — Quality, Shifts, Operators, Weight Standards
+// ═══════════════════════════════════════════════════════════════════════════════
+// TIMESTAMPTZ handling: Hasura sends ISO 8601 strings, DTOs convert to epoch ms for RxDB.
+// Push converts back: epoch ms → ISO 8601 string via .toISOString()
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Quality Inspection Mappers ──────────────────────────────────────────────────
+
+export interface GraphQLQualityInspection {
+  id: string;
+  machine_id: string;
+  inspector_id: string;
+  shift_type: string;
+  disposition: string;
+  notes?: string;
+  data_source: string;
+  updated_at: string; // TIMESTAMPTZ → ISO 8601 string from Hasura
+  // NOTE: device_id, is_deleted son RxDB-only — no existen en Hasura
+}
+
+export function toGraphQLQualityInspection(qi: IQualityInspection): Record<string, unknown> {
+  return {
+    id: qi.id,
+    machine_id: qi.machine_id,
+    inspector_id: qi.inspector_id,
+    shift_type: qi.shift_type,
+    disposition: qi.disposition,
+    notes: qi.notes,
+    data_source: qi.data_source,
+    updated_at: new Date(qi.updated_at).toISOString(),
+    // device_id e is_deleted omitidos — no existen en Hasura
+  };
+}
+
+export function fromGraphQLQualityInspection(gql: GraphQLQualityInspection): IQualityInspection {
+  return {
+    id: gql.id,
+    machine_id: gql.machine_id,
+    inspector_id: gql.inspector_id,
+    shift_type: gql.shift_type as IQualityInspection['shift_type'],
+    disposition: gql.disposition as IQualityInspection['disposition'],
+    notes: gql.notes,
+    data_source: gql.data_source as IQualityInspection['data_source'],
+    updated_at: new Date(gql.updated_at).getTime(),
+    device_id: '', // RxDB-only — no `device_id` en Hasura
+    is_deleted: false, // RxDB-only — no `deleted` en Hasura
+  };
+}
+
+// ─── Defect Log Mappers ──────────────────────────────────────────────────────────
+
+export interface GraphQLDefectLog {
+  id: string;
+  inspection_id: string;
+  severity: string;
+  defect_type: string;
+  defect_count: number;
+  updated_at: string; // TIMESTAMPTZ → ISO 8601
+  // NOTE: No `deleted` column in Hasura
+}
+
+export function toGraphQLDefectLog(dl: IDefectLog): Record<string, unknown> {
+  return {
+    id: dl.id,
+    inspection_id: dl.inspection_id,
+    severity: dl.severity,
+    defect_type: dl.defect_type,
+    defect_count: dl.defect_count,
+    updated_at: new Date(dl.updated_at).toISOString(),
+  };
+}
+
+export function fromGraphQLDefectLog(gql: GraphQLDefectLog): IDefectLog {
+  return {
+    id: gql.id,
+    inspection_id: gql.inspection_id,
+    severity: gql.severity as IDefectLog['severity'],
+    defect_type: gql.defect_type,
+    defect_count: gql.defect_count,
+    updated_at: new Date(gql.updated_at).getTime(),
+    device_id: '', // RxDB-only — not in Hasura
+    is_deleted: false, // RxDB-only — not in Hasura
+  };
+}
+
+// ─── Weight Log Mappers ──────────────────────────────────────────────────────────
+
+export interface GraphQLWeightLog {
+  id: string;
+  inspection_id: string;
+  measured_weight: number;
+  updated_at: string; // TIMESTAMPTZ → ISO 8601 string from Hasura
+  // NOTE: No `deleted` column in Hasura
+}
+
+export function toGraphQLWeightLog(wl: IWeightLog): Record<string, unknown> {
+  return {
+    id: wl.id,
+    inspection_id: wl.inspection_id,
+    measured_weight: wl.measured_weight,
+    updated_at: new Date(wl.updated_at).toISOString(),
+  };
+}
+
+export function fromGraphQLWeightLog(gql: GraphQLWeightLog): IWeightLog {
+  return {
+    id: gql.id,
+    inspection_id: gql.inspection_id,
+    measured_weight: gql.measured_weight,
+    updated_at: new Date(gql.updated_at).getTime(),
+    device_id: '', // RxDB-only — not in Hasura
+    is_deleted: false, // RxDB-only — not in Hasura
+  };
+}
+
+// ─── Shift Session Mappers ───────────────────────────────────────────────────────
+
+export interface GraphQLShiftSession {
+  id: string;
+  machine_id: string;
+  operator_id: string;
+  shift_type: string;
+  status: string;
+  started_at: string; // TIMESTAMPTZ → ISO 8601 string from Hasura
+  ended_at?: string; // TIMESTAMPTZ → ISO 8601 string from Hasura
+  planned_boxes?: number;
+  product_code?: string;
+  updated_at: string; // TIMESTAMPTZ → ISO 8601 string from Hasura
+  // NOTE: No `deleted` column in Hasura — is_deleted is RxDB-only
+}
+
+export function toGraphQLShiftSession(ss: IShiftSession): Record<string, unknown> {
+  return {
+    id: ss.id,
+    machine_id: ss.machine_id,
+    operator_id: ss.operator_id,
+    shift_type: ss.shift_type,
+    status: ss.status,
+    started_at: new Date(ss.started_at).toISOString(),
+    ended_at: ss.ended_at ? new Date(ss.ended_at).toISOString() : undefined,
+    planned_boxes: ss.planned_boxes,
+    product_code: ss.product_code,
+    updated_at: new Date(ss.updated_at).toISOString(),
+    // device_id e is_deleted omitidos — no existen en Hasura
+  };
+}
+
+export function fromGraphQLShiftSession(gql: GraphQLShiftSession): IShiftSession {
+  return {
+    id: gql.id,
+    machine_id: gql.machine_id,
+    operator_id: gql.operator_id,
+    shift_type: gql.shift_type as IShiftSession['shift_type'],
+    status: gql.status as IShiftSession['status'],
+    started_at: new Date(gql.started_at).getTime(),
+    ended_at: gql.ended_at ? new Date(gql.ended_at).getTime() : undefined,
+    planned_boxes: gql.planned_boxes,
+    product_code: gql.product_code,
+    updated_at: new Date(gql.updated_at).getTime(),
+    device_id: '', // RxDB-only — not in Hasura
+    is_deleted: false,
+  };
+}
+
+// ─── Operator Mappers ────────────────────────────────────────────────────────────
+
+export interface GraphQLOperator {
+  id: string;
+  full_name: string;
+  is_active: boolean;
+  updated_at: string; // TIMESTAMPTZ → ISO 8601 string from Hasura
+}
+
+export function toGraphQLOperator(op: IOperator): Record<string, unknown> {
+  return {
+    id: op.id,
+    full_name: op.full_name,
+    is_active: op.is_active,
+    updated_at: new Date(op.updated_at).toISOString(),
+  };
+}
+
+export function fromGraphQLOperator(gql: GraphQLOperator): IOperator {
+  return {
+    id: gql.id,
+    full_name: gql.full_name,
+    is_active: gql.is_active,
+    updated_at: new Date(gql.updated_at).getTime(),
+    device_id: '',
+    is_deleted: false,
+  };
+}
+
+// ─── Product Weight Standard Mappers ─────────────────────────────────────────────
+
+export interface GraphQLProductWeightStandard {
+  sku: string;
+  name: string;
+  lower_limit: number;
+  upper_limit: number;
+  requires_tare: boolean;
+  updated_at: string; // TIMESTAMPTZ → ISO 8601 string from Hasura
+}
+
+export function toGraphQLProductWeightStandard(pws: IProductWeightStandard): Record<string, unknown> {
+  return {
+    sku: pws.sku,
+    name: pws.name,
+    lower_limit: pws.lower_limit,
+    upper_limit: pws.upper_limit,
+    requires_tare: pws.requires_tare,
+    updated_at: new Date(pws.updated_at).toISOString(),
+  };
+}
+
+export function fromGraphQLProductWeightStandard(gql: GraphQLProductWeightStandard): IProductWeightStandard {
+  return {
+    sku: gql.sku,
+    name: gql.name,
+    lower_limit: gql.lower_limit,
+    upper_limit: gql.upper_limit,
+    requires_tare: gql.requires_tare,
+    updated_at: new Date(gql.updated_at).getTime(),
+    device_id: '',
+    is_deleted: false,
   };
 }

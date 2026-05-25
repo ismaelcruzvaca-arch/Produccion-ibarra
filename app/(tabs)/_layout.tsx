@@ -1,16 +1,7 @@
 /**
- * Tab layout for the main authenticated app sections.
- *
- * Routes:
- * - Inicio      → Production dashboard (OEE overview)
- * - OEE         → OEE capture and metrics
- * - Supervisor  → DLQ error management (visible only to supervisor/admin roles)
- * - Ajustes     → Application settings
- *
- * Optimised for industrial tablets:
- * - tabBar height 64 dp
- * - label font size 12 dp
- * - touch targets ≥48 dp via tabBar height
+ * Tab layout — Inicio, OEE, Calidad, Turnos, Alertas (sup.), Ajustes (sup.).
+ * Operators see 4 tabs; supervisors/admins see all 6.
+ * Tab bar: 64 dp height, 12 dp label, ≥48 dp touch targets.
  */
 
 import React from 'react';
@@ -79,6 +70,24 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="quality"
+        options={{
+          title: 'Calidad',
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+            <MaterialCommunityIcons name="quality" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="shifts"
+        options={{
+          title: 'Turnos',
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+            <MaterialCommunityIcons name="calendar-clock" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="supervisor"
         options={{
           title: 'Alertas',
@@ -88,7 +97,6 @@ export default function TabLayout() {
               {isSupervisor && <AlertBadge count={dlqCount} />}
             </View>
           ),
-          // Wave 8: Only visible to supervisor/admin roles
           tabBarButton: isSupervisor ? undefined : () => null,
         }}
       />
@@ -99,6 +107,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <MaterialCommunityIcons name="cog" color={color} size={size} />
           ),
+          tabBarButton: isSupervisor ? undefined : () => null,
         }}
       />
     </Tabs>

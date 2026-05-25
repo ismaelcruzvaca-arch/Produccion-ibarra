@@ -92,6 +92,23 @@ apply_metadata \
   "telemetry_raw_staging + epicor_sync_queue: track tables + select permissions (admin role)" \
   "$SCRIPT_DIR/telemetry_permissions.json"
 
+# 4. quality tables: product_weight_standards, quality_inspections, defect_logs, weight_logs
+#    SELECT for operator/supervisor/admin | INSERT for operator/supervisor/admin | UPDATE for operator/supervisor/admin
+apply_metadata \
+  "quality tables: product_weight_standards, quality_inspections, defect_logs, weight_logs — full CRUD permissions (operator/supervisor/admin roles)" \
+  "$SCRIPT_DIR/quality_permissions.json"
+
+# 5. operator + shift_sessions: SELECT + INSERT + UPDATE + DELETE permissions
+#    Updated to include planned_boxes and product_code columns from migration 013
+apply_metadata \
+  "operator + shift_sessions: full CRUD permissions with planned_boxes + product_code (operator/supervisor/admin roles)" \
+  "$SCRIPT_DIR/operator_sessions_permissions.json"
+
+# 6. Track 5 SQL views + re-track tables with new columns (planned_boxes, product_code, data_source)
+apply_metadata \
+  "Views analíticas: track 5 SQL views + SELECT permissions for supervisor/admin roles" \
+  "$SCRIPT_DIR/track_views_and_columns.json"
+
 # --- Verify ---
 echo "=== Verification ==="
 echo "Checking applied permissions..."
@@ -150,4 +167,9 @@ VERIFY_RESPONSE=$(curl -s \
 echo "epicor_sync_queue permissions: $VERIFY_RESPONSE"
 echo ""
 
+echo "=== Post-Apply: Validar Triggers Epicor Outbox ==="
+echo ""
+echo "Ejecutar contra Postgres:"
+echo "  psql -U <user> -d <database> -f $PROJECT_ROOT/migrations/verify_019_outbox_triggers.sql"
+echo ""
 echo "=== Done. RLS metadata applied successfully. ==="

@@ -247,3 +247,151 @@ export interface ICatalogStopReason {
   sort_order: number;
   is_active: boolean;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Phase 3: New Collections — Quality, Shifts, Operators
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Quality Inspections ─────────────────────────────────────────────────────────
+
+export type DispositionType = 'liberado' | 'rechazado' | 'reproceso';
+export type ShiftType = 'matutino' | 'vespertino' | 'nocturno';
+export type DataSourceType = 'vision' | 'manual' | 'hybrid';
+
+/**
+ * Quality Inspection — atomic QC check event.
+ *
+ * Fields now match Hasura production schema:
+ * - inspector_id instead of operator_id
+ * - disposition (liberado/rechazado/reproceso) instead of result (pass/fail)
+ * - shift_type (matutino/vespertino/nocturno) instead of shift_id FK
+ * - data_source (vision/manual/hybrid) for audit trail
+ * - No more inspection_type, value, defect_code — those are now in defect_logs/weight_logs
+ *
+ * Uses `updated_at` (not `client_updated_at`) per the new data contract.
+ */
+export interface IQualityInspection {
+  id: string;
+  machine_id: string;
+  inspector_id: string;
+  shift_type: ShiftType;
+  disposition: DispositionType;
+  notes?: string;
+  data_source: DataSourceType;
+  updated_at: number;
+  device_id: string;
+  is_deleted: boolean;
+}
+
+export type RxQualityInspection = RxDocument<IQualityInspection>;
+
+// ─── Defect Logs (1:N child of quality_inspections) ─────────────────────────────
+
+/**
+ * Defect Log — individual defect entry linked to a quality inspection.
+ * Free-text defect_type (no catalog lookup), with severity classification.
+ *
+ * Uses `updated_at` (not `client_updated_at`) per the new data contract.
+ */
+export interface IDefectLog {
+  id: string;
+  inspection_id: string;
+  severity: 'critical' | 'major' | 'minor';
+  defect_type: string;
+  defect_count: number;
+  updated_at: number;
+  device_id: string;
+  is_deleted: boolean;
+}
+
+export type RxDefectLog = RxDocument<IDefectLog>;
+
+// ─── Weight Logs (1:N child of quality_inspections) ─────────────────────────────
+
+/**
+ * Weight Log — individual weight measurement linked to a quality inspection.
+ *
+ * Uses `updated_at` (not `client_updated_at`) per the new data contract.
+ */
+export interface IWeightLog {
+  id: string;
+  inspection_id: string;
+  measured_weight: number;
+  updated_at: number;
+  device_id: string;
+  is_deleted: boolean;
+}
+
+export type RxWeightLog = RxDocument<IWeightLog>;
+
+// ─── Shift Sessions ──────────────────────────────────────────────────────────────
+
+/**
+ * Shift Session — tracks the lifecycle of a production shift.
+ *
+ * Fields now match Hasura production schema:
+ * - shift_type (string) instead of shift_id FK
+ * - started_at/ended_at instead of start_timestamp/end_timestamp
+ * - planned_boxes + product_code from Epicor (migration 013)
+ * - No more line_id, supervisor_id, notes
+ *
+ * Uses `updated_at` (not `client_updated_at`) per the new data contract.
+ */
+export interface IShiftSession {
+  id: string;
+  machine_id: string;
+  operator_id: string;
+  shift_type: ShiftType;
+  status: 'active' | 'closed';
+  started_at: number;
+  ended_at?: number;
+  planned_boxes?: number;
+  product_code?: string;
+  updated_at: number;
+  device_id: string;
+  is_deleted: boolean;
+}
+
+export type RxShiftSession = RxDocument<IShiftSession>;
+
+// ─── Operators ───────────────────────────────────────────────────────────────────
+
+/**
+ * Operator — reference table for production operators.
+ * Uses `is_active` for soft deactivation (catalog pattern).
+ * Fields match Hasura: id IS the Epicor payroll code, no more employee_code or role.
+ */
+export interface IOperator {
+  id: string;
+  full_name: string;
+  is_active: boolean;
+  updated_at: number;
+  device_id: string;
+  is_deleted: boolean;
+}
+
+export type RxOperator = RxDocument<IOperator>;
+
+// ─── Product Weight Standards (Offline FK validation) ───────────────────────────
+
+/**
+ * Product Weight Standard — local cache for validation of quality weight checks.
+ * Operators weigh finished product and the system validates against the standard.
+ * Stored locally so validation works offline.
+ *
+ * Primary key is `sku` (natural key from Epicor), not UUID.
+ *
+ * Uses `updated_at` (not `client_updated_at`) per the new data contract.
+ */
+export interface IProductWeightStandard {
+  sku: string;
+  name: string;
+  lower_limit: number;
+  upper_limit: number;
+  requires_tare: boolean;
+  updated_at: number;
+  device_id: string;
+  is_deleted: boolean;
+}
+
+export type RxProductWeightStandard = RxDocument<IProductWeightStandard>;

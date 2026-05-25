@@ -139,7 +139,7 @@
         "table": { "schema": "public", "name": "shift_sessions" },
         "role": "operator",
         "permission": {
-          "columns": ["id", "machine_id", "operator_id", "shift_type", "status", "started_at", "ended_at"],
+          "columns": ["id", "machine_id", "operator_id", "shift_type", "status", "started_at", "ended_at", "planned_boxes", "product_code"],
           "filter": {
             "_or": [
               { "operator_id": { "_eq": "X-Hasura-User-Id" } },
@@ -157,7 +157,7 @@
         "table": { "schema": "public", "name": "shift_sessions" },
         "role": "supervisor",
         "permission": {
-          "columns": ["id", "machine_id", "operator_id", "shift_type", "status", "started_at", "ended_at"],
+          "columns": ["id", "machine_id", "operator_id", "shift_type", "status", "started_at", "ended_at", "planned_boxes", "product_code"],
           "filter": {},
           "allow_aggregations": true
         }
@@ -170,7 +170,7 @@
         "table": { "schema": "public", "name": "shift_sessions" },
         "role": "admin",
         "permission": {
-          "columns": ["id", "machine_id", "operator_id", "shift_type", "status", "started_at", "ended_at"],
+          "columns": ["id", "machine_id", "operator_id", "shift_type", "status", "started_at", "ended_at", "planned_boxes", "product_code"],
           "filter": {},
           "allow_aggregations": true
         }
@@ -183,7 +183,7 @@
         "table": { "schema": "public", "name": "shift_sessions" },
         "role": "operator",
         "permission": {
-          "columns": ["machine_id", "operator_id", "shift_type"],
+          "columns": ["machine_id", "operator_id", "shift_type", "planned_boxes", "product_code"],
           "check": {
             "operator_id": { "_eq": "X-Hasura-User-Id" }
           }
@@ -197,7 +197,7 @@
         "table": { "schema": "public", "name": "shift_sessions" },
         "role": "supervisor",
         "permission": {
-          "columns": ["machine_id", "operator_id", "shift_type"],
+          "columns": ["machine_id", "operator_id", "shift_type", "planned_boxes", "product_code"],
           "check": {}
         }
       }
@@ -209,7 +209,7 @@
         "table": { "schema": "public", "name": "shift_sessions" },
         "role": "admin",
         "permission": {
-          "columns": ["machine_id", "operator_id", "shift_type"],
+          "columns": ["machine_id", "operator_id", "shift_type", "planned_boxes", "product_code"],
           "check": {}
         }
       }
@@ -241,7 +241,7 @@
         "table": { "schema": "public", "name": "shift_sessions" },
         "role": "supervisor",
         "permission": {
-          "columns": ["status", "ended_at"],
+          "columns": ["status", "ended_at", "planned_boxes", "product_code"],
           "filter": {},
           "check": {}
         }
@@ -254,7 +254,7 @@
         "table": { "schema": "public", "name": "shift_sessions" },
         "role": "admin",
         "permission": {
-          "columns": ["status", "ended_at"],
+          "columns": ["status", "ended_at", "planned_boxes", "product_code"],
           "filter": {},
           "check": {}
         }

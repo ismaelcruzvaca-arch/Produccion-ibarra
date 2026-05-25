@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react-native';
-import { useOeeValidation } from '../useOeeValidation';
+import { useOeeValidation } from '../../ui/hooks/useOeeValidation';
 import { useCatalogStore } from '../../ui/store/catalogStore';
 
 jest.mock('../../graphql/nhostClient', () => ({
@@ -21,31 +21,22 @@ describe('useOeeValidation', () => {
     jest.clearAllMocks();
   });
 
-  it('should return invalid if line is not selected', () => {
+  it('should return invalid if no selections made', () => {
     const state = { selectedLine: null, selectedMachine: null, selectedShift: null };
     (useCatalogStore as unknown as jest.Mock).mockImplementation((selector) => selector(state));
 
     const { result } = renderHook(() => useOeeValidation());
     expect(result.current.isValid).toBe(false);
-    expect(result.current.message).toBe('Debe seleccionar una Línea');
+    expect(result.current.message).toBe('Seleccione línea, máquina y turno para iniciar');
   });
 
-  it('should return invalid if machine is not selected', () => {
-    const state = { selectedLine: 'line-1', selectedMachine: null, selectedShift: null };
-    (useCatalogStore as unknown as jest.Mock).mockImplementation((selector) => selector(state));
-
-    const { result } = renderHook(() => useOeeValidation());
-    expect(result.current.isValid).toBe(false);
-    expect(result.current.message).toBe('Debe seleccionar una Máquina');
-  });
-
-  it('should return invalid if shift is not selected', () => {
+  it('should return invalid if any selection is missing', () => {
     const state = { selectedLine: 'line-1', selectedMachine: 'machine-1', selectedShift: null };
     (useCatalogStore as unknown as jest.Mock).mockImplementation((selector) => selector(state));
 
     const { result } = renderHook(() => useOeeValidation());
     expect(result.current.isValid).toBe(false);
-    expect(result.current.message).toBe('Debe seleccionar un Turno');
+    expect(result.current.message).toBe('Seleccione línea, máquina y turno para iniciar');
   });
 
   it('should return valid if all fields are selected', () => {

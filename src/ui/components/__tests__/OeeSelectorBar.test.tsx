@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { OeeSelectorBar } from '../OeeSelectorBar';
-import { useOeeValidation } from '../../../hooks/useOeeValidation';
+import { useOeeValidation } from '../../hooks/useOeeValidation';
 
 if (typeof setImmediate === 'undefined') {
   (global as any).setImmediate = (fn: any, ...args: any[]) => setTimeout(fn, 0, ...args);
@@ -23,7 +23,7 @@ jest.mock('../MachineSelector', () => ({ MachineSelector: () => <></> }));
 jest.mock('../ShiftSelector', () => ({ ShiftSelector: () => <></> }));
 
 // Mock validation hook
-jest.mock('../../../hooks/useOeeValidation');
+jest.mock('../../hooks/useOeeValidation');
 
 describe('OeeSelectorBar', () => {
   it('should render warning message if validation fails', () => {

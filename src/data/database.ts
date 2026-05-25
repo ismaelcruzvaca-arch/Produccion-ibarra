@@ -18,8 +18,11 @@ import { createRxDatabase, addRxPlugin, type RxDatabase, type RxCollection } fro
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode';
 
-import { assetSchema, assetTypeSchema, workOrderSchema, reportSchema, oeeEventSchema, syncErrorSchema } from './schemas';
-import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent, ISyncError } from '../core/types';
+import {
+  assetSchema, assetTypeSchema, workOrderSchema, reportSchema, oeeEventSchema, syncErrorSchema,
+  qualityInspectionSchema, defectLogSchema, weightLogSchema, shiftSessionSchema, operatorSchema, productWeightStandardSchema,
+} from './schemas';
+import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent, ISyncError, IQualityInspection, IDefectLog, IWeightLog, IShiftSession, IOperator, IProductWeightStandard } from '../core/types';
 
 // ─── Database Collections Type ──────────────────────────────────────────────────
 
@@ -31,6 +34,12 @@ export type ChocolateIbarraDatabase = RxDatabase<{
   reports: RxCollection<IReport>;
   oee_events: RxCollection<IOeeEvent>;
   sync_errors: RxCollection<ISyncError>;
+  quality_inspections: RxCollection<IQualityInspection>;
+  defect_logs: RxCollection<IDefectLog>;
+  weight_logs: RxCollection<IWeightLog>;
+  shift_sessions: RxCollection<IShiftSession>;
+  operators: RxCollection<IOperator>;
+  product_weight_standards: RxCollection<IProductWeightStandard>;
 }>;
 
 // ─── Database Singleton ────────────────────────────────────────────────────────
@@ -72,6 +81,12 @@ export async function getDatabase(): Promise<ChocolateIbarraDatabase> {
         reports: { schema: reportSchema },
         oee_events: { schema: oeeEventSchema },
         sync_errors: { schema: syncErrorSchema },
+        quality_inspections: { schema: qualityInspectionSchema },
+        defect_logs: { schema: defectLogSchema },
+        weight_logs: { schema: weightLogSchema },
+        shift_sessions: { schema: shiftSessionSchema },
+        operators: { schema: operatorSchema },
+        product_weight_standards: { schema: productWeightStandardSchema },
       });
       return db as ChocolateIbarraDatabase;
     });

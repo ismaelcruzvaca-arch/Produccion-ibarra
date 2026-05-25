@@ -241,7 +241,7 @@ async function runDLQDiagnosis(
 
   // Find all non-deleted OEE events ordered by timestamp
   const pendingDocs = await collection
-    .find({ selector: { deleted: { $eq: false } }, sort: [{ timestamp: 'asc' }] })
+    .find({ selector: { is_deleted: { $eq: false } }, sort: [{ timestamp: 'asc' }] })
     .exec();
 
   if (pendingDocs.length === 0) return 0;
