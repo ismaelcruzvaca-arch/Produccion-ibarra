@@ -18,6 +18,7 @@ import type {
   IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent, ISyncError,
   IQualityInspection, IDefectLog, IWeightLog, IShiftSession, IOperator,
   IProductWeightStandard,
+  IDowntimeConciliation, IPlantConfig, IShiftSummary,
 } from '../core/types';
 
 /**
@@ -69,9 +70,12 @@ export const assetTypeSchema: RxJsonSchema<IAssetType> = {
 /**
  * Work Order schema.
  * Represents a maintenance/repair task assigned to an asset.
+ * 
+ * v1: Added lifecycle_phase, symptom_note, cause_note, action_note,
+ *     actual_start_at, cmms_wo_id (wo-lifecycle-outbox integration).
  */
 export const workOrderSchema: RxJsonSchema<IWorkOrder> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
   required: ['id', 'client_updated_at', 'is_deleted'],
@@ -86,9 +90,31 @@ export const workOrderSchema: RxJsonSchema<IWorkOrder> = {
     completed_date: { type: 'number' },
     client_updated_at: { type: 'number' },
     is_deleted: { type: 'boolean' },
+
+    // wo-lifecycle-outbox v1: campos desde cmms-ibero
+    lifecycle_phase: { type: 'string' },
+    symptom_note: { type: 'string' },
+    cause_note: { type: 'string' },
+    action_note: { type: 'string' },
+    actual_start_at: { type: 'number' },
+    cmms_wo_id: { type: 'string' },
   },
   indexes: [],
 };
+
+/**
+ * Migration strategy for work_orders v0 → v1.
+ * Adds default values for new optional fields (all undefined = safe).
+ */
+export const workOrderSchemaMigrationStrategy = (oldDoc: Record<string, unknown>) => ({
+  ...oldDoc,
+  lifecycle_phase: undefined,
+  symptom_note: undefined,
+  cause_note: undefined,
+  action_note: undefined,
+  actual_start_at: undefined,
+  cmms_wo_id: undefined,
+});
 
 /**
  * Report collection schema.
@@ -309,4 +335,113 @@ export const productWeightStandardSchema: RxJsonSchema<IProductWeightStandard> =
     is_deleted:   { type: 'boolean' },
   },
   indexes: ['sku'],
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Downtime Conciliation — Phase: downtime-conciliation
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Downtime Conciliation schema.
+ * Links oee_events with maintenance diagnosis and OT trigger.
+ *
+ * Indexes: status, machine_id, shift_session_id for filtering.
+ */
+export const downtimeConciliationSchema: RxJsonSchema<IDowntimeConciliation> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: [
+    'id', 'oee_event_id', 'machine_id', 'reason_code', 'status',
+    'conciliated', 'ot_sent', 'is_mtto',
+    'updated_at', 'device_id', 'is_deleted',
+  ],
+  properties: {
+    id:                { type: 'string', maxLength: 100 },
+    oee_event_id:      { type: 'string', maxLength: 100 },
+    shift_session_id:  { type: 'string', maxLength: 100 },
+    machine_id:        { type: 'string', maxLength: 100 },
+    reason_code:       { type: 'string' },
+    duration_min:      { type: 'number' },
+
+    diagnosed_code:    { type: 'string' },
+    diagnosed_by:      { type: 'string' },
+    diagnosed_at:      { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+
+    conciliated:       { type: 'boolean' },
+    conciliated_code:  { type: 'string' },
+    conciliated_macro: { type: 'string' },
+    conciliated_by_prod: { type: 'string' },
+    conciliated_by_mtto: { type: 'string' },
+    conciliated_at:    { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+
+    conciliation_notes:{ type: 'string' },
+
+    status:            { type: 'string', enum: ['pending', 'reconciled', 'disputed'] },
+
+    ot_sent:           { type: 'boolean' },
+    ot_response:       { type: 'string' },
+    ot_sent_at:        { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+
+    is_mtto:           { type: 'boolean' },
+
+    updated_at:        { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    device_id:         { type: 'string' },
+    is_deleted:        { type: 'boolean' },
+  },
+  indexes: ['status', 'machine_id', 'shift_session_id', 'updated_at'],
+};
+
+/**
+ * Plant Config schema — key-value configuration table.
+ * Primary key is `key` (natural key).
+ */
+export const plantConfigSchema: RxJsonSchema<IPlantConfig> = {
+  version: 0,
+  primaryKey: 'key',
+  type: 'object',
+  required: ['key', 'value', 'updated_at', 'device_id', 'is_deleted'],
+  properties: {
+    key:          { type: 'string', maxLength: 100 },
+    value:        { type: 'string' },
+    description:  { type: 'string' },
+    updated_at:   { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    device_id:    { type: 'string' },
+    is_deleted:   { type: 'boolean' },
+  },
+  indexes: ['updated_at'],
+};
+
+/**
+ * Shift Summary schema — cached aggregates per shift session.
+ * 1:1 relationship with shift_sessions via shift_session_id.
+ */
+export const shiftSummarySchema: RxJsonSchema<IShiftSummary> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: [
+    'id', 'shift_session_id',
+    'total_planned_min', 'total_downtime_min', 'total_micro_stop_min',
+    'total_mtto_min', 'total_prod_min', 'total_boxes', 'total_rejects',
+    'has_pending_conciliation',
+    'updated_at', 'device_id', 'is_deleted',
+  ],
+  properties: {
+    id:                      { type: 'string', maxLength: 100 },
+    shift_session_id:        { type: 'string', maxLength: 100 },
+    total_planned_min:       { type: 'number' },
+    total_downtime_min:      { type: 'number' },
+    total_micro_stop_min:    { type: 'number' },
+    total_mtto_min:          { type: 'number' },
+    total_prod_min:          { type: 'number' },
+    total_boxes:             { type: 'number' },
+    total_rejects:           { type: 'number' },
+    performance_pct:         { type: 'number' },
+    has_pending_conciliation:{ type: 'boolean' },
+    updated_at:              { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    device_id:               { type: 'string' },
+    is_deleted:              { type: 'boolean' },
+  },
+  indexes: ['shift_session_id', 'updated_at'],
 };

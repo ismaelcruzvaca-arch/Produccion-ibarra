@@ -21,6 +21,7 @@ import type {
   IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent,
   IQualityInspection, IDefectLog, IWeightLog, IShiftSession, IOperator,
   IProductWeightStandard,
+  IDowntimeConciliation, IPlantConfig, IShiftSummary,
 } from '../core/types';
 
 // ─── Asset Mappers ─────────────────────────────────────────────────────────────
@@ -146,6 +147,14 @@ export interface GraphQLWorkOrder {
   completed_date?: string;
   client_updated_at: string;
   deleted: boolean;
+
+  // wo-lifecycle-outbox: campos desde cmms-ibero
+  lifecycle_phase?: string;
+  symptom_note?: string;
+  cause_note?: string;
+  action_note?: string;
+  actual_start_at?: string;    // TIMESTAMPTZ → ISO 8601 string from Hasura
+  cmms_wo_id?: string;
 }
 
 /**
@@ -163,6 +172,13 @@ export function toGraphQLWorkOrder(wo: IWorkOrder): Record<string, unknown> {
     completed_date: wo.completed_date?.toString(),
     client_updated_at: wo.client_updated_at.toString(),
     deleted: wo.is_deleted,
+
+    lifecycle_phase: wo.lifecycle_phase,
+    symptom_note: wo.symptom_note,
+    cause_note: wo.cause_note,
+    action_note: wo.action_note,
+    actual_start_at: wo.actual_start_at ? new Date(wo.actual_start_at).toISOString() : undefined,
+    cmms_wo_id: wo.cmms_wo_id,
   };
 }
 
@@ -181,6 +197,13 @@ export function fromGraphQLWorkOrder(gql: GraphQLWorkOrder): IWorkOrder {
     completed_date: gql.completed_date ? parseInt(gql.completed_date, 10) : undefined,
     client_updated_at: parseInt(gql.client_updated_at, 10),
     is_deleted: gql.deleted,
+
+    lifecycle_phase: gql.lifecycle_phase,
+    symptom_note: gql.symptom_note,
+    cause_note: gql.cause_note,
+    action_note: gql.action_note,
+    actual_start_at: gql.actual_start_at ? new Date(gql.actual_start_at).getTime() : undefined,
+    cmms_wo_id: gql.cmms_wo_id,
   };
 }
 
@@ -514,6 +537,176 @@ export function fromGraphQLProductWeightStandard(gql: GraphQLProductWeightStanda
     lower_limit: gql.lower_limit,
     upper_limit: gql.upper_limit,
     requires_tare: gql.requires_tare,
+    updated_at: new Date(gql.updated_at).getTime(),
+    device_id: '',
+    is_deleted: false,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Downtime Conciliation — Phase: downtime-conciliation
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Downtime Conciliation Mappers ─────────────────────────────────────────────
+
+export interface GraphQLDowntimeConciliation {
+  id: string;
+  oee_event_id: string;
+  shift_session_id?: string;
+  machine_id: string;
+  reason_code: string;
+  duration_min?: number;
+  diagnosed_code?: string;
+  diagnosed_by?: string;
+  diagnosed_at?: string; // TIMESTAMPTZ → ISO 8601
+  conciliated: boolean;
+  conciliated_code?: string;
+  conciliated_macro?: string;
+  conciliated_by_prod?: string;
+  conciliated_by_mtto?: string;
+  conciliated_at?: string;
+  conciliation_notes?: string;
+  status: string;
+  ot_sent: boolean;
+  ot_response?: string;
+  ot_sent_at?: string;
+  is_mtto: boolean;
+  updated_at: string; // TIMESTAMPTZ → ISO 8601
+  // NOTE: device_id, is_deleted are RxDB-only
+}
+
+export function toGraphQLDowntimeConciliation(dc: IDowntimeConciliation): Record<string, unknown> {
+  return {
+    id: dc.id,
+    oee_event_id: dc.oee_event_id,
+    shift_session_id: dc.shift_session_id,
+    machine_id: dc.machine_id,
+    reason_code: dc.reason_code,
+    duration_min: dc.duration_min,
+    diagnosed_code: dc.diagnosed_code,
+    diagnosed_by: dc.diagnosed_by,
+    diagnosed_at: dc.diagnosed_at ? new Date(dc.diagnosed_at).toISOString() : undefined,
+    conciliated: dc.conciliated,
+    conciliated_code: dc.conciliated_code,
+    conciliated_macro: dc.conciliated_macro,
+    conciliated_by_prod: dc.conciliated_by_prod,
+    conciliated_by_mtto: dc.conciliated_by_mtto,
+    conciliated_at: dc.conciliated_at ? new Date(dc.conciliated_at).toISOString() : undefined,
+    conciliation_notes: dc.conciliation_notes,
+    status: dc.status,
+    ot_sent: dc.ot_sent,
+    ot_response: dc.ot_response,
+    ot_sent_at: dc.ot_sent_at ? new Date(dc.ot_sent_at).toISOString() : undefined,
+    is_mtto: dc.is_mtto,
+    updated_at: new Date(dc.updated_at).toISOString(),
+  };
+}
+
+export function fromGraphQLDowntimeConciliation(gql: GraphQLDowntimeConciliation): IDowntimeConciliation {
+  return {
+    id: gql.id,
+    oee_event_id: gql.oee_event_id,
+    shift_session_id: gql.shift_session_id,
+    machine_id: gql.machine_id,
+    reason_code: gql.reason_code,
+    duration_min: gql.duration_min,
+    diagnosed_code: gql.diagnosed_code,
+    diagnosed_by: gql.diagnosed_by,
+    diagnosed_at: gql.diagnosed_at ? new Date(gql.diagnosed_at).getTime() : undefined,
+    conciliated: gql.conciliated,
+    conciliated_code: gql.conciliated_code,
+    conciliated_macro: gql.conciliated_macro,
+    conciliated_by_prod: gql.conciliated_by_prod,
+    conciliated_by_mtto: gql.conciliated_by_mtto,
+    conciliated_at: gql.conciliated_at ? new Date(gql.conciliated_at).getTime() : undefined,
+    conciliation_notes: gql.conciliation_notes,
+    status: gql.status as IDowntimeConciliation['status'],
+    ot_sent: gql.ot_sent,
+    ot_response: gql.ot_response,
+    ot_sent_at: gql.ot_sent_at ? new Date(gql.ot_sent_at).getTime() : undefined,
+    is_mtto: gql.is_mtto,
+    updated_at: new Date(gql.updated_at).getTime(),
+    device_id: '', // RxDB-only
+    is_deleted: false, // RxDB-only
+  };
+}
+
+// ─── Plant Config Mappers ──────────────────────────────────────────────────────
+
+export interface GraphQLPlantConfig {
+  key: string;
+  value: string;
+  description?: string;
+  updated_at: string; // TIMESTAMPTZ → ISO 8601
+}
+
+export function toGraphQLPlantConfig(pc: IPlantConfig): Record<string, unknown> {
+  return {
+    key: pc.key,
+    value: pc.value,
+    description: pc.description,
+    updated_at: new Date(pc.updated_at).toISOString(),
+  };
+}
+
+export function fromGraphQLPlantConfig(gql: GraphQLPlantConfig): IPlantConfig {
+  return {
+    key: gql.key,
+    value: gql.value,
+    description: gql.description,
+    updated_at: new Date(gql.updated_at).getTime(),
+    device_id: '',
+    is_deleted: false,
+  };
+}
+
+// ─── Shift Summary Mappers ─────────────────────────────────────────────────────
+
+export interface GraphQLShiftSummary {
+  id: string;
+  shift_session_id: string;
+  total_planned_min: number;
+  total_downtime_min: number;
+  total_micro_stop_min: number;
+  total_mtto_min: number;
+  total_prod_min: number;
+  total_boxes: number;
+  total_rejects: number;
+  performance_pct?: number;
+  has_pending_conciliation: boolean;
+  updated_at: string; // TIMESTAMPTZ → ISO 8601
+}
+
+export function toGraphQLShiftSummary(ss: IShiftSummary): Record<string, unknown> {
+  return {
+    id: ss.id,
+    shift_session_id: ss.shift_session_id,
+    total_planned_min: ss.total_planned_min,
+    total_downtime_min: ss.total_downtime_min,
+    total_micro_stop_min: ss.total_micro_stop_min,
+    total_mtto_min: ss.total_mtto_min,
+    total_prod_min: ss.total_prod_min,
+    total_boxes: ss.total_boxes,
+    total_rejects: ss.total_rejects,
+    performance_pct: ss.performance_pct,
+    has_pending_conciliation: ss.has_pending_conciliation,
+    updated_at: new Date(ss.updated_at).toISOString(),
+  };
+}
+
+export function fromGraphQLShiftSummary(gql: GraphQLShiftSummary): IShiftSummary {
+  return {
+    id: gql.id,
+    shift_session_id: gql.shift_session_id,
+    total_planned_min: gql.total_planned_min,
+    total_downtime_min: gql.total_downtime_min,
+    total_micro_stop_min: gql.total_micro_stop_min,
+    total_mtto_min: gql.total_mtto_min,
+    total_prod_min: gql.total_prod_min,
+    total_boxes: gql.total_boxes,
+    total_rejects: gql.total_rejects,
+    performance_pct: gql.performance_pct,
+    has_pending_conciliation: gql.has_pending_conciliation,
     updated_at: new Date(gql.updated_at).getTime(),
     device_id: '',
     is_deleted: false,

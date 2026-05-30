@@ -1,0 +1,13 @@
+{
+  "type": "create_rest_endpoint",
+  "args": {
+    "url": "upsert_work_order_from_cmms",
+    "methods": ["POST"],
+    "definition": {
+      "query": {
+        "query": "mutation UpsertWorkOrderFromCmms($objects: [work_orders_insert_input!]!) {\n  insert_work_orders(\n    objects: $objects,\n    on_conflict: {\n      constraint: work_orders_cmms_wo_id_key,\n      update_columns: [\n        lifecycle_phase,\n        symptom_note,\n        cause_note,\n        action_note,\n        actual_start_at,\n        completed_at\n      ]\n    }\n  ) {\n    returning {\n      id\n      equipment_id\n      lifecycle_phase\n      cmms_wo_id\n    }\n  }\n}"
+      }
+    },
+    "comment": "Upsert work order desde cmms-ibero. Recibe POST con array de objetos work_orders_insert_input, hace upsert por cmms_wo_id. Autenticación vía X-Hasura-Admin-Secret."
+  }
+}

@@ -41,6 +41,12 @@ import {
   fromGraphQLShiftSession,
   fromGraphQLOperator,
   fromGraphQLProductWeightStandard,
+  toGraphQLDowntimeConciliation,
+  fromGraphQLDowntimeConciliation,
+  toGraphQLPlantConfig,
+  fromGraphQLPlantConfig,
+  toGraphQLShiftSummary,
+  fromGraphQLShiftSummary,
   type GraphQLAsset,
   type GraphQLWorkOrder,
   type GraphQLReport,
@@ -51,8 +57,11 @@ import {
   type GraphQLShiftSession,
   type GraphQLOperator,
   type GraphQLProductWeightStandard,
+  type GraphQLDowntimeConciliation,
+  type GraphQLPlantConfig,
+  type GraphQLShiftSummary,
 } from './dto';
-import type { IAsset, IWorkOrder, IReport, IOeeEvent, IQualityInspection, IDefectLog, IWeightLog, IShiftSession, IOperator, IProductWeightStandard } from '../core/types';
+import type { IAsset, IWorkOrder, IReport, IOeeEvent, IQualityInspection, IDefectLog, IWeightLog, IShiftSession, IOperator, IProductWeightStandard, IDowntimeConciliation, IPlantConfig, IShiftSummary } from '../core/types';
 import type { ChocolateIbarraDatabase } from '../data/database';
 import { createResilientReplication, type ResilientState } from '../sync/resilientReplication';
 
@@ -189,6 +198,12 @@ function pullQueryBuilderWorkOrders(checkpoint: GraphQLWorkOrder | undefined, _l
           completed_date
           client_updated_at
           deleted
+          lifecycle_phase
+          symptom_note
+          cause_note
+          action_note
+          actual_start_at
+          cmms_wo_id
         }
       }
     `,
@@ -216,7 +231,13 @@ function pushMutationBuilderWorkOrders(docs: any[]) {
               scheduled_date,
               completed_date,
               client_updated_at,
-              deleted
+              deleted,
+              lifecycle_phase,
+              symptom_note,
+              cause_note,
+              action_note,
+              actual_start_at,
+              cmms_wo_id
             ]
           }
         ) {
@@ -567,6 +588,169 @@ function pushMutationBuilderShiftSessions(docs: any[]) {
   };
 }
 
+// ─── Pull Query Builder (Downtime Conciliation) ──────────────────────────────
+
+function pullQueryBuilderDowntimeConciliation(checkpoint: GraphQLDowntimeConciliation | undefined, _limit: number) {
+  return {
+    query: `
+      query PullDowntimeConciliation($lastCheckpoint: timestamptz!) {
+        downtime_conciliation(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          oee_event_id
+          shift_session_id
+          machine_id
+          reason_code
+          duration_min
+          diagnosed_code
+          diagnosed_by
+          diagnosed_at
+          conciliated
+          conciliated_code
+          conciliated_macro
+          conciliated_by_prod
+          conciliated_by_mtto
+          conciliated_at
+          conciliation_notes
+          status
+          ot_sent
+          ot_response
+          ot_sent_at
+          is_mtto
+          updated_at
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ?? '1970-01-01T00:00:00Z' },
+  };
+}
+
+// ─── Push Mutation Builder (Downtime Conciliation Upsert) ────────────────────
+
+function pushMutationBuilderDowntimeConciliation(docs: any[]) {
+  const objects = docs.map(toGraphQLDowntimeConciliation);
+  return {
+    query: `
+      mutation UpsertDowntimeConciliation($objects: [downtime_conciliation_insert_input!]!) {
+        insert_downtime_conciliation(
+          objects: $objects,
+          on_conflict: {
+            constraint: downtime_conciliation_pkey,
+            update_columns: [
+              oee_event_id, shift_session_id, machine_id, reason_code,
+              duration_min, diagnosed_code, diagnosed_by, diagnosed_at,
+              conciliated, conciliated_code, conciliated_macro,
+              conciliated_by_prod, conciliated_by_mtto, conciliated_at,
+              conciliation_notes, status, ot_sent, ot_response, ot_sent_at,
+              is_mtto, updated_at
+            ]
+          }
+        ) { affected_rows }
+      }
+    `,
+    variables: { objects },
+  };
+}
+
+// ─── Pull Query Builder (Plant Config) ──────────────────────────────────────
+
+function pullQueryBuilderPlantConfig(checkpoint: GraphQLPlantConfig | undefined, _limit: number) {
+  return {
+    query: `
+      query PullPlantConfig($lastCheckpoint: timestamptz!) {
+        plant_config(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          key
+          value
+          description
+          updated_at
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ?? '1970-01-01T00:00:00Z' },
+  };
+}
+
+// ─── Push Mutation Builder (Plant Config Upsert) ────────────────────────────
+
+function pushMutationBuilderPlantConfig(docs: any[]) {
+  const objects = docs.map(toGraphQLPlantConfig);
+  return {
+    query: `
+      mutation UpsertPlantConfig($objects: [plant_config_insert_input!]!) {
+        insert_plant_config(
+          objects: $objects,
+          on_conflict: {
+            constraint: plant_config_pkey,
+            update_columns: [
+              value, description, updated_at
+            ]
+          }
+        ) { affected_rows }
+      }
+    `,
+    variables: { objects },
+  };
+}
+
+// ─── Pull Query Builder (Shift Summary) ─────────────────────────────────────
+
+function pullQueryBuilderShiftSummary(checkpoint: GraphQLShiftSummary | undefined, _limit: number) {
+  return {
+    query: `
+      query PullShiftSummary($lastCheckpoint: timestamptz!) {
+        shift_summary(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          shift_session_id
+          total_planned_min
+          total_downtime_min
+          total_micro_stop_min
+          total_mtto_min
+          total_prod_min
+          total_boxes
+          total_rejects
+          performance_pct
+          has_pending_conciliation
+          updated_at
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ?? '1970-01-01T00:00:00Z' },
+  };
+}
+
+// ─── Push Mutation Builder (Shift Summary Upsert) ──────────────────────────
+
+function pushMutationBuilderShiftSummary(docs: any[]) {
+  const objects = docs.map(toGraphQLShiftSummary);
+  return {
+    query: `
+      mutation UpsertShiftSummary($objects: [shift_summary_insert_input!]!) {
+        insert_shift_summary(
+          objects: $objects,
+          on_conflict: {
+            constraint: shift_summary_pkey,
+            update_columns: [
+              shift_session_id, total_planned_min, total_downtime_min,
+              total_micro_stop_min, total_mtto_min, total_prod_min,
+              total_boxes, total_rejects, performance_pct,
+              has_pending_conciliation, updated_at
+            ]
+          }
+        ) { affected_rows }
+      }
+    `,
+    variables: { objects },
+  };
+}
+
 // ─── Replication Start Function ────────────────────────────────────────────────
 
 /**
@@ -599,6 +783,9 @@ export interface ReplicationStates {
   shiftSessions: RxGraphQLReplicationState<IShiftSession, GraphQLShiftSession>;
   operators: RxGraphQLReplicationState<IOperator, GraphQLOperator>;
   productWeightStandards: RxGraphQLReplicationState<IProductWeightStandard, GraphQLProductWeightStandard>;
+  downtimeConciliation: RxGraphQLReplicationState<IDowntimeConciliation, GraphQLDowntimeConciliation>;
+  plantConfig: RxGraphQLReplicationState<IPlantConfig, GraphQLPlantConfig>;
+  shiftSummary: RxGraphQLReplicationState<IShiftSummary, GraphQLShiftSummary>;
   /** Resilient replication controller for OEE events (backoff, circuit breaker, DLQ). */
   resilientOeeController?: { cleanup: () => void; getState: () => ResilientState };
 }
@@ -847,6 +1034,78 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
     replicationShiftSessions = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
   }
 
+  // ── Downtime Conciliation replication ─────────────────────────────────
+  let replicationDowntimeConciliation: RxGraphQLReplicationState<IDowntimeConciliation, GraphQLDowntimeConciliation>;
+  try {
+    replicationDowntimeConciliation = replicateGraphQL<IDowntimeConciliation, GraphQLDowntimeConciliation>({
+      replicationIdentifier: 'downtime-conciliation-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
+      collection: db.collections.downtime_conciliation,
+      pull: {
+        queryBuilder: pullQueryBuilderDowntimeConciliation,
+        modifier: (doc: GraphQLDowntimeConciliation) => ({ ...fromGraphQLDowntimeConciliation(doc), _deleted: false }),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderDowntimeConciliation,
+      },
+      live: false,
+      retryTime: 5000,
+      autoStart: true,
+    });
+  } catch (err) {
+    console.warn('DowntimeConciliation replication failed to initialise:', err);
+    replicationDowntimeConciliation = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
+
+  // ── Plant Config replication (pull-only, write via Hasura mutations) ──
+  let replicationPlantConfig: RxGraphQLReplicationState<IPlantConfig, GraphQLPlantConfig>;
+  try {
+    replicationPlantConfig = replicateGraphQL<IPlantConfig, GraphQLPlantConfig>({
+      replicationIdentifier: 'plant-config-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
+      collection: db.collections.plant_config,
+      pull: {
+        queryBuilder: pullQueryBuilderPlantConfig,
+        modifier: (doc: GraphQLPlantConfig) => ({ ...fromGraphQLPlantConfig(doc), _deleted: false }),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderPlantConfig,
+      },
+      live: false,
+      retryTime: 5000,
+      autoStart: true,
+    });
+  } catch (err) {
+    console.warn('PlantConfig replication failed to initialise:', err);
+    replicationPlantConfig = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
+
+  // ── Shift Summary replication ──────────────────────────────────────
+  let replicationShiftSummary: RxGraphQLReplicationState<IShiftSummary, GraphQLShiftSummary>;
+  try {
+    replicationShiftSummary = replicateGraphQL<IShiftSummary, GraphQLShiftSummary>({
+      replicationIdentifier: 'shift-summary-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
+      collection: db.collections.shift_summary,
+      pull: {
+        queryBuilder: pullQueryBuilderShiftSummary,
+        modifier: (doc: GraphQLShiftSummary) => ({ ...fromGraphQLShiftSummary(doc), _deleted: false }),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderShiftSummary,
+      },
+      live: false,
+      retryTime: 5000,
+      autoStart: true,
+    });
+  } catch (err) {
+    console.warn('ShiftSummary replication failed to initialise:', err);
+    replicationShiftSummary = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
+
   return {
     assets: replicationAssets,
     workOrders: replicationWorkOrders,
@@ -858,6 +1117,9 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
     shiftSessions: replicationShiftSessions,
     operators: replicationOperators,
     productWeightStandards: replicationProductWeightStandards,
+    downtimeConciliation: replicationDowntimeConciliation,
+    plantConfig: replicationPlantConfig,
+    shiftSummary: replicationShiftSummary,
     resilientOeeController,
   };
 }

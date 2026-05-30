@@ -102,6 +102,14 @@ export interface IWorkOrder extends IBaseDocument {
   assigned_to?: string;
   scheduled_date?: number; // epoch ms
   completed_date?: number; // epoch ms
+
+  // wo-lifecycle-outbox: campos recibidos desde cmms-ibero
+  lifecycle_phase?: string;       // WAPPR | APPROVED | INPRG | COMP | CLOSED | CANCELLED | REJECTED
+  symptom_note?: string;          // síntoma reportado por el mecánico
+  cause_note?: string;            // causa probable
+  action_note?: string;           // acción realizada
+  actual_start_at?: number;       // epoch ms — cuándo arrancó la intervención
+  cmms_wo_id?: string;            // ID de la WO en cmms-ibero (para mapping cross-project)
 }
 
 export type RxWorkOrder = RxDocument<IWorkOrder>;
@@ -395,3 +403,105 @@ export interface IProductWeightStandard {
 }
 
 export type RxProductWeightStandard = RxDocument<IProductWeightStandard>;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Downtime Conciliation — Phase: downtime-conciliation
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type ConciliationStatus = 'pending' | 'reconciled' | 'disputed';
+
+/**
+ * Downtime Conciliation — bridges Production downtime events with Maintenance action.
+ *
+ * When an operator flags a paro with an MTTO reason, a conciliation record is created.
+ * The supervisor reviews at shift-end, diagnoses root cause, and triggers OT via cmms-ibero.
+ *
+ * Uses `updated_at` (not `client_updated_at`) per the new data contract.
+ */
+export interface IDowntimeConciliation {
+  id: string;
+  oee_event_id: string;          // FK → oee_events.id (downtime_start event)
+  shift_session_id?: string;     // FK → shift_sessions.id
+  machine_id: string;            // denormalized for query speed
+  reason_code: string;           // original operator reason from oee_event
+  duration_min?: number;         // computed from downtime_start → downtime_end
+
+  // Production diagnosis (supervisor)
+  diagnosed_code?: string;       // supervisor's root cause code
+  diagnosed_by?: string;         // supervisor user ID
+  diagnosed_at?: number;         // epoch ms
+
+  // Maintenance diagnosis (mechanic)
+  conciliated: boolean;          // whether maintenance has participated
+  conciliated_code?: string;     // final cause code
+  conciliated_macro?: string;    // final macro category (MTTO, PROD, OTROS)
+  conciliated_by_prod?: string;  // production sign-off
+  conciliated_by_mtto?: string;  // maintenance sign-off
+  conciliated_at?: number;       // epoch ms
+
+  // Notes
+  conciliation_notes?: string;
+
+  // Status
+  status: ConciliationStatus;
+
+  // OT tracking
+  ot_sent: boolean;              // whether oee-trigger was called
+  ot_response?: string;          // response from oee-trigger (WO id or error)
+  ot_sent_at?: number;
+
+  // Classification
+  is_mtto: boolean;              // whether the original reason is MTTO category
+
+  // Timestamps
+  updated_at: number;
+  device_id: string;
+  is_deleted: boolean;
+}
+
+export type RxDowntimeConciliation = RxDocument<IDowntimeConciliation>;
+
+/**
+ * Plant Config — key-value configuration for plant-level parameters.
+ *
+ * First key: micro_stop_threshold_min (integer, minutes).
+ * Read at startup, cached in Zustand, editable from Settings.
+ *
+ * Uses `updated_at` (not `client_updated_at`) per the new data contract.
+ */
+export interface IPlantConfig {
+  key: string;         // e.g., 'micro_stop_threshold_min'
+  value: string;       // stored as string, parsed by consumer (e.g., '5')
+  description?: string;
+  updated_at: number;
+  device_id: string;
+  is_deleted: boolean;
+}
+
+export type RxPlantConfig = RxDocument<IPlantConfig>;
+
+/**
+ * Shift Summary — cached aggregates for shift-end reporting.
+ * Materialized at shift-end. Non-authoritative — always derivable from oee_events.
+ * If target met (actual >= theoretical), no record is created.
+ *
+ * Uses `updated_at` (not `client_updated_at`) per the new data contract.
+ */
+export interface IShiftSummary {
+  id: string;
+  shift_session_id: string;      // FK → shift_sessions.id
+  total_planned_min: number;
+  total_downtime_min: number;
+  total_micro_stop_min: number;
+  total_mtto_min: number;
+  total_prod_min: number;
+  total_boxes: number;
+  total_rejects: number;
+  performance_pct?: number;       // e.g., 85.50
+  has_pending_conciliation: boolean;
+  updated_at: number;
+  device_id: string;
+  is_deleted: boolean;
+}
+
+export type RxShiftSummary = RxDocument<IShiftSummary>;

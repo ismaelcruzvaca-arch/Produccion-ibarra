@@ -109,6 +109,13 @@ apply_metadata \
   "Views analíticas: track 5 SQL views + SELECT permissions for supervisor/admin roles" \
   "$SCRIPT_DIR/track_views_and_columns.json"
 
+# 7. REST endpoint: upsert_work_order_from_cmms
+#    POST /api/rest/upsert_work_order_from_cmms
+#    GraphQL mutation upsert work_orders by cmms_wo_id vía on_conflict
+apply_metadata \
+  "REST endpoint: upsert_work_order_from_cmms — upsert work_orders por cmms_wo_id" \
+  "$SCRIPT_DIR/endpoint_upsert_work_order.json"
+
 # --- Verify ---
 echo "=== Verification ==="
 echo "Checking applied permissions..."

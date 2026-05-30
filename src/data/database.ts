@@ -19,10 +19,12 @@ import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode';
 
 import {
-  assetSchema, assetTypeSchema, workOrderSchema, reportSchema, oeeEventSchema, syncErrorSchema,
+  assetSchema, assetTypeSchema, workOrderSchema, workOrderSchemaMigrationStrategy,
+  reportSchema, oeeEventSchema, syncErrorSchema,
   qualityInspectionSchema, defectLogSchema, weightLogSchema, shiftSessionSchema, operatorSchema, productWeightStandardSchema,
+  downtimeConciliationSchema, plantConfigSchema, shiftSummarySchema,
 } from './schemas';
-import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent, ISyncError, IQualityInspection, IDefectLog, IWeightLog, IShiftSession, IOperator, IProductWeightStandard } from '../core/types';
+import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent, ISyncError, IQualityInspection, IDefectLog, IWeightLog, IShiftSession, IOperator, IProductWeightStandard, IDowntimeConciliation, IPlantConfig, IShiftSummary } from '../core/types';
 
 // ─── Database Collections Type ──────────────────────────────────────────────────
 
@@ -40,6 +42,9 @@ export type ChocolateIbarraDatabase = RxDatabase<{
   shift_sessions: RxCollection<IShiftSession>;
   operators: RxCollection<IOperator>;
   product_weight_standards: RxCollection<IProductWeightStandard>;
+  downtime_conciliation: RxCollection<IDowntimeConciliation>;
+  plant_config: RxCollection<IPlantConfig>;
+  shift_summary: RxCollection<IShiftSummary>;
 }>;
 
 // ─── Database Singleton ────────────────────────────────────────────────────────
@@ -77,7 +82,7 @@ export async function getDatabase(): Promise<ChocolateIbarraDatabase> {
       await db.addCollections({
         assets: { schema: assetSchema },
         asset_types: { schema: assetTypeSchema },
-        work_orders: { schema: workOrderSchema },
+        work_orders: { schema: workOrderSchema, migrationStrategies: { 1: workOrderSchemaMigrationStrategy } },
         reports: { schema: reportSchema },
         oee_events: { schema: oeeEventSchema },
         sync_errors: { schema: syncErrorSchema },
@@ -87,6 +92,9 @@ export async function getDatabase(): Promise<ChocolateIbarraDatabase> {
         shift_sessions: { schema: shiftSessionSchema },
         operators: { schema: operatorSchema },
         product_weight_standards: { schema: productWeightStandardSchema },
+        downtime_conciliation: { schema: downtimeConciliationSchema },
+        plant_config: { schema: plantConfigSchema },
+        shift_summary: { schema: shiftSummarySchema },
       });
       return db as ChocolateIbarraDatabase;
     });
