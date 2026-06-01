@@ -81,6 +81,15 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
+          name="forms"
+          options={{
+            title: 'Formularios',
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+              <MaterialCommunityIcons name="clipboard-text" color={color} size={size} />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="supervisor"
           options={{
             title: 'Alertas',
