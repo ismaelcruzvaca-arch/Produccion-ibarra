@@ -73,9 +73,10 @@ export const assetTypeSchema: RxJsonSchema<IAssetType> = {
  * 
  * v1: Added lifecycle_phase, symptom_note, cause_note, action_note,
  *     actual_start_at, cmms_wo_id (wo-lifecycle-outbox integration).
+ * v2: Added completed_at (wo-lifecycle-integration).
  */
 export const workOrderSchema: RxJsonSchema<IWorkOrder> = {
-  version: 1,
+  version: 2,
   primaryKey: 'id',
   type: 'object',
   required: ['id', 'client_updated_at', 'is_deleted'],
@@ -97,6 +98,7 @@ export const workOrderSchema: RxJsonSchema<IWorkOrder> = {
     cause_note: { type: 'string' },
     action_note: { type: 'string' },
     actual_start_at: { type: 'number' },
+    completed_at: { type: 'number' },   // v2: cuándo finalizó la intervención
     cmms_wo_id: { type: 'string' },
   },
   indexes: [],
@@ -106,7 +108,7 @@ export const workOrderSchema: RxJsonSchema<IWorkOrder> = {
  * Migration strategy for work_orders v0 → v1.
  * Adds default values for new optional fields (all undefined = safe).
  */
-export const workOrderSchemaMigrationStrategy = (oldDoc: Record<string, unknown>) => ({
+export const workOrderSchemaV0ToV1 = (oldDoc: Record<string, unknown>) => ({
   ...oldDoc,
   lifecycle_phase: undefined,
   symptom_note: undefined,
@@ -114,6 +116,15 @@ export const workOrderSchemaMigrationStrategy = (oldDoc: Record<string, unknown>
   action_note: undefined,
   actual_start_at: undefined,
   cmms_wo_id: undefined,
+});
+
+/**
+ * Migration strategy for work_orders v1 → v2.
+ * Adds completed_at for the wo-lifecycle-integration.
+ */
+export const workOrderSchemaV1ToV2 = (oldDoc: Record<string, unknown>) => ({
+  ...oldDoc,
+  completed_at: undefined,
 });
 
 /**

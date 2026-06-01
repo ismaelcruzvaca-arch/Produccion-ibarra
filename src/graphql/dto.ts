@@ -154,6 +154,7 @@ export interface GraphQLWorkOrder {
   cause_note?: string;
   action_note?: string;
   actual_start_at?: string;    // TIMESTAMPTZ → ISO 8601 string from Hasura
+  completed_at?: string;       // TIMESTAMPTZ → ISO 8601 string from Hasura
   cmms_wo_id?: string;
 }
 
@@ -178,6 +179,7 @@ export function toGraphQLWorkOrder(wo: IWorkOrder): Record<string, unknown> {
     cause_note: wo.cause_note,
     action_note: wo.action_note,
     actual_start_at: wo.actual_start_at ? new Date(wo.actual_start_at).toISOString() : undefined,
+    completed_at: wo.completed_at ? new Date(wo.completed_at).toISOString() : undefined,
     cmms_wo_id: wo.cmms_wo_id,
   };
 }
@@ -203,6 +205,7 @@ export function fromGraphQLWorkOrder(gql: GraphQLWorkOrder): IWorkOrder {
     cause_note: gql.cause_note,
     action_note: gql.action_note,
     actual_start_at: gql.actual_start_at ? new Date(gql.actual_start_at).getTime() : undefined,
+    completed_at: gql.completed_at ? new Date(gql.completed_at).getTime() : undefined,
     cmms_wo_id: gql.cmms_wo_id,
   };
 }

@@ -9,8 +9,8 @@
 
 import React from 'react';
 import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
-import { FAB, Text, Portal, Snackbar } from 'react-native-paper';
-import { useRouter } from 'expo-router';
+import { FAB, IconButton, Text, Portal, Snackbar } from 'react-native-paper';
+import { useRouter, useNavigation } from 'expo-router';
 
 import { useQualityListOrchestration } from '../../../src/ui/hooks/useQualityListOrchestration';
 import { QualityInspectionCard } from '../../../src/ui/components/molecules/QualityInspectionCard';
@@ -20,12 +20,28 @@ import { colors, spacing } from '../../../src/ui/theme/tokens';
 
 export default function QualityListScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const {
     inspections,
     loading,
     error,
     refresh,
   } = useQualityListOrchestration();
+
+  // Set headerRight chart icon for navigation to trends screen
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <IconButton
+          icon="chart-line"
+          iconColor={colors.textOnPrimary}
+          size={24}
+          onPress={() => router.push('/quality/trends')}
+          testID="quality-trends-button"
+        />
+      ),
+    });
+  }, [navigation, router]);
 
   const [refreshing, setRefreshing] = React.useState(false);
 

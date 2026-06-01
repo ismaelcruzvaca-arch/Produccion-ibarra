@@ -23,13 +23,14 @@ import { useAuthStore } from '../../auth/useAuthStore';
 const SETTINGS_PERMISSIONS: Record<string, string[]> = {
   profile: ['operator', 'supervisor', 'admin'],
   powerbi: ['supervisor', 'admin'],
+  plant_config: ['supervisor', 'admin'],
   catalogs: ['admin'],
   system: ['operator', 'supervisor', 'admin'],
 } as const;
 
 // ─── Ordered sections for rendering ────────────────────────────────────────────────
 
-const SECTION_ORDER = ['profile', 'powerbi', 'catalogs', 'system'] as const;
+const SECTION_ORDER = ['profile', 'powerbi', 'plant_config', 'catalogs', 'system'] as const;
 
 // ─── Hook ──────────────────────────────────────────────────────────────────────────
 

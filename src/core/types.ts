@@ -109,6 +109,7 @@ export interface IWorkOrder extends IBaseDocument {
   cause_note?: string;            // causa probable
   action_note?: string;           // acción realizada
   actual_start_at?: number;       // epoch ms — cuándo arrancó la intervención
+  completed_at?: number;           // epoch ms — cuándo finalizó la intervención
   cmms_wo_id?: string;            // ID de la WO en cmms-ibero (para mapping cross-project)
 }
 

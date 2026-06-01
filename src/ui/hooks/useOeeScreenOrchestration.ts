@@ -23,11 +23,15 @@ import type { RxDocument } from 'rxdb';
 import { useOeeEventsRepository } from '../../repositories/useOeeEventsRepository';
 import { useReportsRepository } from '../../repositories/useReportsRepository';
 import { useShiftSessionsRepository } from '../../repositories/useShiftSessionsRepository';
+import { useDowntimeConciliationRepository } from '../../repositories/useDowntimeConciliationRepository';
+import { usePlantConfigRepository } from '../../repositories/usePlantConfigRepository';
+import { useShiftSummaryRepository } from '../../repositories/useShiftSummaryRepository';
 import { useOeeCalculator } from './useOeeCalculator';
+import { computeOee } from '../../core/oeeCalculator';
 import { OEE_LIMITS } from '../../config/oeeLimits';
 import type { IOeeEvent, IShiftSession } from '../../core/types';
 import type { ParoReason } from '../../config/catalogs';
-import { PARO_BY_CODE } from '../../config/catalogs';
+import { PARO_BY_CODE, PARO_REASONS, DEFAULT_PPM } from '../../config/catalogs';
 import { nowMs } from '../../utils/timestamp';
 import { generateShiftReport } from '../../core/shiftReportGenerator';
 import { useCatalogStore } from '../store/catalogStore';
@@ -38,6 +42,9 @@ export function useOeeScreenOrchestration() {
   const repository = useOeeEventsRepository();
   const reportsRepository = useReportsRepository();
   const shiftSessionsRepo = useShiftSessionsRepository();
+  const conciliationRepo = useDowntimeConciliationRepository();
+  const plantConfigRepo = usePlantConfigRepository();
+  const shiftSummaryRepo = useShiftSummaryRepository();
   const user = useAuthStore((s) => s.user) as { id?: string } | null;
   const repositoryRef = useRef(repository);
   repositoryRef.current = repository;
@@ -189,13 +196,63 @@ export function useOeeScreenOrchestration() {
     });
     await reportsRepository.createReport(report.data, report.template_id);
 
+    // ── Shift Summary (R6) ─────────────────────────────────────────────────
+    try {
+      const events = shiftEvents.map((e) => e.toJSON() as IOeeEvent);
+      const oeeMetrics = computeOee(events, selectedPpm ?? DEFAULT_PPM);
+
+      // Compute micro-stop total: downtimes with duration < threshold
+      const threshold = await plantConfigRepo.getMicroStopThreshold();
+      const sorted = [...events].sort((a, b) => a.timestamp - b.timestamp);
+      const openDts: IOeeEvent[] = [];
+      let microStopTotalMin = 0;
+      for (const evt of sorted) {
+        if (evt.event_type === 'downtime_start') {
+          openDts.push(evt);
+        } else if (evt.event_type === 'downtime_end' && evt.related_event_id) {
+          const idx = openDts.findIndex((d) => d.id === evt.related_event_id);
+          if (idx !== -1) {
+            const start = openDts.splice(idx, 1)[0];
+            const durMin = (evt.timestamp - start.timestamp) / 60000;
+            if (durMin < threshold) {
+              microStopTotalMin += durMin;
+            }
+          }
+        }
+      }
+
+      // Check for pending conciliations
+      let hasPending = false;
+      if (activeSession) {
+        const pending = await conciliationRepo.findPendingByShift(activeSession.get('id'));
+        hasPending = pending.length > 0;
+      }
+
+      await shiftSummaryRepo.create({
+        shift_session_id: activeSession?.get('id') ?? selectedShift,
+        total_planned_min: Math.round(oeeMetrics.tiempoPlanificadoMin),
+        total_downtime_min: Math.round(oeeMetrics.tiempoParoProdMin + oeeMetrics.tiempoParoMttoMin),
+        total_micro_stop_min: Math.round(microStopTotalMin),
+        total_mtto_min: Math.round(oeeMetrics.tiempoParoMttoMin),
+        total_prod_min: Math.round(oeeMetrics.tiempoParoProdMin),
+        total_boxes: oeeMetrics.totalCajas,
+        total_rejects: oeeMetrics.totalRechazos,
+        performance_pct: Math.round(oeeMetrics.rendimiento * 100) / 100,
+        has_pending_conciliation: hasPending,
+      });
+    } catch (err) {
+      // Non-blocking — shift_summary is a cached aggregate, failure shouldn't block shift close
+      console.warn('Failed to create shift_summary:', err);
+    }
+    // ── End Shift Summary ──────────────────────────────────────────────────
+
     setSelectedProduct(null);
     setShiftStarted(false);
     setShowConfirmModal(false);
     setPendingEvent(null);
     setSnackbarMessage('Turno cerrado y reporte generado');
     setSnackbarVisible(true);
-  }, [selectedShift, selectedLine, selectedMachine, selectedPpm, repository, shiftSessionsRepo, reportsRepository, setSelectedProduct]);
+  }, [selectedShift, selectedLine, selectedMachine, selectedPpm, repository, shiftSessionsRepo, reportsRepository, setSelectedProduct, plantConfigRepo, conciliationRepo, shiftSummaryRepo]);
 
   // ─── Downtime Start ────────────────────────────────────────────────────────
   const handleStartDowntime = useCallback(() => {
@@ -250,17 +307,66 @@ export function useOeeScreenOrchestration() {
   }, [activeDowntime]);
 
   const executeDowntimeEnd = useCallback(async () => {
-    if (!pendingEvent || !selectedShift) return;
+    if (!pendingEvent || !selectedShift || !selectedMachine) return;
+
+    const relatedEventId = pendingEvent.related_event_id;
     await repository.createEvent({
       event_type: 'downtime_end',
       timestamp: nowMs(),
-      related_event_id: pendingEvent.related_event_id,
+      related_event_id: relatedEventId,
     });
+
+    // ── Fire-and-forget: create pending conciliation if MTTO reason ─────
+    if (relatedEventId) {
+      try {
+        // Look up the original downtime_start event to get reason_code
+        const startEvent = await repository.findById(relatedEventId);
+        if (startEvent) {
+          const reasonCode = startEvent.get('reason_code') as string | undefined;
+          const startTimestamp = startEvent.get('timestamp') as number;
+
+          if (reasonCode) {
+            // Check if the reason is MTTO category
+            const reasonCatalogEntry = PARO_REASONS.find((r) => r.code === reasonCode);
+            const isMtto = reasonCatalogEntry?.macro === 'MTTO';
+
+            if (isMtto) {
+              // Calculate duration in minutes
+              const durationMs = nowMs() - startTimestamp;
+              const durationMin = Math.round((durationMs / 60000) * 10) / 10;
+
+              // Check threshold
+              const threshold = await plantConfigRepo.getMicroStopThreshold();
+              if (durationMin >= threshold) {
+                // Get active shift session for the machine
+                const activeSession = await shiftSessionsRepo.findActiveByMachine(selectedMachine);
+
+                await conciliationRepo.create({
+                  oee_event_id: relatedEventId,
+                  shift_session_id: activeSession?.get('id') ?? selectedShift,
+                  machine_id: selectedMachine,
+                  reason_code: reasonCode,
+                  duration_min: durationMin,
+                  conciliated: false,
+                  ot_sent: false,
+                  is_mtto: true,
+                  status: 'pending',
+                });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // Fire-and-forget — don't block the UI if conciliation creation fails
+        console.warn('Failed to create pending conciliation:', err);
+      }
+    }
+
     setShowConfirmModal(false);
     setPendingEvent(null);
     setSnackbarMessage('Paro cerrado');
     setSnackbarVisible(true);
-  }, [pendingEvent, selectedShift, repository]);
+  }, [pendingEvent, selectedShift, selectedMachine, repository, plantConfigRepo, shiftSessionsRepo, conciliationRepo]);
 
   // ─── Production ────────────────────────────────────────────────────────────
   const handleRegisterProduction = useCallback(() => {

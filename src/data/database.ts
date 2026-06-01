@@ -19,7 +19,7 @@ import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode';
 
 import {
-  assetSchema, assetTypeSchema, workOrderSchema, workOrderSchemaMigrationStrategy,
+  assetSchema, assetTypeSchema, workOrderSchema, workOrderSchemaV0ToV1, workOrderSchemaV1ToV2,
   reportSchema, oeeEventSchema, syncErrorSchema,
   qualityInspectionSchema, defectLogSchema, weightLogSchema, shiftSessionSchema, operatorSchema, productWeightStandardSchema,
   downtimeConciliationSchema, plantConfigSchema, shiftSummarySchema,
@@ -82,7 +82,7 @@ export async function getDatabase(): Promise<ChocolateIbarraDatabase> {
       await db.addCollections({
         assets: { schema: assetSchema },
         asset_types: { schema: assetTypeSchema },
-        work_orders: { schema: workOrderSchema, migrationStrategies: { 1: workOrderSchemaMigrationStrategy } },
+        work_orders: { schema: workOrderSchema, migrationStrategies: { 1: workOrderSchemaV0ToV1, 2: workOrderSchemaV1ToV2 } },
         reports: { schema: reportSchema },
         oee_events: { schema: oeeEventSchema },
         sync_errors: { schema: syncErrorSchema },

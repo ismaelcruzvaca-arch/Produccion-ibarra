@@ -203,6 +203,7 @@ function pullQueryBuilderWorkOrders(checkpoint: GraphQLWorkOrder | undefined, _l
           cause_note
           action_note
           actual_start_at
+          completed_at
           cmms_wo_id
         }
       }
@@ -237,6 +238,7 @@ function pushMutationBuilderWorkOrders(docs: any[]) {
               cause_note,
               action_note,
               actual_start_at,
+              completed_at,
               cmms_wo_id
             ]
           }

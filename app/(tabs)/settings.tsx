@@ -17,6 +17,7 @@ import { useSettingsPermissions } from '../../src/ui/hooks/useSettingsPermission
 import { SettingsProfile } from '../../src/ui/components/organisms/settings/SettingsProfile';
 import { SettingsPowerBI } from '../../src/ui/components/organisms/settings/SettingsPowerBI';
 import { SettingsCatalogs } from '../../src/ui/components/organisms/settings/SettingsCatalogs';
+import { SettingsConfig } from '../../src/ui/components/organisms/settings/SettingsConfig';
 import { SettingsSystem } from '../../src/ui/components/organisms/settings/SettingsSystem';
 import { colors, spacing, typography } from '../../src/ui/theme/tokens';
 
@@ -44,6 +45,8 @@ export default function SettingsScreen() {
         return <SettingsProfile key={section} onSignOut={handleSignOut} />;
       case 'powerbi':
         return <SettingsPowerBI key={section} />;
+      case 'plant_config':
+        return <SettingsConfig key={section} />;
       case 'catalogs':
         return <SettingsCatalogs key={section} userId={userId} />;
       case 'system':

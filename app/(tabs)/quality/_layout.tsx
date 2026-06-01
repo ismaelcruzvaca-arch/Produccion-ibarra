@@ -31,6 +31,10 @@ export default function QualityLayout() {
         name="capture"
         options={{ title: 'Nueva Inspección', presentation: 'modal' }}
       />
+      <Stack.Screen
+        name="trends"
+        options={{ title: 'Tendencias de Calidad' }}
+      />
     </Stack>
   );
 }

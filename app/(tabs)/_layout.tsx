@@ -1,31 +1,20 @@
 /**
- * Tab layout — Inicio, OEE, Calidad, Turnos, Alertas (sup.), Ajustes (sup.).
+ * Tab layout — Inicio, OEE, Calidad, Turnos, Alertas, Ajustes.
  * Operators see 4 tabs; supervisors/admins see all 6.
  * Tab bar: 64 dp height, 12 dp label, ≥48 dp touch targets.
+ *
+ * The "Alertas" tab replaces the old supervisor tab. The supervisor DLQ screen
+ * now lives at `app/(tabs)/alerts/dlq.tsx` inside the alerts group.
  */
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/auth/useAuthStore';
-import { useSyncErrorCount } from '../../src/hooks/useSyncErrorCount';
-
-// ─── Badge Component ───────────────────────────────────────────────────────────
-
-/**
- * Red dot badge overlaid on an icon. Shows count up to 99+.
- * Only rendered when count > 0.
- */
-function AlertBadge({ count }: { count: number }) {
-  if (count === 0) return null;
-  const label = count > 99 ? '99+' : String(count);
-  return (
-    <View style={styles.badge}>
-      <Text style={styles.badgeText}>{label}</Text>
-    </View>
-  );
-}
+import { useAlertBadge } from '../../src/hooks/useAlertBadge';
+import { useAlertBadgeStore } from '../../src/store/alertBadgeStore';
+import { AlertBadge } from '../../src/ui/components/alertEngine/AlertBadge';
 
 // ─── Tab Layout ───────────────────────────────────────────────────────────────
 
@@ -33,9 +22,10 @@ export default function TabLayout() {
   const user = useAuthStore((s) => s.user) as { role?: string } | null;
   const isSupervisor = user?.role === 'supervisor' || user?.role === 'admin';
 
-  // Only subscribe to DLQ count when the user has supervisor access — avoids
-  // waking the hook for operators who can't see the tab anyway.
-  const dlqCount = useSyncErrorCount();
+  // Feed the shared badge store (mount polling ONCE here)
+  useAlertBadge();
+  // Read badge count from the shared store
+  const badgeCount = useAlertBadgeStore((s) => s.badgeCount);
 
   return (
     <Tabs
@@ -88,13 +78,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="supervisor"
+        name="alerts"
         options={{
           title: 'Alertas',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <View>
-              <MaterialCommunityIcons name="shield-alert" color={color} size={size} />
-              {isSupervisor && <AlertBadge count={dlqCount} />}
+              <MaterialCommunityIcons name="bell-ring" color={color} size={size} />
+              {isSupervisor && <AlertBadge count={badgeCount} />}
             </View>
           ),
           tabBarButton: isSupervisor ? undefined : () => null,
@@ -113,26 +103,3 @@ export default function TabLayout() {
     </Tabs>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  badge: {
-    position: 'absolute',
-    top: -4,
-    right: -8,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#D32F2F',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 3,
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 9,
-    fontWeight: 'bold',
-    lineHeight: 12,
-  },
-});
