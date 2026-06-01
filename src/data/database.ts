@@ -18,8 +18,32 @@ import { createRxDatabase, addRxPlugin, type RxDatabase, type RxCollection } fro
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode';
 
-import { assetSchema, assetTypeSchema, workOrderSchema, reportSchema, oeeEventSchema, syncErrorSchema } from './schemas';
-import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent, ISyncError } from '../core/types';
+import {
+  assetSchema,
+  assetTypeSchema,
+  workOrderSchema,
+  reportSchema,
+  oeeEventSchema,
+  syncErrorSchema,
+  signatureSchema,
+  toasterLogSchema,
+  mixingBatchSchema,
+  extractorCheckSchema,
+  vitaminKitSchema,
+} from './schemas';
+import type {
+  IAsset,
+  IAssetType,
+  IWorkOrder,
+  IReport,
+  IOeeEvent,
+  ISyncError,
+  ISignature,
+  IToasterLog,
+  IMixingBatch,
+  IExtractorCheck,
+  IVitaminKit,
+} from '../core/types';
 
 // ─── Database Collections Type ──────────────────────────────────────────────────
 
@@ -31,6 +55,11 @@ export type ChocolateIbarraDatabase = RxDatabase<{
   reports: RxCollection<IReport>;
   oee_events: RxCollection<IOeeEvent>;
   sync_errors: RxCollection<ISyncError>;
+  signatures: RxCollection<ISignature>;
+  toaster_logs: RxCollection<IToasterLog>;
+  mixing_batches: RxCollection<IMixingBatch>;
+  extractor_checks: RxCollection<IExtractorCheck>;
+  vitamin_kits: RxCollection<IVitaminKit>;
 }>;
 
 // ─── Database Singleton ────────────────────────────────────────────────────────
@@ -72,6 +101,11 @@ export async function getDatabase(): Promise<ChocolateIbarraDatabase> {
         reports: { schema: reportSchema },
         oee_events: { schema: oeeEventSchema },
         sync_errors: { schema: syncErrorSchema },
+        signatures: { schema: signatureSchema },
+        toaster_logs: { schema: toasterLogSchema },
+        mixing_batches: { schema: mixingBatchSchema },
+        extractor_checks: { schema: extractorCheckSchema },
+        vitamin_kits: { schema: vitaminKitSchema },
       });
       return db as ChocolateIbarraDatabase;
     });
