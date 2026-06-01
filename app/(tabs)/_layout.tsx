@@ -39,8 +39,8 @@ function AlertBadge({ count }: { count: number }) {
 // ─── Tab Layout ───────────────────────────────────────────────────────────────
 
 export default function TabLayout() {
-  const user = useAuthStore((s) => s.user) as { role?: string } | null;
-  const isSupervisor = user?.role === 'supervisor' || user?.role === 'admin';
+  const role = useAuthStore((s) => s.role);
+  const isSupervisor = role === 'supervisor' || role === 'admin';
 
   // Only subscribe to DLQ count when the user has supervisor access — avoids
   // waking the hook for operators who can't see the tab anyway.

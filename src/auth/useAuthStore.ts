@@ -53,6 +53,7 @@ export interface AuthState {
   operatorId: string | null;
   assignedLines: string[];
   selectedLine: string | null;
+  role: string | null;  // 'operator' | 'supervisor' | 'admin' | null
 
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -85,6 +86,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   operatorId: null,
   assignedLines: [],
   selectedLine: null,
+  role: null,
 
   signIn: async (email: string, password: string) => {
     set({ isLoading: true, error: null });
@@ -156,6 +158,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       operatorId: null,
       assignedLines: [],
       selectedLine: null,
+      role: null,
     });
   },
 
@@ -236,6 +239,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({
         operatorId: profile?.id ?? userId,
         assignedLines: lineIds,
+        role: profile?.role ?? 'operator',
       });
     } catch (err: any) {
       console.warn(
@@ -247,6 +251,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({
         operatorId: userId,
         assignedLines: [],
+        role: 'operator',
         error: 'Modo sin conexión — perfiles no disponibles',
       });
     }
