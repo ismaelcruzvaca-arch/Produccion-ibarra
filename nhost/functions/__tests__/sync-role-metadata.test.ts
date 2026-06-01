@@ -125,7 +125,7 @@ Deno.test({
   async fn() {
     setEnv({
       NHOST_WEBHOOK_SECRET: "test-webhook-secret",
-      NHOST_ADMIN_URL: "https://admin.nhost.dev/v1",
+      NHOST_BACKEND_URL: "https://admin.nhost.dev/v1",
       NHOST_ADMIN_SECRET: "test-admin-secret",
     });
     const restore = installMockFetch();
@@ -135,7 +135,9 @@ Deno.test({
       const response = await handler(req);
 
       assertEquals(response.status, 200);
-      assertEquals(await response.text(), "OK");
+      const body = await response.json();
+      assertEquals(body.success, true);
+      assertEquals(body.role, "operator");
 
       assertEquals(fetchCalls.length, 1, "should call Management API exactly once");
       assertMetadataPatchCall(fetchCalls[0], "user-op-001", "operator", ["operator"]);
@@ -152,7 +154,7 @@ Deno.test({
   async fn() {
     setEnv({
       NHOST_WEBHOOK_SECRET: "test-webhook-secret",
-      NHOST_ADMIN_URL: "https://admin.nhost.dev/v1",
+      NHOST_BACKEND_URL: "https://admin.nhost.dev/v1",
       NHOST_ADMIN_SECRET: "test-admin-secret",
     });
     const restore = installMockFetch();
@@ -162,7 +164,9 @@ Deno.test({
       const response = await handler(req);
 
       assertEquals(response.status, 200);
-      assertEquals(await response.text(), "OK");
+      const body = await response.json();
+      assertEquals(body.success, true);
+      assertEquals(body.role, "admin");
 
       assertEquals(fetchCalls.length, 1, "should call Management API exactly once");
       assertMetadataPatchCall(fetchCalls[0], "user-adm-001", "admin", ["admin", "supervisor", "operator"]);
@@ -179,7 +183,7 @@ Deno.test({
   async fn() {
     setEnv({
       NHOST_WEBHOOK_SECRET: "test-webhook-secret",
-      NHOST_ADMIN_URL: "https://admin.nhost.dev/v1",
+      NHOST_BACKEND_URL: "https://admin.nhost.dev/v1",
       NHOST_ADMIN_SECRET: "test-admin-secret",
     });
     const restore = installMockFetch();
@@ -208,7 +212,7 @@ Deno.test({
   async fn() {
     setEnv({
       NHOST_WEBHOOK_SECRET: "test-webhook-secret",
-      NHOST_ADMIN_URL: "https://admin.nhost.dev/v1",
+      NHOST_BACKEND_URL: "https://admin.nhost.dev/v1",
       NHOST_ADMIN_SECRET: "test-admin-secret",
     });
     const restore = installMockFetch();
@@ -237,7 +241,7 @@ Deno.test({
   async fn() {
     setEnv({
       NHOST_WEBHOOK_SECRET: "test-webhook-secret",
-      NHOST_ADMIN_URL: "https://admin.nhost.dev/v1",
+      NHOST_BACKEND_URL: "https://admin.nhost.dev/v1",
       NHOST_ADMIN_SECRET: "test-admin-secret",
     });
     const restore = installMockFetch();
@@ -274,7 +278,7 @@ Deno.test({
   async fn() {
     setEnv({
       NHOST_WEBHOOK_SECRET: "test-webhook-secret",
-      NHOST_ADMIN_URL: "https://admin.nhost.dev/v1",
+      NHOST_BACKEND_URL: "https://admin.nhost.dev/v1",
       NHOST_ADMIN_SECRET: "test-admin-secret",
     });
     const restore = installMockFetch();
@@ -311,7 +315,7 @@ Deno.test({
   async fn() {
     setEnv({
       NHOST_WEBHOOK_SECRET: "test-webhook-secret",
-      NHOST_ADMIN_URL: "https://admin.nhost.dev/v1",
+      NHOST_BACKEND_URL: "https://admin.nhost.dev/v1",
       NHOST_ADMIN_SECRET: "test-admin-secret",
     });
     // Mock fetch to return 500 (simulate Management API failure)
