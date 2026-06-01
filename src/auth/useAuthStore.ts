@@ -54,6 +54,7 @@ export interface AuthState {
   assignedLines: string[];
   selectedLine: string | null;
   role: string | null;  // 'operator' | 'supervisor' | 'admin' | null
+  fullName: string | null;  // resolved from user.displayName ?? user.email
 
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -78,6 +79,16 @@ function isTokenValid(token: string): boolean {
   }
 }
 
+/**
+ * Resolves the user's display name from the Nhost user object.
+ * Falls back to email if displayName is not set.
+ */
+function resolveFullName(user: unknown): string {
+  const u = user as Record<string, unknown> | null | undefined;
+  if (!u) return '';
+  return (u.displayName as string) ?? (u.email as string) ?? '';
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
@@ -87,6 +98,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   assignedLines: [],
   selectedLine: null,
   role: null,
+  fullName: null,
 
   signIn: async (email: string, password: string) => {
     set({ isLoading: true, error: null });
@@ -109,6 +121,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
         error: null,
+        fullName: resolveFullName(body.session.user),
       });
     } catch (err: any) {
       const rawMessage =
@@ -159,6 +172,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       assignedLines: [],
       selectedLine: null,
       role: null,
+      fullName: null,
     });
   },
 
@@ -179,6 +193,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthenticated: true,
           isLoading: false,
           error: null,
+          fullName: resolveFullName(stored.user),
         });
         return;
       }
@@ -194,6 +209,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
         error: null,
+        fullName: resolveFullName(stored.user),
       });
     } catch {
       set({ isAuthenticated: false, isLoading: false, user: null });
