@@ -1,0 +1,728 @@
+{
+  "type": "bulk",
+  "args": [
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "quality_inspections" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "id", "line_id", "operator_id", "inspector_id", "shift_id",
+            "product_code", "batch_id", "result", "inspected_at",
+            "notes", "created_at", "updated_at", "is_deleted"
+          ],
+          "filter": {
+            "_and": [
+              {
+                "_exists": {
+                  "_table": { "schema": "public", "name": "user_line_assignments" },
+                  "_where": {
+                    "_and": [
+                      { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                      { "line_id": { "_eq": "$line_id" } }
+                    ]
+                  }
+                }
+              },
+              { "is_deleted": { "_eq": false } }
+            ]
+          },
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "quality_inspections" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "line_id", "operator_id", "inspector_id", "shift_id",
+            "product_code", "batch_id", "result", "inspected_at",
+            "notes", "created_at", "updated_at", "is_deleted"
+          ],
+          "filter": { "is_deleted": { "_eq": false } },
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "quality_inspections" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "line_id", "operator_id", "inspector_id", "shift_id",
+            "product_code", "batch_id", "result", "inspected_at",
+            "notes", "created_at", "updated_at", "is_deleted"
+          ],
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "quality_inspections" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "id", "line_id", "operator_id", "inspector_id", "shift_id",
+            "product_code", "batch_id", "result", "inspected_at",
+            "notes", "created_at", "updated_at", "is_deleted"
+          ],
+          "check": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          },
+          "set": {
+            "operator_id": "X-Hasura-User-Id"
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "quality_inspections" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "line_id", "operator_id", "inspector_id", "shift_id",
+            "product_code", "batch_id", "result", "inspected_at",
+            "notes", "created_at", "updated_at", "is_deleted"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "quality_inspections" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "line_id", "operator_id", "inspector_id", "shift_id",
+            "product_code", "batch_id", "result", "inspected_at",
+            "notes", "created_at", "updated_at", "is_deleted"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "quality_inspections" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "line_id", "result", "inspected_at", "notes", "updated_at"
+          ],
+          "filter": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          },
+          "check": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "quality_inspections" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "line_id", "operator_id", "inspector_id", "shift_id",
+            "product_code", "batch_id", "result", "inspected_at",
+            "notes", "created_at", "updated_at", "is_deleted"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "quality_inspections" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "line_id", "operator_id", "inspector_id", "shift_id",
+            "product_code", "batch_id", "result", "inspected_at",
+            "notes", "created_at", "updated_at", "is_deleted"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "quality_inspections" },
+        "role": "operator",
+        "permission": {
+          "filter": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "quality_inspections" },
+        "role": "supervisor",
+        "permission": {
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "quality_inspections" },
+        "role": "admin",
+        "permission": {
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "defect_logs" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "defect_type", "defect_code", "quantity", "severity",
+            "position", "notes", "registered_at", "updated_at", "is_deleted"
+          ],
+          "filter": {
+            "_and": [
+              {
+                "_exists": {
+                  "_table": { "schema": "public", "name": "user_line_assignments" },
+                  "_where": {
+                    "_and": [
+                      { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                      { "line_id": { "_eq": "$line_id" } }
+                    ]
+                  }
+                }
+              },
+              { "is_deleted": { "_eq": false } }
+            ]
+          },
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "defect_logs" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "defect_type", "defect_code", "quantity", "severity",
+            "position", "notes", "registered_at", "updated_at", "is_deleted"
+          ],
+          "filter": { "is_deleted": { "_eq": false } },
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "defect_logs" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "defect_type", "defect_code", "quantity", "severity",
+            "position", "notes", "registered_at", "updated_at", "is_deleted"
+          ],
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "defect_logs" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "defect_type", "defect_code", "quantity", "severity",
+            "position", "notes", "registered_at", "updated_at", "is_deleted"
+          ],
+          "check": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          },
+          "set": {
+            "operator_id": "X-Hasura-User-Id"
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "defect_logs" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "defect_type", "defect_code", "quantity", "severity",
+            "position", "notes", "registered_at", "updated_at", "is_deleted"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "defect_logs" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "defect_type", "defect_code", "quantity", "severity",
+            "position", "notes", "registered_at", "updated_at", "is_deleted"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "defect_logs" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "line_id", "quantity", "severity", "notes", "position", "updated_at"
+          ],
+          "filter": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          },
+          "check": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "defect_logs" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "defect_type", "defect_code", "quantity", "severity",
+            "position", "notes", "registered_at", "updated_at", "is_deleted"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "defect_logs" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "defect_type", "defect_code", "quantity", "severity",
+            "position", "notes", "registered_at", "updated_at", "is_deleted"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "defect_logs" },
+        "role": "operator",
+        "permission": {
+          "filter": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "defect_logs" },
+        "role": "supervisor",
+        "permission": {
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "defect_logs" },
+        "role": "admin",
+        "permission": {
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "weight_logs" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "product_code", "target_weight", "actual_weight", "tolerance",
+            "unit", "deviation", "result", "registered_at", "updated_at", "is_deleted"
+          ],
+          "filter": {
+            "_and": [
+              {
+                "_exists": {
+                  "_table": { "schema": "public", "name": "user_line_assignments" },
+                  "_where": {
+                    "_and": [
+                      { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                      { "line_id": { "_eq": "$line_id" } }
+                    ]
+                  }
+                }
+              },
+              { "is_deleted": { "_eq": false } }
+            ]
+          },
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "weight_logs" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "product_code", "target_weight", "actual_weight", "tolerance",
+            "unit", "deviation", "result", "registered_at", "updated_at", "is_deleted"
+          ],
+          "filter": { "is_deleted": { "_eq": false } },
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "weight_logs" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "product_code", "target_weight", "actual_weight", "tolerance",
+            "unit", "deviation", "result", "registered_at", "updated_at", "is_deleted"
+          ],
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "weight_logs" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "product_code", "target_weight", "actual_weight", "tolerance",
+            "unit", "deviation", "result", "registered_at", "updated_at", "is_deleted"
+          ],
+          "check": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          },
+          "set": {
+            "operator_id": "X-Hasura-User-Id"
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "weight_logs" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "product_code", "target_weight", "actual_weight", "tolerance",
+            "unit", "deviation", "result", "registered_at", "updated_at", "is_deleted"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "weight_logs" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "product_code", "target_weight", "actual_weight", "tolerance",
+            "unit", "deviation", "result", "registered_at", "updated_at", "is_deleted"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "weight_logs" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "line_id", "actual_weight", "deviation", "result", "notes", "updated_at"
+          ],
+          "filter": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          },
+          "check": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "weight_logs" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "product_code", "target_weight", "actual_weight", "tolerance",
+            "unit", "deviation", "result", "registered_at", "updated_at", "is_deleted"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "weight_logs" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "line_id", "inspection_id", "operator_id", "shift_id",
+            "product_code", "target_weight", "actual_weight", "tolerance",
+            "unit", "deviation", "result", "registered_at", "updated_at", "is_deleted"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "weight_logs" },
+        "role": "operator",
+        "permission": {
+          "filter": {
+            "_exists": {
+              "_table": { "schema": "public", "name": "user_line_assignments" },
+              "_where": {
+                "_and": [
+                  { "user_id": { "_eq": "X-Hasura-User-Id" } },
+                  { "line_id": { "_eq": "$line_id" } }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "weight_logs" },
+        "role": "supervisor",
+        "permission": {
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "weight_logs" },
+        "role": "admin",
+        "permission": {
+          "filter": {}
+        }
+      }
+    }
+  ]
+}

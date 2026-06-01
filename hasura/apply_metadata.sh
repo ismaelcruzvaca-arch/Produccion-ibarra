@@ -87,6 +87,16 @@ apply_metadata \
   "user_line_assignments: SELECT + INSERT + DELETE permissions (operator role)" \
   "$SCRIPT_DIR/permissions_user_line_assignments.json"
 
+# 3. Quality tables permissions (3 tables × 4 operations × 3 roles)
+# Drop first to ensure clean re-apply
+apply_metadata \
+  "quality: DROP existing permissions (clean slate)" \
+  "$SCRIPT_DIR/drop_quality_permissions.json" || true
+
+apply_metadata \
+  "quality_inspections + defect_logs + weight_logs: FULL permissions (SELECT, INSERT, UPDATE, DELETE for operator, supervisor, admin)" \
+  "$SCRIPT_DIR/quality_permissions.json"
+
 # --- Verify ---
 echo "=== Verification ==="
 echo "Checking applied permissions..."
