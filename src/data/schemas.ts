@@ -14,7 +14,19 @@
  */
 
 import type { RxJsonSchema } from 'rxdb';
-import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent, ISyncError } from '../core/types';
+import type {
+  IAsset,
+  IAssetType,
+  IWorkOrder,
+  IReport,
+  IOeeEvent,
+  ISyncError,
+  ISignature,
+  IToasterLog,
+  IMixingBatch,
+  IExtractorCheck,
+  IVitaminKit,
+} from '../core/types';
 
 /**
  * Asset collection schema.
@@ -162,4 +174,191 @@ export const syncErrorSchema: RxJsonSchema<ISyncError> = {
     fecha:            { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
   },
   indexes: ['id_evento', 'fecha'],
+};
+
+// ─── Digital Signatures ─────────────────────────────────────────────────────────
+
+/**
+ * Signatures collection schema.
+ * Uses `updated_at` (not `client_updated_at`) per the new data contract.
+ * Indexes: [document_id] for lookup by document, [document_type, document_id] for compound queries.
+ */
+export const signatureSchema: RxJsonSchema<ISignature> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: [
+    'id',
+    'updated_at',
+    'is_deleted',
+    'document_type',
+    'document_id',
+    'signer_id',
+    'signer_name',
+    'signer_role',
+    'signed_at',
+    'sequence',
+  ],
+  properties: {
+    id: { type: 'string', maxLength: 100 },
+    updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted: { type: 'boolean' },
+    document_type: { type: 'string' },
+    document_id: { type: 'string' },
+    signer_id: { type: 'string' },
+    signer_name: { type: 'string' },
+    signer_role: { type: 'string' },
+    signed_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    sequence: { type: 'number', multipleOf: 1, minimum: 0, maximum: 100 },
+  },
+  indexes: ['document_id', ['document_type', 'document_id']],
+};
+
+// ─── Toaster Log (F-PD-16) ──────────────────────────────────────────────────────
+
+export const toasterLogSchema: RxJsonSchema<IToasterLog> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'updated_at', 'is_deleted'],
+  properties: {
+    id: { type: 'string', maxLength: 100 },
+    updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted: { type: 'boolean' },
+    line_id: { type: 'string' },
+    machine_id: { type: 'string' },
+    shift_id: { type: 'string' },
+    operator_id: { type: 'string' },
+    batch_number: { type: 'string' },
+    temp_superior: { type: 'number' },
+    temp_media: { type: 'number' },
+    temp_inferior: { type: 'number' },
+    rpm: { type: 'number' },
+    vapor_pressure: { type: 'number' },
+    cacao_crudo_humidity: { type: 'number' },
+    cacao_tostado_humidity: { type: 'number' },
+    pesadas: { type: 'number' },
+    silo: { type: 'string' },
+    lotes: { type: 'string' },
+    tiempo_muerto_min: { type: 'number' },
+    tiempo_muerto_cause: { type: 'string' },
+    inv_ini_cascarilla: { type: 'number' },
+    inv_ini_polvillo: { type: 'number' },
+    inv_ini_granilla: { type: 'number' },
+    inv_ini_cacao_crudo: { type: 'number' },
+    inv_ini_azucar: { type: 'number' },
+    inv_fin_cascarilla: { type: 'number' },
+    inv_fin_polvillo: { type: 'number' },
+    inv_fin_granilla: { type: 'number' },
+    inv_fin_cacao_crudo: { type: 'number' },
+    inv_fin_azucar: { type: 'number' },
+  },
+  indexes: ['shift_id', ['shift_id', 'batch_number']],
+};
+
+// ─── Mixing Batch (F-PD-17) ─────────────────────────────────────────────────────
+
+export const mixingBatchSchema: RxJsonSchema<IMixingBatch> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'updated_at', 'is_deleted'],
+  properties: {
+    id: { type: 'string', maxLength: 100 },
+    updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted: { type: 'boolean' },
+    line_id: { type: 'string' },
+    machine_id: { type: 'string' },
+    shift_id: { type: 'string' },
+    operator_id: { type: 'string' },
+    batch_sequence: { type: 'number' },
+    mezcladora: { type: 'string' },
+    agitador: { type: 'string' },
+    azucar_kg: { type: 'number' },
+    licor_kg: { type: 'number' },
+    cocoa_kg: { type: 'number' },
+    grasa_vegetal_kg: { type: 'number' },
+    lecitina_kg: { type: 'number' },
+    reproceso_kg: { type: 'number' },
+    viscosity_cps: { type: 'number' },
+    discharge_temp: { type: 'number' },
+    mezcladas: { type: 'number' },
+    molidas: { type: 'number' },
+    reproceso_total: { type: 'number' },
+    desperdicio: { type: 'number' },
+    inv_ini_azucar: { type: 'number' },
+    inv_ini_licor: { type: 'number' },
+    inv_ini_cocoa: { type: 'number' },
+    inv_ini_grasa_vegetal: { type: 'number' },
+    inv_ini_lecitina: { type: 'number' },
+    inv_ini_reproceso: { type: 'number' },
+    inv_fin_azucar: { type: 'number' },
+    inv_fin_licor: { type: 'number' },
+    inv_fin_cocoa: { type: 'number' },
+    inv_fin_grasa_vegetal: { type: 'number' },
+    inv_fin_lecitina: { type: 'number' },
+    inv_fin_reproceso: { type: 'number' },
+    consumo_azucar: { type: 'number' },
+    consumo_licor: { type: 'number' },
+    consumo_cocoa: { type: 'number' },
+    consumo_grasa_vegetal: { type: 'number' },
+    consumo_lecitina: { type: 'number' },
+    consumo_reproceso: { type: 'number' },
+  },
+  indexes: ['shift_id', 'batch_sequence'],
+};
+
+// ─── Extractor Check (F-PD-18) ──────────────────────────────────────────────────
+
+export const extractorCheckSchema: RxJsonSchema<IExtractorCheck> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'updated_at', 'is_deleted'],
+  properties: {
+    id: { type: 'string', maxLength: 100 },
+    updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted: { type: 'boolean' },
+    line_id: { type: 'string' },
+    machine_id: { type: 'string' },
+    shift_id: { type: 'string' },
+    operator_id: { type: 'string' },
+    extractor_1_on: { type: 'boolean' },
+    extractor_2_on: { type: 'boolean' },
+    extractor_3_on: { type: 'boolean' },
+    extractor_4_on: { type: 'boolean' },
+    extractor_5_on: { type: 'boolean' },
+    extractor_6_on: { type: 'boolean' },
+    extractor_7_on: { type: 'boolean' },
+    extractor_8_on: { type: 'boolean' },
+    cedazo_tt_last_cleaning: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+  },
+  indexes: ['shift_id'],
+};
+
+// ─── Vitamin Kit (F-PD-06) ──────────────────────────────────────────────────────
+
+export const vitaminKitSchema: RxJsonSchema<IVitaminKit> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'updated_at', 'is_deleted'],
+  properties: {
+    id: { type: 'string', maxLength: 100 },
+    updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted: { type: 'boolean' },
+    line_id: { type: 'string' },
+    machine_id: { type: 'string' },
+    shift_id: { type: 'string' },
+    operator_id: { type: 'string' },
+    orden: { type: 'string' },
+    kit: { type: 'string' },
+    semi_terminado: { type: 'string' },
+    ingredients: { type: 'array' },
+    verif_produccion: { type: 'boolean' },
+    verif_calidad: { type: 'boolean' },
+    peso_bascula_kg: { type: 'number' },
+    peso_fisico_kg: { type: 'number' },
+  },
+  indexes: ['shift_id'],
 };
