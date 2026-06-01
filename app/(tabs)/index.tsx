@@ -20,7 +20,6 @@ import {
   Button,
   Dialog,
   Portal,
-  Snackbar,
 } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import {
@@ -34,6 +33,7 @@ import { ConnectionBadge } from '../../src/ui/components/ConnectionBadge';
 import { SyncMonitor } from '../../src/ui/components/SyncMonitor';
 import { useUIStore } from '../../src/ui/store/useUIStore';
 import { useDashboardData } from '../../src/ui/hooks/useDashboardData';
+import { useAlertSnackbar } from '../../src/ui/components/molecules/AlertSnackbar';
 import { TimeFilter } from '../../src/ui/components/TimeFilter';
 import { KpiCards } from '../../src/ui/components/KpiCards';
 import { ProductionBarChart } from '../../src/ui/components/ProductionBarChart';
@@ -182,8 +182,8 @@ export default function DashboardScreen() {
   const [reports, setReports] = useState<IReport[]>([]);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
   const [reportToDelete, setReportToDelete] = useState<IReport | null>(null);
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
+  // Snackbar — centralized via AlertSnackbar
+  const { showAlert } = useAlertSnackbar();
 
   // Wave 8: OEE event data for live dashboard preview
   const { docs$: oeeDocs$ } = useOeeEventsRepository();
@@ -217,16 +217,14 @@ export default function DashboardScreen() {
     if (!reportToDelete) return;
     try {
       await remove(reportToDelete.id);
-      setSnackbarMessage('Reporte eliminado correctamente');
-      setSnackbarVisible(true);
+      showAlert({ message: 'Reporte eliminado correctamente', type: 'success' });
     } catch {
-      setSnackbarMessage('Error al eliminar el reporte');
-      setSnackbarVisible(true);
+      showAlert({ message: 'Error al eliminar el reporte', type: 'error' });
     } finally {
       setDeleteDialogVisible(false);
       setReportToDelete(null);
     }
-  }, [reportToDelete, remove]);
+  }, [reportToDelete, remove, showAlert]);
 
   const renderItem = useCallback(
     ({ item }: { item: IReport }) => {
@@ -376,15 +374,6 @@ export default function DashboardScreen() {
         </Dialog>
       </Portal>
 
-      <Snackbar
-        visible={snackbarVisible}
-        onDismiss={() => setSnackbarVisible(false)}
-        duration={3000}
-        style={styles.snackbar}
-      >
-        {snackbarMessage}
-      </Snackbar>
-
       <SyncMonitor />
     </ScrollView>
   );
@@ -481,11 +470,6 @@ const styles = StyleSheet.create({
   dialogBold: {
     fontWeight: 'bold',
   },
-  snackbar: {
-    marginBottom: 16,
-    marginHorizontal: 16,
-  },
-
   // Live OEE Summary styles
   liveCard: {
     marginBottom: 16,

@@ -10,7 +10,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { Text, Button, Portal, Dialog, IconButton, Snackbar } from 'react-native-paper';
+import { Text, Button, Portal, Dialog, IconButton } from 'react-native-paper';
 import type { RxDocument } from 'rxdb';
 
 import { useOeeEventsRepository } from '../../src/repositories/useOeeEventsRepository';
@@ -30,6 +30,7 @@ import { generateShiftReport } from '../../src/core/shiftReportGenerator';
 import { useCatalogStore } from '../../src/ui/store/catalogStore';
 import { OeeSelectorBar } from '../../src/ui/components/OeeSelectorBar';
 import { useOeeValidation } from '../../src/hooks/useOeeValidation';
+import { useAlertSnackbar } from '../../src/ui/components/molecules/AlertSnackbar';
 
 export default function OeeScreen() {
   const repository = useOeeEventsRepository();
@@ -68,9 +69,8 @@ export default function OeeScreen() {
   const [showProductionModal, setShowProductionModal] = useState(false);
   const [pendingAnomalousProduction, setPendingAnomalousProduction] = useState<number | null>(null);
 
-  // Snackbar
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
+  // Snackbar — centralized via AlertSnackbar
+  const { showAlert } = useAlertSnackbar();
 
   // Subscribe to events
   const { docs$: oeeDocs$ } = repository;
@@ -114,9 +114,8 @@ export default function OeeScreen() {
       planned_boxes: 480,
     });
     setShiftStarted(true);
-    setSnackbarMessage('Turno iniciado');
-    setSnackbarVisible(true);
-  }, [repository, isValid, selectedShift]);
+    showAlert({ message: 'Turno iniciado', type: 'success' });
+  }, [repository, isValid, selectedShift, showAlert]);
 
   // ─── Shift End ─────────────────────────────────────────────────────────────
   const handleEndShift = useCallback(async () => {
@@ -153,9 +152,8 @@ export default function OeeScreen() {
     setShiftStarted(false);
     setShowConfirmModal(false);
     setPendingEvent(null);
-    setSnackbarMessage('Turno cerrado y reporte generado');
-    setSnackbarVisible(true);
-  }, [selectedShift, selectedLine, selectedPpm, repository, reportsRepository, setSelectedProduct]);
+    showAlert({ message: 'Turno cerrado y reporte generado', type: 'success' });
+  }, [selectedShift, selectedLine, selectedPpm, repository, reportsRepository, setSelectedProduct, showAlert]);
 
   // ─── Downtime Start ────────────────────────────────────────────────────────
   const handleStartDowntime = useCallback(() => {
@@ -183,9 +181,8 @@ export default function OeeScreen() {
     });
     setShowConfirmModal(false);
     setPendingEvent(null);
-    setSnackbarMessage('Paro registrado');
-    setSnackbarVisible(true);
-  }, [pendingEvent, selectedShift, repository]);
+    showAlert({ message: 'Paro registrado', type: 'success' });
+  }, [pendingEvent, selectedShift, repository, showAlert]);
 
   // ─── Downtime End ──────────────────────────────────────────────────────────
   const handleEndDowntime = useCallback(() => {
@@ -218,9 +215,8 @@ export default function OeeScreen() {
     });
     setShowConfirmModal(false);
     setPendingEvent(null);
-    setSnackbarMessage('Paro cerrado');
-    setSnackbarVisible(true);
-  }, [pendingEvent, selectedShift, repository]);
+    showAlert({ message: 'Paro cerrado', type: 'success' });
+  }, [pendingEvent, selectedShift, repository, showAlert]);
 
   // ─── Production ────────────────────────────────────────────────────────────
   const handleRegisterProduction = useCallback(() => {
@@ -251,9 +247,8 @@ export default function OeeScreen() {
       quantity: value,
     });
     setPendingAnomalousProduction(null);
-    setSnackbarMessage(`Producción registrada: ${value} cajas`);
-    setSnackbarVisible(true);
-  }, [selectedShift, repository]);
+    showAlert({ message: `Producción registrada: ${value} cajas`, type: 'success' });
+  }, [selectedShift, repository, showAlert]);
 
   // ─── Generic Confirm ───────────────────────────────────────────────────────
   const handleConfirm = useCallback(() => {
@@ -330,15 +325,6 @@ export default function OeeScreen() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
-
-      <Snackbar
-        visible={snackbarVisible}
-        onDismiss={() => setSnackbarVisible(false)}
-        duration={3000}
-        style={styles.snackbar}
-      >
-        {snackbarMessage}
-      </Snackbar>
     </View>
   );
 }
@@ -366,9 +352,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: 'bold',
     color: '#5D4037',
-  },
-  snackbar: {
-    marginBottom: 16,
-    marginHorizontal: 16,
   },
 });

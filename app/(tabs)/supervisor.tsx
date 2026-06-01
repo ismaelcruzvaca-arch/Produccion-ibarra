@@ -18,12 +18,12 @@ import {
   Button,
   Portal,
   Dialog,
-  Snackbar,
   ActivityIndicator,
   Chip,
 } from 'react-native-paper';
 import { useDatabase } from '../../src/data/DatabaseContext';
 import { nowMs } from '../../src/utils/timestamp';
+import { useAlertSnackbar } from '../../src/ui/components/molecules/AlertSnackbar';
 import type { ISyncError } from '../../src/core/types';
 import type { RxDocument } from 'rxdb';
 
@@ -40,9 +40,8 @@ export default function SupervisorScreen() {
   const [confirmMessage, setConfirmMessage] = useState('');
   const [pendingAction, setPendingAction] = useState<(() => Promise<void>) | null>(null);
 
-  // Snackbar
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
+  // Snackbar — centralized via AlertSnackbar
+  const { showAlert } = useAlertSnackbar();
 
   // Reactive subscription to sync_errors collection
   useEffect(() => {
@@ -68,11 +67,10 @@ export default function SupervisorScreen() {
     try {
       await pendingAction();
     } catch (e: any) {
-      setSnackbarMessage(`Error: ${e?.message ?? 'Operación fallida'}`);
-      setSnackbarVisible(true);
+      showAlert({ message: `Error: ${e?.message ?? 'Operación fallida'}`, type: 'error' });
     }
     setPendingAction(null);
-  }, [pendingAction]);
+  }, [pendingAction, showAlert]);
 
   // Task 3.5: Discard — remove the sync_error, leave oee_event untouched
   const handleDiscard = useCallback((errorDoc: SyncErrorDoc) => {
@@ -81,11 +79,10 @@ export default function SupervisorScreen() {
       `¿Descartar este error de sincronización?\n\nEvento: ${errorDoc.id_evento}\n\nEl evento original NO será modificado.`,
       async () => {
         await errorDoc.remove();
-        setSnackbarMessage('Error descartado correctamente');
-        setSnackbarVisible(true);
+        showAlert({ message: 'Error descartado correctamente', type: 'success' });
       }
     );
-  }, [showConfirm]);
+  }, [showConfirm, showAlert]);
 
   // Task 3.6: Retry — bump updated_at on the original event to re-trigger push, then remove error
   const handleRetry = useCallback((errorDoc: SyncErrorDoc) => {
@@ -100,11 +97,10 @@ export default function SupervisorScreen() {
           await originalEvent.patch({ updated_at: nowMs() });
         }
         await errorDoc.remove();
-        setSnackbarMessage('Reintento encolado — el motor de sync tomará el evento');
-        setSnackbarVisible(true);
+        showAlert({ message: 'Reintento encolado — el motor de sync tomará el evento', type: 'success' });
       }
     );
-  }, [showConfirm, db]);
+  }, [showConfirm, db, showAlert]);
 
   const formatDate = (epochMs: number) => {
     return new Date(epochMs).toLocaleString('es-MX', {
@@ -196,15 +192,6 @@ export default function SupervisorScreen() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
-
-      <Snackbar
-        visible={snackbarVisible}
-        onDismiss={() => setSnackbarVisible(false)}
-        duration={3000}
-        style={styles.snackbar}
-      >
-        {snackbarMessage}
-      </Snackbar>
     </View>
   );
 }
@@ -269,9 +256,5 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: '#757575',
     textAlign: 'center',
-  },
-  snackbar: {
-    marginBottom: 16,
-    marginHorizontal: 16,
   },
 });

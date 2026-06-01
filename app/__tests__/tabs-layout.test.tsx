@@ -116,7 +116,7 @@ describe('TabLayout — isSupervisor logic', () => {
     expect(getByTestId('tab-visible-Alertas').children[0]).toBe('hidden');
   });
 
-  it('should show Inicio, OEE, Alertas, and Ajustes tabs', () => {
+  it('should render all 4 tabs for any role', () => {
     mockUseAuthStore.mockImplementation((selector: (s: any) => any) =>
       selector({ role: 'operator' }),
     );

@@ -19,6 +19,7 @@ import { Tabs } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/auth/useAuthStore';
 import { useSyncErrorCount } from '../../src/hooks/useSyncErrorCount';
+import { AlertSnackbarProvider } from '../../src/ui/components/molecules/AlertSnackbar';
 
 // ─── Badge Component ───────────────────────────────────────────────────────────
 
@@ -47,61 +48,64 @@ export default function TabLayout() {
   const dlqCount = useSyncErrorCount();
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Inicio',
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialCommunityIcons name="home" color={color} size={size} />
-          ),
+    <AlertSnackbarProvider>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: {
+            height: 64,
+            paddingBottom: 8,
+            paddingTop: 8,
+          },
+          tabBarLabelStyle: {
+            fontSize: 12,
+          },
         }}
-      />
-      <Tabs.Screen
-        name="oee"
-        options={{
-          title: 'OEE',
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialCommunityIcons name="chart-line" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="supervisor"
-        options={{
-          title: 'Alertas',
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <View>
-              <MaterialCommunityIcons name="shield-alert" color={color} size={size} />
-              {isSupervisor && <AlertBadge count={dlqCount} />}
-            </View>
-          ),
-          // Wave 8: Only visible to supervisor/admin roles
-          tabBarButton: isSupervisor ? undefined : () => null,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Ajustes',
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialCommunityIcons name="cog" color={color} size={size} />
-          ),
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Inicio',
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+              <MaterialCommunityIcons name="home" color={color} size={size} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="oee"
+          options={{
+            title: 'OEE',
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+              <MaterialCommunityIcons name="chart-line" color={color} size={size} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="supervisor"
+          options={{
+            title: 'Alertas',
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+              <View>
+                <MaterialCommunityIcons name="shield-alert" color={color} size={size} />
+                {isSupervisor && <AlertBadge count={dlqCount} />}
+              </View>
+            ),
+            // Wave 8: Only visible to supervisor/admin roles
+            tabBarButton: isSupervisor ? undefined : () => null,
+            tabBarTestID: isSupervisor ? 'tab-visible-Alertas' : 'tab-hidden-Alertas',
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: 'Ajustes',
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => (
+              <MaterialCommunityIcons name="cog" color={color} size={size} />
+            ),
+          }}
+        />
+      </Tabs>
+    </AlertSnackbarProvider>
   );
 }
 
