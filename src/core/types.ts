@@ -247,3 +247,222 @@ export interface ICatalogStopReason {
   sort_order: number;
   is_active: boolean;
 }
+
+// ─── Digital Signatures ─────────────────────────────────────────────────────────
+
+/**
+ * Signature entity — represents a digital signature (tap-to-confirm) on a document.
+ *
+ * Fields:
+ * - document_type: discriminator for the signed document type (oee_report, toaster_log,
+ *   mixing_batch, extractor_check, vitamin_kit, quality_inspection)
+ * - document_id: UUID of the signed document
+ * - signer_id: operator_profiles.id of the signer
+ * - signer_name: denormalized display name (for offline availability)
+ * - signer_role: role at time of signing (operator, supervisor, admin)
+ * - signed_at: epoch ms when the signature was captured
+ * - sequence: ordinal position in multi-signer chain (1st, 2nd, 3rd, 4th)
+ *
+ * Uses `updated_at` (not `client_updated_at`) per the new data contract.
+ * Stored in shared `signatures` RxDB collection across all form types.
+ */
+export interface ISignature {
+  id: string;
+  updated_at: number;
+  is_deleted: boolean;
+  document_type: string;   // e.g. 'oee_report', 'toaster_log', 'quality_inspection'
+  document_id: string;     // UUID of the signed document
+  signer_id: string;       // operator_profiles.id
+  signer_name: string;     // denormalized (displayName for offline)
+  signer_role: string;     // 'operator' | 'supervisor' | 'admin'
+  signed_at: number;       // epoch ms
+  sequence: number;        // 1st, 2nd, 3rd, 4th signature on same document
+}
+
+export type RxSignature = RxDocument<ISignature>;
+
+// ─── Toaster Log (F-PD-16) ──────────────────────────────────────────────────────
+
+/**
+ * Toaster Log — captures production data for the toaster station (F-PD-16).
+ *
+ * Fields per spec TF-1 through TF-5:
+ * - Temperature readings (superior, media, inferior)
+ * - RPM, vapor pressure
+ * - Cacao crudo and tostado humidity percentages
+ * - Pesadas per batch, silo, lotes
+ * - Tiempo muerto with cause
+ * - Initial and final inventories: cascarilla, polvillo, granilla, cacao_crudo, azucar
+ */
+export interface IToasterLog {
+  id: string;
+  updated_at: number;
+  is_deleted: boolean;
+  line_id: string;
+  machine_id: string;
+  shift_id: string;
+  operator_id: string;
+  batch_number: string;
+  // Temperature readings
+  temp_superior: number;
+  temp_media: number;
+  temp_inferior: number;
+  // Process parameters
+  rpm: number;
+  vapor_pressure: number;
+  // Humidity
+  cacao_crudo_humidity: number;
+  cacao_tostado_humidity: number;
+  // Production tracking
+  pesadas: number;
+  silo: string;
+  lotes: string;
+  // Dead time
+  tiempo_muerto_min: number;
+  tiempo_muerto_cause: string;
+  // Inventories — initial
+  inv_ini_cascarilla: number;
+  inv_ini_polvillo: number;
+  inv_ini_granilla: number;
+  inv_ini_cacao_crudo: number;
+  inv_ini_azucar: number;
+  // Inventories — final
+  inv_fin_cascarilla: number;
+  inv_fin_polvillo: number;
+  inv_fin_granilla: number;
+  inv_fin_cacao_crudo: number;
+  inv_fin_azucar: number;
+}
+
+export type RxToasterLog = RxDocument<IToasterLog>;
+
+// ─── Mixing Batch (F-PD-17) ─────────────────────────────────────────────────────
+
+/**
+ * Mixing Batch — captures production data for the mixing station (F-PD-17).
+ *
+ * Fields per spec MF-1 through MF-4:
+ * - Mezcladora, agitador, batch sequence
+ * - Ingredients per batch: azucar, licor, cocoa, grasa vegetal, lecitina, reproceso
+ * - Viscosity (cps), discharge temp
+ * - Initial / final / consumo inventory per component
+ */
+export interface IMixingBatch {
+  id: string;
+  updated_at: number;
+  is_deleted: boolean;
+  line_id: string;
+  machine_id: string;
+  shift_id: string;
+  operator_id: string;
+  batch_sequence: number;
+  mezcladora: string;
+  agitador: string;
+  // Ingredients per batch
+  azucar_kg: number;
+  licor_kg: number;
+  cocoa_kg: number;
+  grasa_vegetal_kg: number;
+  lecitina_kg: number;
+  reproceso_kg: number;
+  // Process
+  viscosity_cps: number;
+  discharge_temp: number;
+  // Calculated totals (auto-sum per spec MF-5)
+  mezcladas: number;
+  molidas: number;
+  reproceso_total: number;
+  desperdicio: number;
+  // Inventories
+  inv_ini_azucar: number;
+  inv_ini_licor: number;
+  inv_ini_cocoa: number;
+  inv_ini_grasa_vegetal: number;
+  inv_ini_lecitina: number;
+  inv_ini_reproceso: number;
+  inv_fin_azucar: number;
+  inv_fin_licor: number;
+  inv_fin_cocoa: number;
+  inv_fin_grasa_vegetal: number;
+  inv_fin_lecitina: number;
+  inv_fin_reproceso: number;
+  consumo_azucar: number;
+  consumo_licor: number;
+  consumo_cocoa: number;
+  consumo_grasa_vegetal: number;
+  consumo_lecitina: number;
+  consumo_reproceso: number;
+}
+
+export type RxMixingBatch = RxDocument<IMixingBatch>;
+
+// ─── Extractor Check (F-PD-18) ──────────────────────────────────────────────────
+
+/**
+ * Extractor Check — captures production data for the extractor station (F-PD-18).
+ *
+ * Fields per spec EF-1 through EF-2:
+ * - 8 extractors as on/off toggles
+ * - Last cleaning date of Cedazo TT
+ */
+export interface IExtractorCheck {
+  id: string;
+  updated_at: number;
+  is_deleted: boolean;
+  line_id: string;
+  machine_id: string;
+  shift_id: string;
+  operator_id: string;
+  // 8 extractors as on/off toggles
+  extractor_1_on: boolean;
+  extractor_2_on: boolean;
+  extractor_3_on: boolean;
+  extractor_4_on: boolean;
+  extractor_5_on: boolean;
+  extractor_6_on: boolean;
+  extractor_7_on: boolean;
+  extractor_8_on: boolean;
+  // Cleaning
+  cedazo_tt_last_cleaning: number; // epoch ms
+}
+
+export type RxExtractorCheck = RxDocument<IExtractorCheck>;
+
+// ─── Vitamin Kit (F-PD-06) ──────────────────────────────────────────────────────
+
+/**
+ * Vitamin Kit — captures production data for the vitamin station (F-PD-06).
+ *
+ * Fields per spec VF-1 through VF-4:
+ * - Up to 3 products per turno
+ * - #Orden, #Kit, semi-terminado, ingredients with lotes
+ * - Microingredient kits verified by Production AND Quality
+ * - Peso báscula vs peso físico
+ */
+export interface IVitaminKit {
+  id: string;
+  updated_at: number;
+  is_deleted: boolean;
+  line_id: string;
+  machine_id: string;
+  shift_id: string;
+  operator_id: string;
+  // Product info
+  orden: string;
+  kit: string;
+  semi_terminado: string;
+  // Ingredients with lotes (flexible payload)
+  ingredients: Array<{
+    name: string;
+    lote: string;
+    quantity_kg: number;
+  }>;
+  // Verifications
+  verif_produccion: boolean; // Verified by Production
+  verif_calidad: boolean;    // Verified by Quality
+  // Weight
+  peso_bascula_kg: number;
+  peso_fisico_kg: number;
+}
+
+export type RxVitaminKit = RxDocument<IVitaminKit>;
