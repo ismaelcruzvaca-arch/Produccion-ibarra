@@ -1,0 +1,22 @@
+# Nhost Configuration
+# ====================
+# Deploy: nhost deploy --remote
+# Docs: https://docs.nhost.io/platform/nhost-toml
+
+# ─── Custom JWT Claims ─────────────────────────────────────────────────────────
+# Maps auth.users.metadata fields into the JWT so Hasura receives the correct
+# x-hasura-default-role for RLS policies.
+#
+# The Nhost Function (nhost/functions/sync-role-metadata.ts) keeps metadata in
+# sync with operator_profiles.role. When no metadata.role exists, the default
+# 'operator' is used (safe fallback — matches the DB column default).
+
+[[auth.session.accessToken.customClaims]]
+key = 'x-hasura-default-role'
+value = 'user.metadata.role'
+default = 'operator'
+
+[[auth.session.accessToken.customClaims]]
+key = 'x-hasura-allowed-roles'
+value = 'user.metadata.allowedRoles'
+default = '["operator"]'
