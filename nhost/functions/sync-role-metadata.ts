@@ -21,6 +21,32 @@
  *   NHOST_BACKEND_URL    — Base URL of the Nhost backend
  */
 
+// ─── Error helpers ────────────────────────────────────────────────────────────
+
+const ERR_UNAUTHORIZED = 'Unauthorized';
+const ERR_VALIDATION = 'Validation';
+const ERR_CONFIG = 'Config';
+const ERR_UPSTREAM = 'Upstream';
+
+class HttpError extends Error {
+  status: number;
+  constructor(message: string, status: number, category: string) {
+    super(`[${category}] ${message}`);
+    this.status = status;
+    this.name = 'HttpError';
+  }
+}
+
+function getErrorStatus(err: unknown): number {
+  if (err instanceof HttpError) return err.status;
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg.includes(ERR_UPSTREAM)) return 502;
+  if (msg.includes(ERR_UNAUTHORIZED)) return 401;
+  if (msg.includes(ERR_VALIDATION)) return 400;
+  if (msg.includes(ERR_CONFIG)) return 500;
+  return 500;
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 interface SyncPayload {
@@ -61,16 +87,20 @@ async function extractPayload(req: Request): Promise<SyncPayload> {
   // Hasura Event Trigger format
   const event = body.event;
   if (!event || !event.data || !event.data.new) {
-    throw new Error(
+    throw new HttpError(
       'Unrecognized payload format. Expected Hasura event { event: { data: { new: { id, role } } } } ' +
       'or direct PATCH { userId, role }',
+      400,
+      ERR_VALIDATION,
     );
   }
 
   const { id, role } = event.data.new;
   if (!id || !role) {
-    throw new Error(
+    throw new HttpError(
       `Missing fields in event.data.new: id=${id}, role=${role}`,
+      400,
+      ERR_VALIDATION,
     );
   }
 
@@ -143,7 +173,11 @@ async function syncRoleToMetadata(
     }
   }
 
-  throw lastError ?? new Error(`Failed to sync role after ${maxRetries} attempts`);
+  throw new HttpError(
+    lastError?.message ?? `Failed to sync role after ${maxRetries} attempts`,
+    502,
+    ERR_UPSTREAM,
+  );
 }
 
 /**
@@ -163,7 +197,7 @@ function validateWebhookSecret(req: Request, expectedSecret: string): void {
     console.error(
       `[sync-role-metadata] Invalid webhook secret (provided: ${provided ? '***' : 'none'})`,
     );
-    throw new Error('Unauthorized: invalid webhook secret');
+    throw new HttpError('invalid webhook secret', 401, ERR_UNAUTHORIZED);
   }
 }
 
@@ -196,12 +230,12 @@ export default async (req: Request): Promise<Response> => {
     // Sync to auth.users metadata via Management API
     const adminSecret = Deno.env.get('NHOST_ADMIN_SECRET');
     if (!adminSecret) {
-      throw new Error('NHOST_ADMIN_SECRET environment variable is not set');
+      throw new HttpError('NHOST_ADMIN_SECRET not set', 500, ERR_CONFIG);
     }
 
     const backendUrl = Deno.env.get('NHOST_BACKEND_URL');
     if (!backendUrl) {
-      throw new Error('NHOST_BACKEND_URL environment variable is not set');
+      throw new HttpError('NHOST_BACKEND_URL not set', 500, ERR_CONFIG);
     }
 
     await syncRoleToMetadata(userId, role, allowedRoles, adminSecret, backendUrl);
@@ -224,17 +258,19 @@ export default async (req: Request): Promise<Response> => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const elapsed = Date.now() - startTime;
+    const status = getErrorStatus(err);
 
-    console.error(`[sync-role-metadata] Error after ${elapsed}ms: ${message}`);
+    console.error(`[sync-role-metadata] ${status} Error after ${elapsed}ms: ${message}`);
 
     return new Response(
       JSON.stringify({
         success: false,
         error: message,
         elapsed,
+        status,
       }),
       {
-        status: 500,
+        status,
         headers: { 'Content-Type': 'application/json' },
       },
     );
