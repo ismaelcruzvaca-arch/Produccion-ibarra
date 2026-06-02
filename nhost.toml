@@ -20,3 +20,8 @@ default = 'operator'
 key = 'x-hasura-allowed-roles'
 value = 'user.metadata.allowedRoles'
 default = '["operator"]'
+
+[[auth.session.accessToken.customClaims]]
+key = 'x-hasura-plant-id'
+value = 'user.metadata.plant_id'
+default = ''

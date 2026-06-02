@@ -30,6 +30,9 @@ import {
   mixingBatchSchema,
   extractorCheckSchema,
   vitaminKitSchema,
+  qualityInspectionSchema,
+  defectLogSchema,
+  weightLogSchema,
 } from './schemas';
 import type {
   IAsset,
@@ -43,6 +46,9 @@ import type {
   IMixingBatch,
   IExtractorCheck,
   IVitaminKit,
+  IQualityInspection,
+  IDefectLog,
+  IWeightLog,
 } from '../core/types';
 
 // ─── Database Collections Type ──────────────────────────────────────────────────
@@ -60,6 +66,9 @@ export type ChocolateIbarraDatabase = RxDatabase<{
   mixing_batches: RxCollection<IMixingBatch>;
   extractor_checks: RxCollection<IExtractorCheck>;
   vitamin_kits: RxCollection<IVitaminKit>;
+  quality_inspections: RxCollection<IQualityInspection>;
+  defect_logs: RxCollection<IDefectLog>;
+  weight_logs: RxCollection<IWeightLog>;
 }>;
 
 // ─── Database Singleton ────────────────────────────────────────────────────────
@@ -106,6 +115,9 @@ export async function getDatabase(): Promise<ChocolateIbarraDatabase> {
         mixing_batches: { schema: mixingBatchSchema },
         extractor_checks: { schema: extractorCheckSchema },
         vitamin_kits: { schema: vitaminKitSchema },
+        quality_inspections: { schema: qualityInspectionSchema },
+        defect_logs: { schema: defectLogSchema },
+        weight_logs: { schema: weightLogSchema },
       });
       return db as ChocolateIbarraDatabase;
     });

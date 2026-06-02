@@ -466,3 +466,105 @@ export interface IVitaminKit {
 }
 
 export type RxVitaminKit = RxDocument<IVitaminKit>;
+
+// ─── Quality Inspection ─────────────────────────────────────────────────────────
+
+/**
+ * Quality Inspection — captures quality control data at production stations.
+ *
+ * Fields per spec QC-1 through QC-12:
+ * - product_id: the product being inspected
+ * - inspection_type: visual, weight, temp, metal_detector (QC-6)
+ * - value: the measured value
+ * - unit: measurement unit
+ * - passed: pass/fail status (QC-10)
+ * - defect_id: optional reference to quality_defects catalog (QC-9)
+ * - defect_label: denormalized defect label for offline display
+ * - defect_severity: denormalized defect severity level
+ * - notes: optional inspector notes
+ * - line_id, machine_id, shift_session_id: context (QC-4 — uses active shift_session.id)
+ * - operator_id: who performed the inspection
+ * - standard_min/standard_max: cached weight standards from product_weight_standards (QC-3)
+ * - standard_warning: true when standard was missing (QC-8)
+ *
+ * Uses `updated_at` (not `client_updated_at`) per the new data contract.
+ */
+export interface IQualityInspection {
+  id: string;
+  updated_at: number;
+  is_deleted: boolean;
+  line_id: string;
+  machine_id: string;
+  shift_session_id: string;  // active shift_session.id, NOT catalog shift
+  operator_id: string;
+  product_id: string;
+  inspection_type: 'visual' | 'weight' | 'temp' | 'metal_detector';
+  value: number;
+  unit: string;
+  passed: boolean;
+  defect_id?: string;
+  defect_label?: string;
+  defect_severity?: string;
+  notes?: string;
+  standard_min?: number;
+  standard_max?: number;
+  standard_warning?: boolean;
+}
+
+export type RxQualityInspection = RxDocument<IQualityInspection>;
+
+// ─── Defect Log ─────────────────────────────────────────────────────────────────
+
+/**
+ * Defect Log — records a specific defect found during quality inspection.
+ *
+ * Fields:
+ * - inspection_id: reference to the quality inspection
+ * - defect_id: reference to quality_defects catalog
+ * - defect_label: denormalized defect label
+ * - defect_severity: critical, major, minor
+ * - quantity: number of units affected
+ * - notes: additional context
+ */
+export interface IDefectLog {
+  id: string;
+  updated_at: number;
+  is_deleted: boolean;
+  inspection_id: string;
+  defect_id: string;
+  defect_label: string;
+  defect_severity: 'critical' | 'major' | 'minor';
+  quantity: number;
+  notes?: string;
+}
+
+export type RxDefectLog = RxDocument<IDefectLog>;
+
+// ─── Weight Log ─────────────────────────────────────────────────────────────────
+
+/**
+ * Weight Log — captures weight measurements during quality inspection.
+ *
+ * Fields:
+ * - inspection_id: reference to the quality inspection
+ * - product_id: the product being weighed
+ * - weight_kg: measured weight
+ * - standard_min_kg: minimum weight from product_weight_standards
+ * - standard_max_kg: maximum weight from product_weight_standards
+ * - passed: whether weight is within standards
+ * - warning: true if standard was missing (QC-8)
+ */
+export interface IWeightLog {
+  id: string;
+  updated_at: number;
+  is_deleted: boolean;
+  inspection_id: string;
+  product_id: string;
+  weight_kg: number;
+  standard_min_kg?: number;
+  standard_max_kg?: number;
+  passed: boolean;
+  warning?: boolean;
+}
+
+export type RxWeightLog = RxDocument<IWeightLog>;

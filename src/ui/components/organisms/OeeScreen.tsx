@@ -14,7 +14,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { Text, Button, Portal, Dialog } from 'react-native-paper';
+import { Text, Button, Portal, Dialog, Divider, ActivityIndicator, Chip } from 'react-native-paper';
 import type { RxDocument } from 'rxdb';
 
 import { useOeeEventsRepository } from '../../../repositories/useOeeEventsRepository';
@@ -31,6 +31,9 @@ import { PARO_BY_CODE } from '../../../config/catalogs';
 import { nowMs } from '../../../utils/timestamp';
 import { generateShiftReport } from '../../../core/shiftReportGenerator';
 import { useCatalogStore } from '../../store/catalogStore';
+import { useAuthStore } from '../../../auth/useAuthStore';
+import { useSignatures, DEFAULT_CHAINS } from '../../../hooks/useSignatures';
+import { SignaturePrompt } from '../molecules/SignaturePrompt';
 import { OeeSelectorBar } from '../OeeSelectorBar';
 import { useOeeValidation } from '../../../hooks/useOeeValidation';
 import { useAlertSnackbar } from '../molecules/AlertSnackbar';
@@ -50,8 +53,29 @@ export default function OeeScreen() {
   const selectedPpm = selectedProduct ? getProductById(selectedProduct)?.theoretical_ppm : undefined;
   const { isValid } = useOeeValidation();
 
+  const { operatorId, fullName, role: currentRole } = useAuthStore();
+
   // Shift state
   const [shiftStarted, setShiftStarted] = useState(false);
+
+  // Signature state (Phase 9)
+  const [savedDocId, setSavedDocId] = useState<string | null>(null);
+  const [showSignature, setShowSignature] = useState(false);
+  const [currentSigStep, setCurrentSigStep] = useState(0);
+
+  // Signature chain (Phase 9.2)
+  const OEE_CHAIN_CONFIG = DEFAULT_CHAINS.oee_report;
+  const {
+    status: sigStatus,
+    isLoading: sigLoading,
+    error: sigError,
+    sign: doSign,
+    refresh: refreshSigs,
+  } = useSignatures({
+    documentType: 'oee_report',
+    documentId: savedDocId ?? '',
+    chainConfig: OEE_CHAIN_CONFIG,
+  });
 
   // Events
   const [events, setEvents] = useState<IOeeEvent[]>([]);
@@ -132,12 +156,27 @@ export default function OeeScreen() {
     setShowConfirmModal(true);
   }, [repository, selectedMachine]);
 
-  const executeShiftEnd = useCallback(async () => {
+  // ─── Phase A: Save Shift-End Event (9.1) ─────────────────────────────────────
+  const executeShiftEndPhaseA = useCallback(async () => {
     if (!selectedShift || !selectedLine) return;
-    await repository.createEvent({
+
+    const doc = await repository.createEvent({
       event_type: 'shift_end',
       timestamp: nowMs(),
     });
+    const docId = doc.get('id');
+    setSavedDocId(docId);
+    setCurrentSigStep(0);
+
+    // Show signature prompt after event saved
+    setShowConfirmModal(false);
+    setPendingEvent(null);
+    setShowSignature(true);
+  }, [selectedShift, selectedLine, repository]);
+
+  // ─── Phase C: Generate Report After All Signatures (9.1) ────────────────────
+  const executeShiftEndPhaseC = useCallback(async () => {
+    if (!selectedShift || !selectedLine) return;
 
     const shiftEvents = await repository.findByShift(selectedShift);
     const report = generateShiftReport({
@@ -150,10 +189,29 @@ export default function OeeScreen() {
 
     setSelectedProduct(null);
     setShiftStarted(false);
-    setShowConfirmModal(false);
-    setPendingEvent(null);
+    setSavedDocId(null);
+    setShowSignature(false);
     showAlert({ message: 'Turno cerrado y reporte generado', type: 'success' });
   }, [selectedShift, selectedLine, selectedPpm, repository, reportsRepository, setSelectedProduct, showAlert]);
+
+  // ─── Signature Handlers (9.2) ───────────────────────────────────────────────
+  const handleSigSign = useCallback(async () => {
+    const success = await doSign();
+    if (success) {
+      // Chain complete → generate report
+      if (sigStatus.nextRole === null) {
+        setShowSignature(false);
+        setCurrentSigStep(0);
+        await executeShiftEndPhaseC();
+      } else {
+        setCurrentSigStep((prev) => prev + 1);
+      }
+    }
+  }, [doSign, sigStatus.nextRole, executeShiftEndPhaseC]);
+
+  const handleSigSkip = useCallback(() => {
+    setShowSignature(false);
+  }, []);
 
   // ─── Downtime Start ────────────────────────────────────────────────────────
   const handleStartDowntime = useCallback(() => {
@@ -254,7 +312,7 @@ export default function OeeScreen() {
   const handleConfirm = useCallback(() => {
     const type = pendingEvent?.event_type;
     if (type === 'shift_end') {
-      executeShiftEnd();
+      executeShiftEndPhaseA();
     } else if (type === 'downtime_start') {
       executeDowntimeStart();
     } else if (type === 'downtime_end') {
@@ -264,7 +322,7 @@ export default function OeeScreen() {
       setShowConfirmModal(false);
       setPendingEvent(null);
     }
-  }, [pendingEvent, executeShiftEnd, executeDowntimeStart, executeDowntimeEnd, executeProduction, pendingAnomalousProduction]);
+  }, [pendingEvent, executeShiftEndPhaseA, executeDowntimeStart, executeDowntimeEnd, executeProduction, pendingAnomalousProduction]);
 
   return (
     <View style={styles.container}>
@@ -325,6 +383,77 @@ export default function OeeScreen() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      {/* Signature status card — Phase 9.3 */}
+      {savedDocId && (
+        <View style={styles.sigStatusContainer}>
+          <View style={styles.sigStatusCard}>
+            <Text variant="titleSmall" style={styles.sigStatusTitle}>
+              Firmas del Turno
+            </Text>
+            <Divider style={styles.sigDivider} />
+            {sigLoading ? (
+              <ActivityIndicator />
+            ) : (
+              OEE_CHAIN_CONFIG.roles.map((role, index) => {
+                const step = sigStatus.steps[index];
+                const isSigned = step?.status === 'signed';
+                return (
+                  <View key={role} style={styles.sigRow}>
+                    <Text
+                      variant="bodyMedium"
+                      style={[styles.sigLabel, isSigned && styles.sigLabelSigned]}
+                    >
+                      {OEE_CHAIN_CONFIG.labels[index]}
+                    </Text>
+                    {isSigned ? (
+                      <Chip compact style={styles.sigSignedChip} textStyle={styles.sigSignedChipText}>
+                        {'\u2705'} Firmado
+                      </Chip>
+                    ) : (
+                      <Chip compact style={styles.sigPendingChip} textStyle={styles.sigPendingChipText}>
+                        {'\u25CB'} Pendiente
+                      </Chip>
+                    )}
+                  </View>
+                );
+              })
+            )}
+            {sigError && (
+              <Text variant="bodySmall" style={styles.sigError}>
+                {sigError}
+              </Text>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* Signature Prompt dialog — Phase 9.2 */}
+      {savedDocId && (
+        <SignaturePrompt
+          visible={showSignature}
+          signature={{
+            documentType: 'oee_report',
+            documentId: savedDocId,
+            requiredRoles: [OEE_CHAIN_CONFIG.roles[currentSigStep]],
+            sequence: currentSigStep + 1,
+            stepLabel: OEE_CHAIN_CONFIG.labels[currentSigStep],
+          }}
+          currentRole={currentRole}
+          currentUserName={fullName ?? ''}
+          existingSignatures={sigStatus.steps
+            .filter((s) => s.status === 'signed')
+            .map((s) => ({
+              signer_name: s.signerName ?? '',
+              signer_role: s.role,
+              signed_at: s.signedAt ?? 0,
+              sequence: OEE_CHAIN_CONFIG.roles.findIndex((r) => r === s.role) + 1,
+            }))}
+          onSign={handleSigSign}
+          onSkip={handleSigSkip}
+          onDismiss={handleSigSkip}
+        />
+      )}
     </View>
   );
 }
@@ -337,5 +466,66 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     flexGrow: 1,
+  },
+
+  // Signature status (Phase 9.3)
+  sigStatusContainer: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    zIndex: 10,
+  },
+  sigStatusCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 12,
+    minWidth: 180,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  sigStatusTitle: {
+    fontWeight: '700',
+    color: '#5D4037',
+    marginBottom: 4,
+  },
+  sigDivider: {
+    marginVertical: 8,
+  },
+  sigRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  sigLabel: {
+    flex: 1,
+    fontSize: 13,
+  },
+  sigLabelSigned: {
+    fontWeight: '600',
+  },
+  sigSignedChip: {
+    backgroundColor: '#E8F5E9',
+    height: 24,
+  },
+  sigSignedChipText: {
+    fontSize: 11,
+    color: '#2E7D32',
+  },
+  sigPendingChip: {
+    backgroundColor: '#FFF3E0',
+    height: 24,
+  },
+  sigPendingChipText: {
+    fontSize: 11,
+    color: '#E65100',
+  },
+  sigError: {
+    color: '#C62828',
+    marginTop: 8,
+    fontSize: 12,
   },
 });

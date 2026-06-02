@@ -26,6 +26,9 @@ import type {
   IMixingBatch,
   IExtractorCheck,
   IVitaminKit,
+  IQualityInspection,
+  IDefectLog,
+  IWeightLog,
 } from '../core/types';
 
 /**
@@ -361,4 +364,124 @@ export const vitaminKitSchema: RxJsonSchema<IVitaminKit> = {
     peso_fisico_kg: { type: 'number' },
   },
   indexes: ['shift_id'],
+};
+
+// ─── Quality Inspection ─────────────────────────────────────────────────────────
+
+/**
+ * Quality Inspection schema.
+ * Uses `updated_at` (not `client_updated_at`) per the new data contract.
+ * Indexes: shift_session_id for active shift queries, [shift_session_id, updated_at] for DESC sort.
+ */
+export const qualityInspectionSchema: RxJsonSchema<IQualityInspection> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: [
+    'id',
+    'updated_at',
+    'is_deleted',
+    'line_id',
+    'machine_id',
+    'shift_session_id',
+    'operator_id',
+    'product_id',
+    'inspection_type',
+    'value',
+    'unit',
+    'passed',
+  ],
+  properties: {
+    id: { type: 'string', maxLength: 100 },
+    updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted: { type: 'boolean' },
+    line_id: { type: 'string' },
+    machine_id: { type: 'string' },
+    shift_session_id: { type: 'string' },
+    operator_id: { type: 'string' },
+    product_id: { type: 'string' },
+    inspection_type: {
+      type: 'string',
+      enum: ['visual', 'weight', 'temp', 'metal_detector'],
+    },
+    value: { type: 'number' },
+    unit: { type: 'string' },
+    passed: { type: 'boolean' },
+    defect_id: { type: 'string' },
+    defect_label: { type: 'string' },
+    defect_severity: { type: 'string' },
+    notes: { type: 'string' },
+    standard_min: { type: 'number' },
+    standard_max: { type: 'number' },
+    standard_warning: { type: 'boolean' },
+  },
+  indexes: ['shift_session_id', ['shift_session_id', 'updated_at']],
+};
+
+// ─── Defect Log ─────────────────────────────────────────────────────────────────
+
+/**
+ * Defect Log schema.
+ * Indexes: inspection_id for lookup.
+ */
+export const defectLogSchema: RxJsonSchema<IDefectLog> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: [
+    'id',
+    'updated_at',
+    'is_deleted',
+    'inspection_id',
+    'defect_id',
+    'defect_label',
+    'defect_severity',
+    'quantity',
+  ],
+  properties: {
+    id: { type: 'string', maxLength: 100 },
+    updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted: { type: 'boolean' },
+    inspection_id: { type: 'string' },
+    defect_id: { type: 'string' },
+    defect_label: { type: 'string' },
+    defect_severity: { type: 'string', enum: ['critical', 'major', 'minor'] },
+    quantity: { type: 'number' },
+    notes: { type: 'string' },
+  },
+  indexes: ['inspection_id'],
+};
+
+// ─── Weight Log ─────────────────────────────────────────────────────────────────
+
+/**
+ * Weight Log schema.
+ * Indexes: inspection_id for lookup.
+ */
+export const weightLogSchema: RxJsonSchema<IWeightLog> = {
+  version: 0,
+  primaryKey: 'id',
+  type: 'object',
+  required: [
+    'id',
+    'updated_at',
+    'is_deleted',
+    'inspection_id',
+    'product_id',
+    'weight_kg',
+    'passed',
+  ],
+  properties: {
+    id: { type: 'string', maxLength: 100 },
+    updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted: { type: 'boolean' },
+    inspection_id: { type: 'string' },
+    product_id: { type: 'string' },
+    weight_kg: { type: 'number' },
+    standard_min_kg: { type: 'number' },
+    standard_max_kg: { type: 'number' },
+    passed: { type: 'boolean' },
+    warning: { type: 'boolean' },
+  },
+  indexes: ['inspection_id'],
 };

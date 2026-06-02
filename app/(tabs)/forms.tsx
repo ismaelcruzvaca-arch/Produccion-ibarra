@@ -14,6 +14,10 @@ import { View, Text, StyleSheet } from 'react-native';
 import { resolveFormType } from '../../src/core/formRouter';
 import { useCatalogStore } from '../../src/ui/store/catalogStore';
 import OeeScreen from '../../src/ui/components/organisms/OeeScreen';
+import ExtractorScreen from '../../src/ui/components/organisms/ExtractorScreen';
+import ToasterScreen from '../../src/ui/components/organisms/ToasterScreen';
+import MixingScreen from '../../src/ui/components/organisms/MixingScreen';
+import VitaminScreen from '../../src/ui/components/organisms/VitaminScreen';
 
 const FORM_LABELS: Record<string, string> = {
   oee: 'OEE (F-PD-21)',
@@ -56,11 +60,13 @@ export default function FormsScreen() {
     case 'oee':
       return <OeeScreen />;
     case 'toaster':
-    case 'mixing':
+      return <ToasterScreen />;
     case 'extractor':
+      return <ExtractorScreen />;
+    case 'mixing':
+      return <MixingScreen />;
     case 'vitamin':
-      // Placeholder until individual form screens are built (Phase 2+)
-      return <FormPlaceholder formType={formType} />;
+      return <VitaminScreen />;
     default:
       return <OeeScreen />;
   }
