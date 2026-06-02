@@ -30,6 +30,7 @@ jest.mock('react-native-safe-area-context', () =>
 
 const PASSING_INSPECTION: IQualityInspection = {
   id: 'insp-1',
+  created_at: 1700000000000,
   updated_at: 1700000000000,
   is_deleted: false,
   line_id: 'line-1',

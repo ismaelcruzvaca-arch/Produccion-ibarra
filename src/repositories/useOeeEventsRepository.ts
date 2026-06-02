@@ -30,7 +30,7 @@ import { getDeviceId } from '../sync/deviceId';
 import { useCatalogStore } from '../ui/store/catalogStore';
 import { useAuthStore } from '../auth/useAuthStore';
 
-export type CreateEventPayload = Omit<IOeeEvent, 'id' | 'updated_at' | 'deleted' | 'device_id' | 'line_id' | 'machine_id' | 'shift_id'> & Partial<Pick<IOeeEvent, 'line_id' | 'machine_id' | 'shift_id'>> & { device_id?: string };
+export type CreateEventPayload = Omit<IOeeEvent, 'id' | 'created_at' | 'updated_at' | 'is_deleted' | 'device_id' | 'line_id' | 'machine_id' | 'shift_id'> & Partial<Pick<IOeeEvent, 'line_id' | 'machine_id' | 'shift_id'>> & { device_id?: string };
 
 export interface OeeEventsRepository {
   /** Emits the current list of non-deleted OEE events on every change. */
@@ -105,9 +105,11 @@ export function useOeeEventsRepository(): OeeEventsRepository {
   const createEvent = useCallback(
     async (event: CreateEventPayload) => {
       const deviceId = event.device_id ?? await getDeviceId();
+      const now = nowMs();
       const newDoc: IOeeEvent = {
         id: generateUuid(),
-        updated_at: nowMs(),
+        created_at: now,
+        updated_at: now,
         is_deleted: false,
         device_id: deviceId,
         ...event,

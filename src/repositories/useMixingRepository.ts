@@ -28,7 +28,7 @@ import { useDatabase } from '../data/DatabaseContext';
 /** Payload for creating a mixing batch — omits auto-generated fields. */
 export type CreateMixingBatchPayload = Omit<
   IMixingBatch,
-  'id' | 'updated_at' | 'is_deleted'
+  'id' | 'created_at' | 'updated_at' | 'is_deleted'
 >;
 
 export interface MixingRepository {
@@ -113,9 +113,11 @@ export function useMixingRepository(): MixingRepository {
 
   const create = useCallback(
     async (payload: CreateMixingBatchPayload) => {
+      const now = nowMs();
       const newDoc: IMixingBatch = {
         id: generateUuid(),
-        updated_at: nowMs(),
+        created_at: now,
+        updated_at: now,
         is_deleted: false,
         ...payload,
       };

@@ -241,7 +241,7 @@ async function runDLQDiagnosis(
 
   // Find all non-deleted OEE events ordered by timestamp
   const pendingDocs = await collection
-    .find({ selector: { deleted: { $eq: false } }, sort: [{ timestamp: 'asc' }] })
+    .find({ selector: { is_deleted: { $eq: false } }, sort: [{ timestamp: 'asc' }] })
     .exec();
 
   if (pendingDocs.length === 0) return 0;
@@ -262,6 +262,9 @@ async function runDLQDiagnosis(
       const now = Date.now();
       const syncError: ISyncError = {
         id: generateUuid(),
+        created_at: now,
+        updated_at: now,
+        is_deleted: false,
         id_evento: doc.id,
         payload_original: doc as unknown as Record<string, unknown>,
         mensaje_error: `Constraint/validation error during DLQ diagnosis — doc quarantined at ${now}`,

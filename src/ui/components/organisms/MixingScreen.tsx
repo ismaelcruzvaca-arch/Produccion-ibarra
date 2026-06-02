@@ -156,7 +156,7 @@ export default function MixingScreen() {
   // ─── Build payload ─────────────────────────────────────────────────────────
 
   const buildPayload = useCallback(
-    (overrides: Partial<IMixingBatch> = {}): Omit<IMixingBatch, 'id' | 'updated_at' | 'is_deleted'> => {
+    (overrides: Partial<IMixingBatch> = {}): Omit<IMixingBatch, 'id' | 'created_at' | 'updated_at' | 'is_deleted'> => {
       if (!selectedLine || !selectedMachine || !selectedShift || !operatorId) {
         throw new Error('Faltan datos de contexto (línea, máquina, turno u operador)');
       }

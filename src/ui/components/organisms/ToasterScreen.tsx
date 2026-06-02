@@ -136,7 +136,7 @@ export default function ToasterScreen() {
   const buildPayload = useCallback(
     (
       overrides: Partial<IToasterLog> = {}
-    ): Omit<IToasterLog, 'id' | 'updated_at' | 'is_deleted'> => {
+    ): Omit<IToasterLog, 'id' | 'created_at' | 'updated_at' | 'is_deleted'> => {
       if (!selectedLine || !selectedMachine || !selectedShift || !operatorId) {
         throw new Error('Faltan datos de contexto (línea, máquina, turno u operador)');
       }

@@ -28,7 +28,7 @@ import { useDatabase } from '../data/DatabaseContext';
 /** Payload for creating a toaster log — omits auto-generated fields. */
 export type CreateToasterLogPayload = Omit<
   IToasterLog,
-  'id' | 'updated_at' | 'is_deleted'
+  'id' | 'created_at' | 'updated_at' | 'is_deleted'
 >;
 
 export interface ToasterRepository {
@@ -113,9 +113,11 @@ export function useToasterRepository(): ToasterRepository {
 
   const create = useCallback(
     async (payload: CreateToasterLogPayload) => {
+      const now = nowMs();
       const newDoc: IToasterLog = {
         id: generateUuid(),
-        updated_at: nowMs(),
+        created_at: now,
+        updated_at: now,
         is_deleted: false,
         ...payload,
       };

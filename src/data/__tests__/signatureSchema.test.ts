@@ -11,8 +11,8 @@
 import { signatureSchema } from '../schemas';
 
 describe('signatureSchema', () => {
-  it('has version 0 and primaryKey id', () => {
-    expect(signatureSchema.version).toBe(0);
+  it('has version 1 and primaryKey id', () => {
+    expect(signatureSchema.version).toBe(1);
     expect(signatureSchema.primaryKey).toBe('id');
   });
 

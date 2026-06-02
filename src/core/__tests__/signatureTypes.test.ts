@@ -10,6 +10,7 @@ import type { ISignature } from '../types';
 describe('ISignature', () => {
   const validSignature: ISignature = {
     id: 'sig-001',
+    created_at: 1715000000000,
     updated_at: 1715000000000,
     is_deleted: false,
     document_type: 'oee_report',
@@ -64,7 +65,7 @@ describe('ISignature', () => {
     // TypeScript would fail compilation if ISignature required client_updated_at
     // This test confirms updated_at is the field name
     expect(validSignature.updated_at).toBeDefined();
-    // @ts-expect-error — client_updated_at should NOT exist on ISignature
+    // client_updated_at should NOT exist on ISignature — it was replaced by updated_at
     expect((validSignature as any).client_updated_at).toBeUndefined();
   });
 });

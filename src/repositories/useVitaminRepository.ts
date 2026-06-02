@@ -28,7 +28,7 @@ import { useDatabase } from '../data/DatabaseContext';
 /** Payload for creating a vitamin kit — omits auto-generated fields. */
 export type CreateVitaminKitPayload = Omit<
   IVitaminKit,
-  'id' | 'updated_at' | 'is_deleted'
+  'id' | 'created_at' | 'updated_at' | 'is_deleted'
 >;
 
 export interface VitaminRepository {
@@ -101,9 +101,11 @@ export function useVitaminRepository(): VitaminRepository {
 
   const create = useCallback(
     async (payload: CreateVitaminKitPayload) => {
+      const now = nowMs();
       const newDoc: IVitaminKit = {
         id: generateUuid(),
-        updated_at: nowMs(),
+        created_at: now,
+        updated_at: now,
         is_deleted: false,
         ...payload,
       };

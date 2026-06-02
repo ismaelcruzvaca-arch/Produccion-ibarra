@@ -28,7 +28,7 @@ import { useDatabase } from '../data/DatabaseContext';
 /** Payload for creating an extractor check — omits auto-generated fields. */
 export type CreateExtractorCheckPayload = Omit<
   IExtractorCheck,
-  'id' | 'updated_at' | 'is_deleted'
+  'id' | 'created_at' | 'updated_at' | 'is_deleted'
 >;
 
 export interface ExtractorRepository {
@@ -101,9 +101,11 @@ export function useExtractorRepository(): ExtractorRepository {
 
   const create = useCallback(
     async (payload: CreateExtractorCheckPayload) => {
+      const now = nowMs();
       const newDoc: IExtractorCheck = {
         id: generateUuid(),
-        updated_at: nowMs(),
+        created_at: now,
+        updated_at: now,
         is_deleted: false,
         ...payload,
       };

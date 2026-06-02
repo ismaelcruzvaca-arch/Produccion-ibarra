@@ -37,8 +37,13 @@ export function SyncMonitor() {
   useEffect(() => {
     if (!replication) return;
 
-    const { assets, workOrders, oeeEvents } = replication;
+    const { oeeEvents, signatures, qualityInspections, defectLogs, weightLogs } = replication;
     const subs: Array<() => void> = [];
+
+    // Helpers to subscribe to any replication state
+    const allReplications = [
+      oeeEvents, signatures, qualityInspections, defectLogs, weightLogs,
+    ];
 
     // ── Subscribe to active$ (is replication currently running?) ──
     const handleActive = (active: boolean) => {
@@ -56,14 +61,11 @@ export function SyncMonitor() {
       prevStatusRef.current = active ? 'syncing' : syncStatus;
     };
 
-    const subAssetsActive = assets.active$.subscribe(handleActive);
-    const subWorkOrdersActive = workOrders.active$.subscribe(handleActive);
-    subs.push(() => subAssetsActive.unsubscribe(), () => subWorkOrdersActive.unsubscribe());
-
-    // OEE Events replication active$
-    if (oeeEvents) {
-      const subOeeActive = oeeEvents.active$.subscribe(handleActive);
-      subs.push(() => subOeeActive.unsubscribe());
+    for (const rep of allReplications) {
+      if (rep) {
+        const subActive = rep.active$.subscribe(handleActive);
+        subs.push(() => subActive.unsubscribe());
+      }
     }
 
     // ── Subscribe to error$ (did the last sync fail?) ──
@@ -74,14 +76,11 @@ export function SyncMonitor() {
       }
     };
 
-    const subAssetsError = assets.error$.subscribe(handleError);
-    const subWorkOrdersError = workOrders.error$.subscribe(handleError);
-    subs.push(() => subAssetsError.unsubscribe(), () => subWorkOrdersError.unsubscribe());
-
-    // OEE Events replication error$
-    if (oeeEvents) {
-      const subOeeError = oeeEvents.error$.subscribe(handleError);
-      subs.push(() => subOeeError.unsubscribe());
+    for (const rep of allReplications) {
+      if (rep) {
+        const subError = rep.error$.subscribe(handleError);
+        subs.push(() => subError.unsubscribe());
+      }
     }
 
     return () => {

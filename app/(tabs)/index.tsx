@@ -58,24 +58,26 @@ function useReportsReplicationState() {
 
   useEffect(() => {
     if (!replication) return;
-    const { reports } = replication;
+    const { oeeEvents } = replication;
     const subs: Array<() => void> = [];
 
-    const subActive = reports.active$.subscribe((active: boolean) => {
-      if (active) {
-        setHasError(false);
-      } else {
-        setLastSyncTime(Date.now());
-      }
-    });
-    subs.push(() => subActive.unsubscribe());
+    if (oeeEvents) {
+      const subActive = oeeEvents.active$.subscribe((active: boolean) => {
+        if (active) {
+          setHasError(false);
+        } else {
+          setLastSyncTime(Date.now());
+        }
+      });
+      subs.push(() => subActive.unsubscribe());
 
-    const subError = reports.error$.subscribe((err: Error | undefined) => {
-      if (err) {
-        setHasError(true);
-      }
-    });
-    subs.push(() => subError.unsubscribe());
+      const subError = oeeEvents.error$.subscribe((err: Error | undefined) => {
+        if (err) {
+          setHasError(true);
+        }
+      });
+      subs.push(() => subError.unsubscribe());
+    }
 
     return () => subs.forEach((unsub) => unsub());
   }, [replication]);

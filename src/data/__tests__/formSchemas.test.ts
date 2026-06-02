@@ -15,14 +15,15 @@ import {
 // ─── T1.3: toasterLogSchema ─────────────────────────────────────────────────────
 
 describe('toasterLogSchema (F-PD-16)', () => {
-  it('has version 0 and primaryKey id', () => {
-    expect(toasterLogSchema.version).toBe(0);
+  it('has version 1 and primaryKey id', () => {
+    expect(toasterLogSchema.version).toBe(1);
     expect(toasterLogSchema.primaryKey).toBe('id');
   });
 
-  it('requires base fields: id, updated_at, is_deleted', () => {
+  it('requires base fields: id, created_at, updated_at, is_deleted', () => {
     const required = toasterLogSchema.required as string[];
     expect(required).toContain('id');
+    expect(required).toContain('created_at');
     expect(required).toContain('updated_at');
     expect(required).toContain('is_deleted');
   });
@@ -78,8 +79,8 @@ describe('toasterLogSchema (F-PD-16)', () => {
 // ─── T1.4: mixingBatchSchema ────────────────────────────────────────────────────
 
 describe('mixingBatchSchema (F-PD-17)', () => {
-  it('has version 0 and primaryKey id', () => {
-    expect(mixingBatchSchema.version).toBe(0);
+  it('has version 1 and primaryKey id', () => {
+    expect(mixingBatchSchema.version).toBe(1);
     expect(mixingBatchSchema.primaryKey).toBe('id');
   });
 
@@ -132,8 +133,8 @@ describe('mixingBatchSchema (F-PD-17)', () => {
 // ─── T1.5: extractorCheckSchema ──────────────────────────────────────────────────
 
 describe('extractorCheckSchema (F-PD-18)', () => {
-  it('has version 0 and primaryKey id', () => {
-    expect(extractorCheckSchema.version).toBe(0);
+  it('has version 1 and primaryKey id', () => {
+    expect(extractorCheckSchema.version).toBe(1);
     expect(extractorCheckSchema.primaryKey).toBe('id');
   });
 
@@ -159,8 +160,8 @@ describe('extractorCheckSchema (F-PD-18)', () => {
 // ─── T1.6: vitaminKitSchema ──────────────────────────────────────────────────────
 
 describe('vitaminKitSchema (F-PD-06)', () => {
-  it('has version 0 and primaryKey id', () => {
-    expect(vitaminKitSchema.version).toBe(0);
+  it('has version 1 and primaryKey id', () => {
+    expect(vitaminKitSchema.version).toBe(1);
     expect(vitaminKitSchema.primaryKey).toBe('id');
   });
 

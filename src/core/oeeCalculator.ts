@@ -30,7 +30,7 @@ export function computeOee(
   productoPpm: number
 ): OeeMetrics {
   // 1. Sort events by timestamp ascending
-  const sorted = [...events].filter(e => !e.deleted).sort((a, b) => a.timestamp - b.timestamp);
+  const sorted = [...events].filter(e => !e.is_deleted).sort((a, b) => a.timestamp - b.timestamp);
 
   // 2. Find shift boundaries
   const shiftStart = sorted.find(e => e.event_type === 'shift_start');

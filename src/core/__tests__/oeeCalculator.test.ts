@@ -4,43 +4,37 @@ import type { IOeeEvent } from '../../core/types';
 
 const FIXED_NOW = 1715000000000;
 
+function makeEvent(overrides: Partial<IOeeEvent> = {}): IOeeEvent {
+  return {
+    created_at: FIXED_NOW,
+    updated_at: FIXED_NOW,
+    is_deleted: false,
+    line_id: 'LINEA-1',
+    machine_id: 'CAVEMIL-03',
+    shift_id: 'shift-1',
+    device_id: 'device-1',
+    ...overrides,
+  } as IOeeEvent;
+}
+
 describe('computeOee', () => {
-  const shiftStart = (timestamp: number, shiftId = 'shift-1'): IOeeEvent => ({
-    id: 'ev-1', updated_at: timestamp, deleted: false,
-    line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: shiftId,
-    event_type: 'shift_start', timestamp,
-    planned_boxes: 480, device_id: 'device-1',
-  });
+  const shiftStart = (timestamp: number, shiftId = 'shift-1'): IOeeEvent =>
+    makeEvent({ id: 'ev-1', updated_at: timestamp, event_type: 'shift_start', timestamp, planned_boxes: 480, shift_id: shiftId });
 
-  const shiftEnd = (timestamp: number, shiftId = 'shift-1'): IOeeEvent => ({
-    id: 'ev-2', updated_at: timestamp, deleted: false,
-    line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: shiftId,
-    event_type: 'shift_end', timestamp, device_id: 'device-1',
-  });
+  const shiftEnd = (timestamp: number, shiftId = 'shift-1'): IOeeEvent =>
+    makeEvent({ id: 'ev-2', updated_at: timestamp, event_type: 'shift_end', timestamp, shift_id: shiftId });
 
-  const downtimeStart = (timestamp: number, reason: string, id: string): IOeeEvent => ({
-    id, updated_at: timestamp, deleted: false,
-    line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
-    event_type: 'downtime_start', timestamp, reason_code: reason, device_id: 'device-1',
-  });
+  const downtimeStart = (timestamp: number, reason: string, id: string): IOeeEvent =>
+    makeEvent({ id, updated_at: timestamp, event_type: 'downtime_start', timestamp, reason_code: reason });
 
-  const downtimeEnd = (timestamp: number, relatedId: string): IOeeEvent => ({
-    id: `end-${relatedId}`, updated_at: timestamp, deleted: false,
-    line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
-    event_type: 'downtime_end', timestamp, related_event_id: relatedId, device_id: 'device-1',
-  });
+  const downtimeEnd = (timestamp: number, relatedId: string): IOeeEvent =>
+    makeEvent({ id: `end-${relatedId}`, updated_at: timestamp, event_type: 'downtime_end', timestamp, related_event_id: relatedId });
 
-  const boxCount = (timestamp: number, qty: number): IOeeEvent => ({
-    id: `box-${timestamp}`, updated_at: timestamp, deleted: false,
-    line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
-    event_type: 'box_count', timestamp, quantity: qty, device_id: 'device-1',
-  });
+  const boxCount = (timestamp: number, qty: number): IOeeEvent =>
+    makeEvent({ id: `box-${timestamp}`, updated_at: timestamp, event_type: 'box_count', timestamp, quantity: qty });
 
-  const rejectCount = (timestamp: number, qty: number): IOeeEvent => ({
-    id: `rej-${timestamp}`, updated_at: timestamp, deleted: false,
-    line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
-    event_type: 'reject_count', timestamp, quantity: qty, device_id: 'device-1',
-  });
+  const rejectCount = (timestamp: number, qty: number): IOeeEvent =>
+    makeEvent({ id: `rej-${timestamp}`, updated_at: timestamp, event_type: 'reject_count', timestamp, quantity: qty });
 
   // Test 1: Empty events → all zeros
   it('returns zero metrics for empty events', () => {
@@ -151,7 +145,7 @@ describe('computeOee', () => {
     const start = FIXED_NOW;
     const events = [
       shiftStart(start),
-      { ...boxCount(start + 1000, 50), deleted: true },
+      { ...boxCount(start + 1000, 50), is_deleted: true },
       boxCount(start + 2000, 100),
       shiftEnd(start + 60 * 60 * 1000),
     ];

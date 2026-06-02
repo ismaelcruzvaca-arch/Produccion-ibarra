@@ -110,9 +110,11 @@ export function useReportsRepository(): ReportsRepository {
 
   const createReport = useCallback(
     async (data: ReportData, templateId = 'oee-basic') => {
+      const now = nowMs();
       const newDoc: IReport = {
         id: generateUuid(),
-        updated_at: nowMs(),
+        created_at: now,
+        updated_at: now,
         is_deleted: false,
         template_id: templateId,
         data,

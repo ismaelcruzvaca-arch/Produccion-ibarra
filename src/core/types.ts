@@ -13,8 +13,9 @@ import type { RxDocument } from 'rxdb';
 /**
  * Base document interface — mandatory fields for all collections.
  * - id: UUID v4 primary key
- * - client_updated_at: milliseconds since epoch (BIGINT in Postgres)
- * - deleted: soft-delete flag for sync
+ * - created_at: milliseconds since epoch when the document was first created
+ * - updated_at: milliseconds since epoch when the document was last modified (sync checkpoint)
+ * - is_deleted: soft-delete flag for sync
  *
  * Pattern: Base Interface Embedding
  * All domain interfaces extend IBaseDocument to inherit these mandatory fields.
@@ -23,7 +24,8 @@ import type { RxDocument } from 'rxdb';
  */
 export interface IBaseDocument {
   id: string;
-  client_updated_at: number;
+  created_at: number;   // epoch ms — document creation time
+  updated_at: number;   // epoch ms — last modification (replication checkpoint)
   is_deleted: boolean;
 }
 
@@ -121,13 +123,11 @@ export interface ReportData {
  * Fields:
  * - template_id: identifies the report template (e.g., 'oee-basic')
  * - data: flexible payload containing report-specific metrics
- *
- * Uses `updated_at` (not `client_updated_at`) per the approved data contract
- * for new collections.
  */
 export interface IReport {
   id: string;
-  updated_at: number;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms (replication checkpoint)
   is_deleted: boolean;
   template_id: string;
   data: ReportData;
@@ -147,12 +147,11 @@ export type OeeEventType =
 
 /**
  * OEE Event — atomic production event for OEE calculation.
- *
- * Uses `updated_at` (not `client_updated_at`) per the new data contract.
  */
 export interface IOeeEvent {
   id: string;
-  updated_at: number;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms (replication checkpoint)
   is_deleted: boolean;
 
   // Context
@@ -176,7 +175,7 @@ export interface IOeeEvent {
   related_event_id?: string;
 
   // Wave 4: device audit
-  device_id: string;
+  device_id?: string;
 }
 
 export type RxOeeEvent = RxDocument<IOeeEvent>;
@@ -189,6 +188,9 @@ export type RxOeeEvent = RxDocument<IOeeEvent>;
  */
 export interface ISyncError {
   id: string;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms
+  is_deleted: boolean;
   id_evento: string;
   payload_original: Record<string, unknown>;
   mensaje_error: string;
@@ -263,12 +265,12 @@ export interface ICatalogStopReason {
  * - signed_at: epoch ms when the signature was captured
  * - sequence: ordinal position in multi-signer chain (1st, 2nd, 3rd, 4th)
  *
- * Uses `updated_at` (not `client_updated_at`) per the new data contract.
  * Stored in shared `signatures` RxDB collection across all form types.
  */
 export interface ISignature {
   id: string;
-  updated_at: number;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms (replication checkpoint)
   is_deleted: boolean;
   document_type: string;   // e.g. 'oee_report', 'toaster_log', 'quality_inspection'
   document_id: string;     // UUID of the signed document
@@ -296,7 +298,8 @@ export type RxSignature = RxDocument<ISignature>;
  */
 export interface IToasterLog {
   id: string;
-  updated_at: number;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms (replication checkpoint)
   is_deleted: boolean;
   line_id: string;
   machine_id: string;
@@ -349,7 +352,8 @@ export type RxToasterLog = RxDocument<IToasterLog>;
  */
 export interface IMixingBatch {
   id: string;
-  updated_at: number;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms (replication checkpoint)
   is_deleted: boolean;
   line_id: string;
   machine_id: string;
@@ -407,7 +411,8 @@ export type RxMixingBatch = RxDocument<IMixingBatch>;
  */
 export interface IExtractorCheck {
   id: string;
-  updated_at: number;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms (replication checkpoint)
   is_deleted: boolean;
   line_id: string;
   machine_id: string;
@@ -441,7 +446,8 @@ export type RxExtractorCheck = RxDocument<IExtractorCheck>;
  */
 export interface IVitaminKit {
   id: string;
-  updated_at: number;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms (replication checkpoint)
   is_deleted: boolean;
   line_id: string;
   machine_id: string;
@@ -487,11 +493,11 @@ export type RxVitaminKit = RxDocument<IVitaminKit>;
  * - standard_min/standard_max: cached weight standards from product_weight_standards (QC-3)
  * - standard_warning: true when standard was missing (QC-8)
  *
- * Uses `updated_at` (not `client_updated_at`) per the new data contract.
  */
 export interface IQualityInspection {
   id: string;
-  updated_at: number;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms (replication checkpoint)
   is_deleted: boolean;
   line_id: string;
   machine_id: string;
@@ -528,7 +534,8 @@ export type RxQualityInspection = RxDocument<IQualityInspection>;
  */
 export interface IDefectLog {
   id: string;
-  updated_at: number;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms (replication checkpoint)
   is_deleted: boolean;
   inspection_id: string;
   defect_id: string;
@@ -556,7 +563,8 @@ export type RxDefectLog = RxDocument<IDefectLog>;
  */
 export interface IWeightLog {
   id: string;
-  updated_at: number;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms (replication checkpoint)
   is_deleted: boolean;
   inspection_id: string;
   product_id: string;

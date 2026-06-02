@@ -31,7 +31,7 @@ import type { ISignature } from '../core/types';
 import { useDatabase } from '../data/DatabaseContext';
 
 /** Payload for creating a signature — omits auto-generated fields. */
-export type CreateSignaturePayload = Omit<ISignature, 'id' | 'updated_at' | 'is_deleted' | 'signed_at'>;
+export type CreateSignaturePayload = Omit<ISignature, 'id' | 'created_at' | 'updated_at' | 'is_deleted' | 'signed_at'>;
 
 export interface SignaturesRepository {
   /** Emits the current list of non-deleted signatures on every change. */
@@ -112,11 +112,13 @@ export function useSignaturesRepository(): SignaturesRepository {
 
   const create = useCallback(
     async (payload: CreateSignaturePayload) => {
+      const now = nowMs();
       const newDoc: ISignature = {
         id: generateUuid(),
-        updated_at: nowMs(),
+        created_at: now,
+        updated_at: now,
         is_deleted: false,
-        signed_at: nowMs(),
+        signed_at: now,
         ...payload,
       };
       const result = await db.collections.signatures.insert(newDoc);

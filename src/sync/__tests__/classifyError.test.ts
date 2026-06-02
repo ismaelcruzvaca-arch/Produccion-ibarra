@@ -180,7 +180,7 @@ describe('classifyError', () => {
     it('handles undefined input safely', () => {
       const result = classifyError(undefined);
       expect(result.type).toBe('unknown');
-      expect(result.message).toContain('Unknown');
+      expect(result.message).toContain('No error');
     });
 
     it('handles null input safely', () => {

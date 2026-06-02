@@ -13,8 +13,9 @@ const BASE_TS = 1715000000000;
 
 const makeEvent = (overrides: Partial<IOeeEvent>): IOeeEvent => ({
   id: 'ev-test',
+  created_at: BASE_TS,
   updated_at: BASE_TS,
-  deleted: false,
+  is_deleted: false,
   line_id: 'LINE-1',
   machine_id: 'MACH-1',
   shift_id: 'SHIFT-1',

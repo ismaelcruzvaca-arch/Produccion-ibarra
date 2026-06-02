@@ -35,14 +35,14 @@ import { useDatabase } from '../data/DatabaseContext';
 /** Payload for creating a quality inspection — omits auto-generated fields. */
 export type CreateInspectionPayload = Omit<
   IQualityInspection,
-  'id' | 'updated_at' | 'is_deleted'
+  'id' | 'created_at' | 'updated_at' | 'is_deleted'
 >;
 
 /** Payload for creating a defect log — omits auto-generated fields. */
-export type CreateDefectLogPayload = Omit<IDefectLog, 'id' | 'updated_at' | 'is_deleted'>;
+export type CreateDefectLogPayload = Omit<IDefectLog, 'id' | 'created_at' | 'updated_at' | 'is_deleted'>;
 
 /** Payload for creating a weight log — omits auto-generated fields. */
-export type CreateWeightLogPayload = Omit<IWeightLog, 'id' | 'updated_at' | 'is_deleted'>;
+export type CreateWeightLogPayload = Omit<IWeightLog, 'id' | 'created_at' | 'updated_at' | 'is_deleted'>;
 
 // ─── Repository Interface ───────────────────────────────────────────────────────
 
@@ -117,9 +117,11 @@ export function useQualityInspectionsRepository(): QualityInspectionsRepository 
 
   const createInspection = useCallback(
     async (payload: CreateInspectionPayload) => {
+      const now = nowMs();
       const newDoc: IQualityInspection = {
         id: generateUuid(),
-        updated_at: nowMs(),
+        created_at: now,
+        updated_at: now,
         is_deleted: false,
         ...payload,
       };
@@ -191,9 +193,11 @@ export function useQualityInspectionsRepository(): QualityInspectionsRepository 
 
   const createDefectLog = useCallback(
     async (payload: CreateDefectLogPayload) => {
+      const now = nowMs();
       const newDoc: IDefectLog = {
         id: generateUuid(),
-        updated_at: nowMs(),
+        created_at: now,
+        updated_at: now,
         is_deleted: false,
         ...payload,
       };
@@ -222,9 +226,11 @@ export function useQualityInspectionsRepository(): QualityInspectionsRepository 
 
   const createWeightLog = useCallback(
     async (payload: CreateWeightLogPayload) => {
+      const now = nowMs();
       const newDoc: IWeightLog = {
         id: generateUuid(),
-        updated_at: nowMs(),
+        created_at: now,
+        updated_at: now,
         is_deleted: false,
         ...payload,
       };

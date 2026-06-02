@@ -21,22 +21,25 @@
 
 import { replicateGraphQL, type RxGraphQLReplicationState } from 'rxdb/plugins/replication-graphql';
 
-import { nhost, getAuthToken } from './nhostClient';
+import { getAuthToken } from './nhostClient';
 import {
-  toGraphQLAsset,
-  fromGraphQLAsset,
-  fromGraphQLWorkOrder,
-  toGraphQLWorkOrder,
-  toGraphQLReport,
-  fromGraphQLReport,
   toGraphQLOeeEvent,
   fromGraphQLOeeEvent,
-  type GraphQLAsset,
-  type GraphQLWorkOrder,
-  type GraphQLReport,
+  toGraphQLSignature,
+  fromGraphQLSignature,
+  toGraphQLQualityInspection,
+  fromGraphQLQualityInspection,
+  toGraphQLDefectLog,
+  fromGraphQLDefectLog,
+  toGraphQLWeightLog,
+  fromGraphQLWeightLog,
   type GraphQLOeeEvent,
+  type GraphQLSignature,
+  type GraphQLQualityInspection,
+  type GraphQLDefectLog,
+  type GraphQLWeightLog,
 } from './dto';
-import type { IAsset, IWorkOrder, IReport, IOeeEvent } from '../core/types';
+import type { IOeeEvent, ISignature, IQualityInspection, IDefectLog, IWeightLog } from '../core/types';
 import type { ChocolateIbarraDatabase } from '../data/database';
 import { createResilientReplication, type ResilientState } from '../sync/resilientReplication';
 
@@ -67,198 +70,6 @@ export function getHeaders(): Record<string, string> {
     headers['Authorization'] = `Bearer ${token}`;
   }
   return headers;
-}
-
-// ─── Pull Query Builder (Assets) ───────────────────────────────────────────────
-
-/**
- * Pull handler for assets — fetches records updated after the checkpoint.
- *
- * @param checkpoint - The last synced client_updated_at value (null for initial sync)
- * @returns Query object for replicateGraphQL's queryBuilder
- *
- * Checkpoint strategy:
- * - Initial sync (checkpoint=null): query all records (client_updated_at > 0)
- * - Subsequent syncs: query records where client_updated_at > last checkpoint
- * - Results ordered by client_updated_at ascending to avoid missing updates
- */
-function pullQueryBuilderAssets(checkpoint: GraphQLAsset | undefined, _limit: number) {
-  return {
-    query: `
-      query PullAssets($lastCheckpoint: bigint!) {
-        assets(
-          where: { client_updated_at: { _gt: $lastCheckpoint } },
-          order_by: { client_updated_at: asc }
-        ) {
-          id
-          name
-          type_id
-          status
-          location
-          serial_number
-          manufacturer
-          model_number
-          in_service_date
-          warranty_expiration
-          client_updated_at
-          deleted
-        }
-      }
-    `,
-    variables: { lastCheckpoint: checkpoint?.client_updated_at ? parseInt(checkpoint.client_updated_at, 10) : 0 },
-  };
-}
-
-// ─── Push Mutation Builder (Assets Upsert) ────────────────────────────────────
-
-/**
- * Push handler for assets — sends changed documents to server via upsert mutation.
- *
- * Uses Hasura's insert ... on_conflict to handle both inserts and updates.
- * Constraint name: assets_pkey (Hasura standard naming: <table>_pkey)
- *
- * The update_columns array specifies which fields to update on conflict.
- * All mutable fields are included; id and client_updated_at are always updated
- * (client_updated_at drives LWW conflict resolution).
- */
-function pushMutationBuilderAssets(docs: any[]) {
-  const objects = docs.map(toGraphQLAsset);
-  return {
-    query: `
-      mutation UpsertAssets($objects: [assets_insert_input!]!) {
-        insert_assets(
-          objects: $objects,
-          on_conflict: {
-            constraint: assets_pkey,
-            update_columns: [
-              name,
-              type_id,
-              status,
-              location,
-              serial_number,
-              manufacturer,
-              model_number,
-              in_service_date,
-              warranty_expiration,
-              client_updated_at,
-              deleted
-            ]
-          }
-        ) {
-          affected_rows
-        }
-      }
-    `,
-    variables: { objects },
-  };
-}
-
-// ─── Pull Query Builder (Work Orders) ─────────────────────────────────────────
-
-function pullQueryBuilderWorkOrders(checkpoint: GraphQLWorkOrder | undefined, _limit: number) {
-  return {
-    query: `
-      query PullWorkOrders($lastCheckpoint: bigint!) {
-        work_orders(
-          where: { client_updated_at: { _gt: $lastCheckpoint } },
-          order_by: { client_updated_at: asc }
-        ) {
-          id
-          equipment_id
-          description
-          status
-          priority
-          assigned_to
-          scheduled_date
-          completed_date
-          client_updated_at
-          deleted
-        }
-      }
-    `,
-    variables: { lastCheckpoint: checkpoint?.client_updated_at ? parseInt(checkpoint.client_updated_at, 10) : 0 },
-  };
-}
-
-// ─── Push Mutation Builder (Work Orders Upsert) ────────────────────────────────
-
-function pushMutationBuilderWorkOrders(docs: any[]) {
-  const objects = docs.map(toGraphQLWorkOrder);
-  return {
-    query: `
-      mutation UpsertWorkOrders($objects: [work_orders_insert_input!]!) {
-        insert_work_orders(
-          objects: $objects,
-          on_conflict: {
-            constraint: work_orders_pkey,
-            update_columns: [
-              equipment_id,
-              description,
-              status,
-              priority,
-              assigned_to,
-              scheduled_date,
-              completed_date,
-              client_updated_at,
-              deleted
-            ]
-          }
-        ) {
-          affected_rows
-        }
-      }
-    `,
-    variables: { objects },
-  };
-}
-
-// ─── Pull Query Builder (Reports) ──────────────────────────────────────────────
-
-function pullQueryBuilderReports(checkpoint: GraphQLReport | undefined, _limit: number) {
-  return {
-    query: `
-      query PullReports($lastCheckpoint: bigint!) {
-        reports(
-          where: { updated_at: { _gt: $lastCheckpoint } },
-          order_by: { updated_at: asc }
-        ) {
-          id
-          updated_at
-          deleted
-          template_id
-          data
-        }
-      }
-    `,
-    variables: { lastCheckpoint: checkpoint?.updated_at ? parseInt(checkpoint.updated_at, 10) : 0 },
-  };
-}
-
-// ─── Push Mutation Builder (Reports Upsert) ─────────────────────────────────────
-
-function pushMutationBuilderReports(docs: any[]) {
-  const objects = docs.map(toGraphQLReport);
-  return {
-    query: `
-      mutation UpsertReports($objects: [reports_insert_input!]!) {
-        insert_reports(
-          objects: $objects,
-          on_conflict: {
-            constraint: reports_pkey,
-            update_columns: [
-              updated_at,
-              deleted,
-              template_id,
-              data
-            ]
-          }
-        ) {
-          affected_rows
-        }
-      }
-    `,
-    variables: { objects },
-  };
 }
 
 // ─── Pull Query Builder (OEE Events) ───────────────────────────────────────────
@@ -320,6 +131,216 @@ function pushMutationBuilderOeeEvents(docs: any[]) {
   };
 }
 
+// ─── Pull Query Builder (Signatures) ──────────────────────────────────────────
+
+function pullQueryBuilderSignatures(checkpoint: GraphQLSignature | undefined, _limit: number) {
+  return {
+    query: `
+      query PullSignatures($lastCheckpoint: bigint!) {
+        signatures(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          document_type
+          document_id
+          signer_id
+          signer_name
+          signer_role
+          signed_at
+          sequence
+          is_deleted
+          created_at
+          updated_at
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ? parseInt(checkpoint.updated_at, 10) : 0 },
+  };
+}
+
+// ─── Push Mutation Builder (Signatures Upsert) ─────────────────────────────────
+
+function pushMutationBuilderSignatures(docs: any[]) {
+  const objects = docs.map(toGraphQLSignature);
+  return {
+    query: `
+      mutation UpsertSignatures($objects: [signatures_insert_input!]!) {
+        insert_signatures(
+          objects: $objects,
+          on_conflict: {
+            constraint: signatures_pkey,
+            update_columns: [
+              document_type, document_id, signer_id, signer_name,
+              signer_role, signed_at, sequence, is_deleted,
+              created_at, updated_at
+            ]
+          }
+        ) {
+          affected_rows
+        }
+      }
+    `,
+    variables: { objects },
+  };
+}
+
+// ─── Pull Query Builder (Quality Inspections) ─────────────────────────────────
+
+function pullQueryBuilderQualityInspections(checkpoint: GraphQLQualityInspection | undefined, _limit: number) {
+  return {
+    query: `
+      query PullQualityInspections($lastCheckpoint: bigint!) {
+        quality_inspections(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          line_id
+          operator_id
+          shift_id
+          product_code
+          result
+          notes
+          created_at
+          updated_at
+          is_deleted
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ? parseInt(checkpoint.updated_at, 10) : 0 },
+  };
+}
+
+// ─── Push Mutation Builder (Quality Inspections Upsert) ───────────────────────
+
+function pushMutationBuilderQualityInspections(docs: any[]) {
+  const objects = docs.map(toGraphQLQualityInspection);
+  return {
+    query: `
+      mutation UpsertQualityInspections($objects: [quality_inspections_insert_input!]!) {
+        insert_quality_inspections(
+          objects: $objects,
+          on_conflict: {
+            constraint: quality_inspections_pkey,
+            update_columns: [
+              line_id, operator_id, shift_id, product_code,
+              result, notes, is_deleted
+            ]
+          }
+        ) {
+          affected_rows
+        }
+      }
+    `,
+    variables: { objects },
+  };
+}
+
+// ─── Pull Query Builder (Defect Logs) ─────────────────────────────────────────
+
+function pullQueryBuilderDefectLogs(checkpoint: GraphQLDefectLog | undefined, _limit: number) {
+  return {
+    query: `
+      query PullDefectLogs($lastCheckpoint: bigint!) {
+        defect_logs(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          inspection_id
+          defect_type
+          defect_code
+          quantity
+          severity
+          notes
+          registered_at
+          updated_at
+          is_deleted
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ? parseInt(checkpoint.updated_at, 10) : 0 },
+  };
+}
+
+// ─── Push Mutation Builder (Defect Logs Upsert) ────────────────────────────────
+
+function pushMutationBuilderDefectLogs(docs: any[]) {
+  const objects = docs.map(toGraphQLDefectLog);
+  return {
+    query: `
+      mutation UpsertDefectLogs($objects: [defect_logs_insert_input!]!) {
+        insert_defect_logs(
+          objects: $objects,
+          on_conflict: {
+            constraint: defect_logs_pkey,
+            update_columns: [
+              inspection_id, defect_type, defect_code, quantity,
+              severity, notes, is_deleted
+            ]
+          }
+        ) {
+          affected_rows
+        }
+      }
+    `,
+    variables: { objects },
+  };
+}
+
+// ─── Pull Query Builder (Weight Logs) ─────────────────────────────────────────
+
+function pullQueryBuilderWeightLogs(checkpoint: GraphQLWeightLog | undefined, _limit: number) {
+  return {
+    query: `
+      query PullWeightLogs($lastCheckpoint: bigint!) {
+        weight_logs(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          inspection_id
+          product_code
+          target_weight
+          actual_weight
+          tolerance
+          result
+          registered_at
+          updated_at
+          is_deleted
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ? parseInt(checkpoint.updated_at, 10) : 0 },
+  };
+}
+
+// ─── Push Mutation Builder (Weight Logs Upsert) ────────────────────────────────
+
+function pushMutationBuilderWeightLogs(docs: any[]) {
+  const objects = docs.map(toGraphQLWeightLog);
+  return {
+    query: `
+      mutation UpsertWeightLogs($objects: [weight_logs_insert_input!]!) {
+        insert_weight_logs(
+          objects: $objects,
+          on_conflict: {
+            constraint: weight_logs_pkey,
+            update_columns: [
+              inspection_id, product_code, target_weight,
+              actual_weight, result, is_deleted
+            ]
+          }
+        ) {
+          affected_rows
+        }
+      }
+    `,
+    variables: { objects },
+  };
+}
+
 // ─── Replication Start Function ────────────────────────────────────────────────
 
 /**
@@ -342,88 +363,16 @@ function pushMutationBuilderOeeEvents(docs: any[]) {
  * ```
  */
 export interface ReplicationStates {
-  assets: RxGraphQLReplicationState<IAsset, GraphQLAsset>;
-  workOrders: RxGraphQLReplicationState<IWorkOrder, GraphQLWorkOrder>;
-  reports: RxGraphQLReplicationState<IReport, GraphQLReport>;
   oeeEvents: RxGraphQLReplicationState<IOeeEvent, GraphQLOeeEvent>;
+  signatures: RxGraphQLReplicationState<ISignature, GraphQLSignature>;
+  qualityInspections: RxGraphQLReplicationState<IQualityInspection, GraphQLQualityInspection>;
+  defectLogs: RxGraphQLReplicationState<IDefectLog, GraphQLDefectLog>;
+  weightLogs: RxGraphQLReplicationState<IWeightLog, GraphQLWeightLog>;
   /** Resilient replication controller for OEE events (backoff, circuit breaker, DLQ). */
   resilientOeeController?: { cleanup: () => void; getState: () => ResilientState };
 }
 
 export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates {
-  // ── Assets replication ──────────────────────────────────────────────────────
-  let replicationAssets: RxGraphQLReplicationState<IAsset, GraphQLAsset>;
-  try {
-    replicationAssets = replicateGraphQL<IAsset, GraphQLAsset>({
-      replicationIdentifier: 'assets-graphql-replication',
-      url: { http: getGraphQLUrl() },
-      headers: getHeaders(),
-      collection: db.collections.assets,
-      pull: {
-        queryBuilder: pullQueryBuilderAssets,
-        modifier: (doc: GraphQLAsset) => ({ ...fromGraphQLAsset(doc), _deleted: doc.deleted ?? false }),
-      },
-      push: {
-        queryBuilder: pushMutationBuilderAssets,
-      },
-      live: false, // disable live WebSocket polling to avoid 'ws' module crash in browser
-      retryTime: 5000,
-      autoStart: true,
-    });
-  } catch (err) {
-    console.warn('Assets replication failed to initialise:', err);
-    // Create a minimal stub so the rest of the app doesn't crash
-    replicationAssets = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
-  }
-
-  // ── Work Orders replication ────────────────────────────────────────────────
-  let replicationWorkOrders: RxGraphQLReplicationState<IWorkOrder, GraphQLWorkOrder>;
-  try {
-    replicationWorkOrders = replicateGraphQL<IWorkOrder, GraphQLWorkOrder>({
-      replicationIdentifier: 'work-orders-graphql-replication',
-      url: { http: getGraphQLUrl() },
-      headers: getHeaders(),
-      collection: db.collections.work_orders,
-      pull: {
-        queryBuilder: pullQueryBuilderWorkOrders,
-        modifier: (doc: GraphQLWorkOrder) => ({ ...fromGraphQLWorkOrder(doc), _deleted: doc.deleted ?? false }),
-      },
-      push: {
-        queryBuilder: pushMutationBuilderWorkOrders,
-      },
-      live: false,
-      retryTime: 5000,
-      autoStart: true,
-    });
-  } catch (err) {
-    console.warn('WorkOrders replication failed to initialise:', err);
-    replicationWorkOrders = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
-  }
-
-  // ── Reports replication ────────────────────────────────────────────────────
-  let replicationReports: RxGraphQLReplicationState<IReport, GraphQLReport>;
-  try {
-    replicationReports = replicateGraphQL<IReport, GraphQLReport>({
-      replicationIdentifier: 'reports-graphql-replication',
-      url: { http: getGraphQLUrl() },
-      headers: getHeaders(),
-      collection: db.collections.reports,
-      pull: {
-        queryBuilder: pullQueryBuilderReports,
-        modifier: (doc: GraphQLReport) => ({ ...fromGraphQLReport(doc), _deleted: doc.deleted ?? false }),
-      },
-      push: {
-        queryBuilder: pushMutationBuilderReports,
-      },
-      live: false,
-      retryTime: 5000,
-      autoStart: true,
-    });
-  } catch (err) {
-    console.warn('Reports replication failed to initialise:', err);
-    replicationReports = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
-  }
-
   // ── OEE Events replication ─────────────────────────────────────────────────
   let replicationOeeEvents: RxGraphQLReplicationState<IOeeEvent, GraphQLOeeEvent>;
   let resilientOeeController: { cleanup: () => void; getState: () => ResilientState } | undefined;
@@ -456,8 +405,108 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
     replicationOeeEvents = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
   }
 
-  // Asset Types replication would follow the same pattern.
-  // TODO: Add asset_types replication once Nhost tables are created.
+  // ── Signatures replication ─────────────────────────────────────────────────
+  let replicationSignatures: RxGraphQLReplicationState<ISignature, GraphQLSignature>;
+  try {
+    replicationSignatures = replicateGraphQL<ISignature, GraphQLSignature>({
+      replicationIdentifier: 'signatures-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
+      collection: db.collections.signatures,
+      pull: {
+        queryBuilder: pullQueryBuilderSignatures,
+        modifier: (doc: GraphQLSignature) => ({ ...fromGraphQLSignature(doc), _deleted: doc.is_deleted ?? false }),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderSignatures,
+      },
+      live: false,
+      retryTime: 5000,
+      autoStart: true,
+    });
+  } catch (err) {
+    console.warn('Signatures replication failed to initialise:', err);
+    replicationSignatures = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
 
-  return { assets: replicationAssets, workOrders: replicationWorkOrders, reports: replicationReports, oeeEvents: replicationOeeEvents, resilientOeeController };
+  // ── Quality Inspections replication ────────────────────────────────────────
+  let replicationQualityInspections: RxGraphQLReplicationState<IQualityInspection, GraphQLQualityInspection>;
+  try {
+    replicationQualityInspections = replicateGraphQL<IQualityInspection, GraphQLQualityInspection>({
+      replicationIdentifier: 'quality-inspections-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
+      collection: db.collections.quality_inspections,
+      pull: {
+        queryBuilder: pullQueryBuilderQualityInspections,
+        modifier: (doc: GraphQLQualityInspection) => ({ ...fromGraphQLQualityInspection(doc), _deleted: doc.is_deleted ?? false }),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderQualityInspections,
+      },
+      live: false,
+      retryTime: 5000,
+      autoStart: true,
+    });
+  } catch (err) {
+    console.warn('QualityInspections replication failed to initialise:', err);
+    replicationQualityInspections = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
+
+  // ── Defect Logs replication ────────────────────────────────────────────────
+  let replicationDefectLogs: RxGraphQLReplicationState<IDefectLog, GraphQLDefectLog>;
+  try {
+    replicationDefectLogs = replicateGraphQL<IDefectLog, GraphQLDefectLog>({
+      replicationIdentifier: 'defect-logs-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
+      collection: db.collections.defect_logs,
+      pull: {
+        queryBuilder: pullQueryBuilderDefectLogs,
+        modifier: (doc: GraphQLDefectLog) => ({ ...fromGraphQLDefectLog(doc), _deleted: doc.is_deleted ?? false }),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderDefectLogs,
+      },
+      live: false,
+      retryTime: 5000,
+      autoStart: true,
+    });
+  } catch (err) {
+    console.warn('DefectLogs replication failed to initialise:', err);
+    replicationDefectLogs = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
+
+  // ── Weight Logs replication ────────────────────────────────────────────────
+  let replicationWeightLogs: RxGraphQLReplicationState<IWeightLog, GraphQLWeightLog>;
+  try {
+    replicationWeightLogs = replicateGraphQL<IWeightLog, GraphQLWeightLog>({
+      replicationIdentifier: 'weight-logs-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
+      collection: db.collections.weight_logs,
+      pull: {
+        queryBuilder: pullQueryBuilderWeightLogs,
+        modifier: (doc: GraphQLWeightLog) => ({ ...fromGraphQLWeightLog(doc), _deleted: doc.is_deleted ?? false }),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderWeightLogs,
+      },
+      live: false,
+      retryTime: 5000,
+      autoStart: true,
+    });
+  } catch (err) {
+    console.warn('WeightLogs replication failed to initialise:', err);
+    replicationWeightLogs = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
+
+  return {
+    oeeEvents: replicationOeeEvents,
+    signatures: replicationSignatures,
+    qualityInspections: replicationQualityInspections,
+    defectLogs: replicationDefectLogs,
+    weightLogs: replicationWeightLogs,
+    resilientOeeController,
+  };
 }

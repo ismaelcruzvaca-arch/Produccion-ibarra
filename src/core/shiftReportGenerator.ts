@@ -31,9 +31,11 @@ export function generateShiftReport(input: ShiftReportInput): IReport {
     downtime_minutes: metrics.tiempoParoProdMin + metrics.tiempoParoMttoMin,
   };
 
+  const now = nowMs();
   return {
     id: generateUuid(),
-    updated_at: nowMs(),
+    created_at: now,
+    updated_at: now,
     is_deleted: false,
     template_id: 'oee-shift-summary',
     data: reportData,

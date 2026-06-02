@@ -28,7 +28,7 @@ interface QualityCaptureScreenProps {
   /** Called to dismiss/close the capture wizard. */
   onDismiss: () => void;
   /** Called when the inspection is confirmed and ready to save. */
-  onSave: (payload: Omit<IQualityInspection, 'id' | 'updated_at' | 'is_deleted'>) => Promise<void>;
+  onSave: (payload: Omit<IQualityInspection, 'id' | 'created_at' | 'updated_at' | 'is_deleted'>) => Promise<void>;
   /** Available products for selection. */
   products: Array<{ id: string; name: string; code: string }>;
   /** Available defects from quality_defects catalog (QC-9). */

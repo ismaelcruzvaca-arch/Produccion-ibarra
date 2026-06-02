@@ -151,11 +151,13 @@ describe('createResilientReplication', () => {
       const state = createMockReplicationState();
       const db = createMockDatabase();
 
+      // Use threshold=4 so the 3rd error still does backoff (not circuit open)
+      const backoffOptions = { ...fastOptions, circuitBreakerThreshold: 4 };
       const controller = createResilientReplication(
         state as any,
         db,
         mockGraphQLCtx,
-        fastOptions
+        backoffOptions
       );
 
       // Error 1 → delay 100ms (base)

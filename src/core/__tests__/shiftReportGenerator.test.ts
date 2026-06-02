@@ -5,31 +5,31 @@ const FIXED_NOW = 1715000000000;
 
 describe('generateShiftReport', () => {
   const shiftStart = (timestamp: number): IOeeEvent => ({
-    id: 'ev-1', updated_at: timestamp, is_deleted: false,
+    id: 'ev-1', created_at: timestamp, updated_at: timestamp, is_deleted: false,
     line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
     event_type: 'shift_start', timestamp, planned_boxes: 480, device_id: 'device-1',
   });
 
   const shiftEnd = (timestamp: number): IOeeEvent => ({
-    id: 'ev-2', updated_at: timestamp, is_deleted: false,
+    id: 'ev-2', created_at: timestamp, updated_at: timestamp, is_deleted: false,
     line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
     event_type: 'shift_end', timestamp, device_id: 'device-1',
   });
 
   const boxCount = (timestamp: number, qty: number): IOeeEvent => ({
-    id: `box-${timestamp}`, updated_at: timestamp, is_deleted: false,
+    id: `box-${timestamp}`, created_at: timestamp, updated_at: timestamp, is_deleted: false,
     line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
     event_type: 'box_count', timestamp, quantity: qty, device_id: 'device-1',
   });
 
   const downtimeStart = (timestamp: number, reason: string, id: string): IOeeEvent => ({
-    id, updated_at: timestamp, is_deleted: false,
+    id, created_at: timestamp, updated_at: timestamp, is_deleted: false,
     line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
     event_type: 'downtime_start', timestamp, reason_code: reason, device_id: 'device-1',
   });
 
   const downtimeEnd = (timestamp: number, relatedId: string): IOeeEvent => ({
-    id: `end-${relatedId}`, updated_at: timestamp, is_deleted: false,
+    id: `end-${relatedId}`, created_at: timestamp, updated_at: timestamp, is_deleted: false,
     line_id: 'LINEA-1', machine_id: 'CAVEMIL-03', shift_id: 'shift-1',
     event_type: 'downtime_end', timestamp, related_event_id: relatedId, device_id: 'device-1',
   });

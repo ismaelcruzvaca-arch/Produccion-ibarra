@@ -4,10 +4,13 @@
  * Pattern: Schema Definition
  * Why: RxDB requires explicit JSON schemas for validation and indexing.
  * Each schema follows the same structure:
- *   - version: 0 (initial schema, no migrations needed)
+ *   - version: 1 (standardized across all collections; migrations enabled)
  *   - primaryKey: 'id' (UUID v4, set by the repository before insert)
- *   - required: ['id', 'client_updated_at', 'deleted'] — IBaseDocument fields
+ *   - required: ['id', 'created_at', 'updated_at', 'is_deleted'] — IBaseDocument fields
  *   - properties: typed fields matching the TypeScript interfaces
+ *
+ * All schemas use `created_at` and `updated_at` timestamps (epoch ms).
+ * `updated_at` serves as the replication checkpoint for RxDB sync.
  *
  * These schemas are used by both local storage (Dexie/SQLite) and the
  * replication layer to validate document structure.
@@ -33,13 +36,13 @@ import type {
 
 /**
  * Asset collection schema.
- * Indexes: none defined yet — add performance indexes as needed (e.g., status, type_id).
+ * Indexes: updated_at for replication checkpoint, status + type_id for filtered queries.
  */
 export const assetSchema: RxJsonSchema<IAsset> = {
-  version: 0,
+  version: 2,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'client_updated_at', 'is_deleted'],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted'],
   properties: {
     id: { type: 'string', maxLength: 100 },
     name: { type: 'string' },
@@ -51,10 +54,11 @@ export const assetSchema: RxJsonSchema<IAsset> = {
     model_number: { type: 'string' },
     in_service_date: { type: 'number' },
     warranty_expiration: { type: 'number' },
-    client_updated_at: { type: 'number' },
+    created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
   },
-  indexes: [],
+  indexes: ['updated_at'],
 };
 
 /**
@@ -62,19 +66,20 @@ export const assetSchema: RxJsonSchema<IAsset> = {
  * Used to categorize assets (e.g., HVAC, Electrical, Plumbing).
  */
 export const assetTypeSchema: RxJsonSchema<IAssetType> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'client_updated_at', 'is_deleted'],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted'],
   properties: {
     id: { type: 'string', maxLength: 100 },
     code: { type: 'string' },
     description: { type: 'string' },
     is_active: { type: 'boolean' },
-    client_updated_at: { type: 'number' },
+    created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
   },
-  indexes: [],
+  indexes: ['updated_at'],
 };
 
 /**
@@ -82,10 +87,10 @@ export const assetTypeSchema: RxJsonSchema<IAssetType> = {
  * Represents a maintenance/repair task assigned to an asset.
  */
 export const workOrderSchema: RxJsonSchema<IWorkOrder> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'client_updated_at', 'is_deleted'],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted'],
   properties: {
     id: { type: 'string', maxLength: 100 },
     equipment_id: { type: 'string' },
@@ -95,24 +100,25 @@ export const workOrderSchema: RxJsonSchema<IWorkOrder> = {
     assigned_to: { type: 'string' },
     scheduled_date: { type: 'number' },
     completed_date: { type: 'number' },
-    client_updated_at: { type: 'number' },
+    created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
   },
-  indexes: [],
+  indexes: ['updated_at'],
 };
 
 /**
  * Report collection schema.
- * Uses `updated_at` (not `client_updated_at`) per the new data contract.
  * The `data` field is a flexible object for template-specific payloads.
  */
 export const reportSchema: RxJsonSchema<IReport> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'updated_at', 'is_deleted', 'template_id', 'data'],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'template_id', 'data'],
   properties: {
     id: { type: 'string', maxLength: 100 },
+    created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
     template_id: { type: 'string' },
@@ -131,16 +137,16 @@ export const reportSchema: RxJsonSchema<IReport> = {
 
 /**
  * OEE Event collection schema.
- * Uses `updated_at` (not `client_updated_at`) per the new data contract.
- * Indexes: timestamp, [line_id, timestamp], [shift_id, timestamp] for performance.
+ * Indexes: updated_at for replication, timestamp, [line_id, timestamp], [shift_id, timestamp].
  */
 export const oeeEventSchema: RxJsonSchema<IOeeEvent> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'updated_at', 'is_deleted', 'line_id', 'machine_id', 'shift_id', 'event_type', 'timestamp', 'device_id'],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'line_id', 'machine_id', 'shift_id', 'event_type', 'timestamp'],
   properties: {
     id:               { type: 'string', maxLength: 100 },
+    created_at:       { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     updated_at:       { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted:       { type: 'boolean' },
     line_id:          { type: 'string', maxLength: 100 },
@@ -157,7 +163,7 @@ export const oeeEventSchema: RxJsonSchema<IOeeEvent> = {
     related_event_id: { type: 'string' },
     device_id:        { type: 'string' },
   },
-  indexes: ['timestamp', ['line_id', 'timestamp'], ['shift_id', 'timestamp']],
+  indexes: ['updated_at', 'timestamp', ['line_id', 'timestamp'], ['shift_id', 'timestamp']],
 };
 
 /**
@@ -165,12 +171,15 @@ export const oeeEventSchema: RxJsonSchema<IOeeEvent> = {
  * Stores events that failed server-side validation during push.
  */
 export const syncErrorSchema: RxJsonSchema<ISyncError> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'id_evento', 'payload_original', 'mensaje_error', 'fecha'],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'id_evento', 'payload_original', 'mensaje_error', 'fecha'],
   properties: {
     id:               { type: 'string', maxLength: 100 },
+    created_at:       { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    updated_at:       { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted:       { type: 'boolean' },
     id_evento:        { type: 'string', maxLength: 100 },
     payload_original: { type: 'object' },
     mensaje_error:    { type: 'string' },
@@ -183,15 +192,15 @@ export const syncErrorSchema: RxJsonSchema<ISyncError> = {
 
 /**
  * Signatures collection schema.
- * Uses `updated_at` (not `client_updated_at`) per the new data contract.
- * Indexes: [document_id] for lookup by document, [document_type, document_id] for compound queries.
+ * Indexes: updated_at for replication, document_id, [document_type, document_id].
  */
 export const signatureSchema: RxJsonSchema<ISignature> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
   required: [
     'id',
+    'created_at',
     'updated_at',
     'is_deleted',
     'document_type',
@@ -204,6 +213,7 @@ export const signatureSchema: RxJsonSchema<ISignature> = {
   ],
   properties: {
     id: { type: 'string', maxLength: 100 },
+    created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
     document_type: { type: 'string' },
@@ -214,18 +224,19 @@ export const signatureSchema: RxJsonSchema<ISignature> = {
     signed_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     sequence: { type: 'number', multipleOf: 1, minimum: 0, maximum: 100 },
   },
-  indexes: ['document_id', ['document_type', 'document_id']],
+  indexes: ['updated_at', 'document_id', ['document_type', 'document_id']],
 };
 
 // ─── Toaster Log (F-PD-16) ──────────────────────────────────────────────────────
 
 export const toasterLogSchema: RxJsonSchema<IToasterLog> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'updated_at', 'is_deleted'],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted'],
   properties: {
     id: { type: 'string', maxLength: 100 },
+    created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
     line_id: { type: 'string' },
@@ -256,18 +267,19 @@ export const toasterLogSchema: RxJsonSchema<IToasterLog> = {
     inv_fin_cacao_crudo: { type: 'number' },
     inv_fin_azucar: { type: 'number' },
   },
-  indexes: ['shift_id', ['shift_id', 'batch_number']],
+  indexes: ['updated_at', 'shift_id', ['shift_id', 'batch_number']],
 };
 
 // ─── Mixing Batch (F-PD-17) ─────────────────────────────────────────────────────
 
 export const mixingBatchSchema: RxJsonSchema<IMixingBatch> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'updated_at', 'is_deleted'],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted'],
   properties: {
     id: { type: 'string', maxLength: 100 },
+    created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
     line_id: { type: 'string' },
@@ -308,18 +320,19 @@ export const mixingBatchSchema: RxJsonSchema<IMixingBatch> = {
     consumo_lecitina: { type: 'number' },
     consumo_reproceso: { type: 'number' },
   },
-  indexes: ['shift_id', 'batch_sequence'],
+  indexes: ['updated_at', 'shift_id', 'batch_sequence'],
 };
 
 // ─── Extractor Check (F-PD-18) ──────────────────────────────────────────────────
 
 export const extractorCheckSchema: RxJsonSchema<IExtractorCheck> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'updated_at', 'is_deleted'],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted'],
   properties: {
     id: { type: 'string', maxLength: 100 },
+    created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
     line_id: { type: 'string' },
@@ -336,18 +349,19 @@ export const extractorCheckSchema: RxJsonSchema<IExtractorCheck> = {
     extractor_8_on: { type: 'boolean' },
     cedazo_tt_last_cleaning: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
   },
-  indexes: ['shift_id'],
+  indexes: ['updated_at', 'shift_id'],
 };
 
 // ─── Vitamin Kit (F-PD-06) ──────────────────────────────────────────────────────
 
 export const vitaminKitSchema: RxJsonSchema<IVitaminKit> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'updated_at', 'is_deleted'],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted'],
   properties: {
     id: { type: 'string', maxLength: 100 },
+    created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
     line_id: { type: 'string' },
@@ -363,22 +377,22 @@ export const vitaminKitSchema: RxJsonSchema<IVitaminKit> = {
     peso_bascula_kg: { type: 'number' },
     peso_fisico_kg: { type: 'number' },
   },
-  indexes: ['shift_id'],
+  indexes: ['updated_at', 'shift_id'],
 };
 
 // ─── Quality Inspection ─────────────────────────────────────────────────────────
 
 /**
  * Quality Inspection schema.
- * Uses `updated_at` (not `client_updated_at`) per the new data contract.
  * Indexes: shift_session_id for active shift queries, [shift_session_id, updated_at] for DESC sort.
  */
 export const qualityInspectionSchema: RxJsonSchema<IQualityInspection> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
   required: [
     'id',
+    'created_at',
     'updated_at',
     'is_deleted',
     'line_id',
@@ -393,6 +407,7 @@ export const qualityInspectionSchema: RxJsonSchema<IQualityInspection> = {
   ],
   properties: {
     id: { type: 'string', maxLength: 100 },
+    created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
     line_id: { type: 'string' },
@@ -422,14 +437,15 @@ export const qualityInspectionSchema: RxJsonSchema<IQualityInspection> = {
 
 /**
  * Defect Log schema.
- * Indexes: inspection_id for lookup.
+ * Indexes: updated_at for replication, inspection_id for lookup.
  */
 export const defectLogSchema: RxJsonSchema<IDefectLog> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
   required: [
     'id',
+    'created_at',
     'updated_at',
     'is_deleted',
     'inspection_id',
@@ -440,6 +456,7 @@ export const defectLogSchema: RxJsonSchema<IDefectLog> = {
   ],
   properties: {
     id: { type: 'string', maxLength: 100 },
+    created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
     inspection_id: { type: 'string' },
@@ -449,21 +466,22 @@ export const defectLogSchema: RxJsonSchema<IDefectLog> = {
     quantity: { type: 'number' },
     notes: { type: 'string' },
   },
-  indexes: ['inspection_id'],
+  indexes: ['updated_at', 'inspection_id'],
 };
 
 // ─── Weight Log ─────────────────────────────────────────────────────────────────
 
 /**
  * Weight Log schema.
- * Indexes: inspection_id for lookup.
+ * Indexes: updated_at for replication, inspection_id for lookup.
  */
 export const weightLogSchema: RxJsonSchema<IWeightLog> = {
-  version: 0,
+  version: 1,
   primaryKey: 'id',
   type: 'object',
   required: [
     'id',
+    'created_at',
     'updated_at',
     'is_deleted',
     'inspection_id',
@@ -473,6 +491,7 @@ export const weightLogSchema: RxJsonSchema<IWeightLog> = {
   ],
   properties: {
     id: { type: 'string', maxLength: 100 },
+    created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
     inspection_id: { type: 'string' },
@@ -483,5 +502,5 @@ export const weightLogSchema: RxJsonSchema<IWeightLog> = {
     passed: { type: 'boolean' },
     warning: { type: 'boolean' },
   },
-  indexes: ['inspection_id'],
+  indexes: ['updated_at', 'inspection_id'],
 };

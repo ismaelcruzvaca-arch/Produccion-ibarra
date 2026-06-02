@@ -34,6 +34,7 @@ import {
   defectLogSchema,
   weightLogSchema,
 } from './schemas';
+import { MIGRATIONS } from './migrations';
 import type {
   IAsset,
   IAssetType,
@@ -102,22 +103,22 @@ export async function getDatabase(): Promise<ChocolateIbarraDatabase> {
       multiInstance: true, // allow multiple instances across web workers
       eventReduce: true, // event reduce for better performance
     }).then(async (db) => {
-      // Register all collections with their schemas
+      // Register all collections with their schemas and migration strategies
       await db.addCollections({
-        assets: { schema: assetSchema },
-        asset_types: { schema: assetTypeSchema },
-        work_orders: { schema: workOrderSchema },
-        reports: { schema: reportSchema },
-        oee_events: { schema: oeeEventSchema },
-        sync_errors: { schema: syncErrorSchema },
-        signatures: { schema: signatureSchema },
-        toaster_logs: { schema: toasterLogSchema },
-        mixing_batches: { schema: mixingBatchSchema },
-        extractor_checks: { schema: extractorCheckSchema },
-        vitamin_kits: { schema: vitaminKitSchema },
-        quality_inspections: { schema: qualityInspectionSchema },
-        defect_logs: { schema: defectLogSchema },
-        weight_logs: { schema: weightLogSchema },
+        assets: { schema: assetSchema, migrationStrategies: MIGRATIONS.assetSchema },
+        asset_types: { schema: assetTypeSchema, migrationStrategies: MIGRATIONS.assetTypeSchema },
+        work_orders: { schema: workOrderSchema, migrationStrategies: MIGRATIONS.workOrderSchema },
+        reports: { schema: reportSchema, migrationStrategies: MIGRATIONS.reportSchema },
+        oee_events: { schema: oeeEventSchema, migrationStrategies: MIGRATIONS.oeeEventSchema },
+        sync_errors: { schema: syncErrorSchema, migrationStrategies: MIGRATIONS.syncErrorSchema },
+        signatures: { schema: signatureSchema, migrationStrategies: MIGRATIONS.signatureSchema },
+        toaster_logs: { schema: toasterLogSchema, migrationStrategies: MIGRATIONS.toasterLogSchema },
+        mixing_batches: { schema: mixingBatchSchema, migrationStrategies: MIGRATIONS.mixingBatchSchema },
+        extractor_checks: { schema: extractorCheckSchema, migrationStrategies: MIGRATIONS.extractorCheckSchema },
+        vitamin_kits: { schema: vitaminKitSchema, migrationStrategies: MIGRATIONS.vitaminKitSchema },
+        quality_inspections: { schema: qualityInspectionSchema, migrationStrategies: MIGRATIONS.qualityInspectionSchema },
+        defect_logs: { schema: defectLogSchema, migrationStrategies: MIGRATIONS.defectLogSchema },
+        weight_logs: { schema: weightLogSchema, migrationStrategies: MIGRATIONS.weightLogSchema },
       });
       return db as ChocolateIbarraDatabase;
     });
