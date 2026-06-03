@@ -19,7 +19,7 @@
  * by network-level naming conventions.
  */
 
-import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent, ISignature, IQualityInspection, IDefectLog, IWeightLog } from '../core/types';
+import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent, ISignature, IQualityInspection, IDefectLog, IWeightLog, IToasterLog, IMixingBatch, IExtractorCheck, IVitaminKit } from '../core/types';
 
 // ─── Asset Mappers ─────────────────────────────────────────────────────────────
 
@@ -483,6 +483,418 @@ export function fromGraphQLDefectLog(gql: GraphQLDefectLog): IDefectLog {
     created_at: parseInt(gql.registered_at, 10),
     updated_at: parseInt(gql.updated_at, 10),
     is_deleted: gql.is_deleted,
+  };
+}
+
+// ─── Toaster Log Mappers ────────────────────────────────────────────────────────
+
+/**
+ * GraphQL representation of a Toaster Log as returned by Hasura.
+ */
+export interface GraphQLToasterLog {
+  id: string;
+  line_id: string;
+  machine_id: string;
+  shift_id: string;
+  operator_id: string;
+  created_at: string; // BIGINT as string
+  updated_at: string; // BIGINT as string
+  is_deleted: boolean;
+  batch_number: string;
+  temp_superior?: number;
+  temp_media?: number;
+  temp_inferior?: number;
+  rpm?: number;
+  vapor_pressure?: number;
+  cacao_crudo_humidity?: number;
+  cacao_tostado_humidity?: number;
+  pesadas?: number;
+  silo?: string;
+  lotes?: string;
+  tiempo_muerto_min?: number;
+  tiempo_muerto_cause?: string;
+  inv_ini_cascarilla?: number;
+  inv_ini_polvillo?: number;
+  inv_ini_granilla?: number;
+  inv_ini_cacao_crudo?: number;
+  inv_ini_azucar?: number;
+  inv_fin_cascarilla?: number;
+  inv_fin_polvillo?: number;
+  inv_fin_granilla?: number;
+  inv_fin_cacao_crudo?: number;
+  inv_fin_azucar?: number;
+}
+
+/**
+ * Maps a local RxDB toaster log to GraphQL input format.
+ */
+export function toGraphQLToasterLog(log: IToasterLog): Record<string, unknown> {
+  return {
+    id: log.id,
+    line_id: log.line_id,
+    machine_id: log.machine_id,
+    shift_id: log.shift_id,
+    operator_id: log.operator_id,
+    created_at: log.created_at.toString(),
+    updated_at: log.updated_at.toString(),
+    is_deleted: log.is_deleted,
+    batch_number: log.batch_number,
+    temp_superior: log.temp_superior,
+    temp_media: log.temp_media,
+    temp_inferior: log.temp_inferior,
+    rpm: log.rpm,
+    vapor_pressure: log.vapor_pressure,
+    cacao_crudo_humidity: log.cacao_crudo_humidity,
+    cacao_tostado_humidity: log.cacao_tostado_humidity,
+    pesadas: log.pesadas,
+    silo: log.silo,
+    lotes: log.lotes,
+    tiempo_muerto_min: log.tiempo_muerto_min,
+    tiempo_muerto_cause: log.tiempo_muerto_cause,
+    inv_ini_cascarilla: log.inv_ini_cascarilla,
+    inv_ini_polvillo: log.inv_ini_polvillo,
+    inv_ini_granilla: log.inv_ini_granilla,
+    inv_ini_cacao_crudo: log.inv_ini_cacao_crudo,
+    inv_ini_azucar: log.inv_ini_azucar,
+    inv_fin_cascarilla: log.inv_fin_cascarilla,
+    inv_fin_polvillo: log.inv_fin_polvillo,
+    inv_fin_granilla: log.inv_fin_granilla,
+    inv_fin_cacao_crudo: log.inv_fin_cacao_crudo,
+    inv_fin_azucar: log.inv_fin_azucar,
+  };
+}
+
+/**
+ * Maps a GraphQL toaster log response to local RxDB format.
+ */
+export function fromGraphQLToasterLog(gql: GraphQLToasterLog): IToasterLog {
+  return {
+    id: gql.id,
+    line_id: gql.line_id,
+    machine_id: gql.machine_id,
+    shift_id: gql.shift_id,
+    operator_id: gql.operator_id,
+    created_at: parseInt(gql.created_at, 10),
+    updated_at: parseInt(gql.updated_at, 10),
+    is_deleted: gql.is_deleted,
+    batch_number: gql.batch_number,
+    temp_superior: gql.temp_superior ?? 0,
+    temp_media: gql.temp_media ?? 0,
+    temp_inferior: gql.temp_inferior ?? 0,
+    rpm: gql.rpm ?? 0,
+    vapor_pressure: gql.vapor_pressure ?? 0,
+    cacao_crudo_humidity: gql.cacao_crudo_humidity ?? 0,
+    cacao_tostado_humidity: gql.cacao_tostado_humidity ?? 0,
+    pesadas: gql.pesadas ?? 0,
+    silo: gql.silo ?? '',
+    lotes: gql.lotes ?? '',
+    tiempo_muerto_min: gql.tiempo_muerto_min ?? 0,
+    tiempo_muerto_cause: gql.tiempo_muerto_cause ?? '',
+    inv_ini_cascarilla: gql.inv_ini_cascarilla ?? 0,
+    inv_ini_polvillo: gql.inv_ini_polvillo ?? 0,
+    inv_ini_granilla: gql.inv_ini_granilla ?? 0,
+    inv_ini_cacao_crudo: gql.inv_ini_cacao_crudo ?? 0,
+    inv_ini_azucar: gql.inv_ini_azucar ?? 0,
+    inv_fin_cascarilla: gql.inv_fin_cascarilla ?? 0,
+    inv_fin_polvillo: gql.inv_fin_polvillo ?? 0,
+    inv_fin_granilla: gql.inv_fin_granilla ?? 0,
+    inv_fin_cacao_crudo: gql.inv_fin_cacao_crudo ?? 0,
+    inv_fin_azucar: gql.inv_fin_azucar ?? 0,
+  };
+}
+
+// ─── Mixing Batch Mappers ───────────────────────────────────────────────────────
+
+/**
+ * GraphQL representation of a Mixing Batch as returned by Hasura.
+ */
+export interface GraphQLMixingBatch {
+  id: string;
+  line_id: string;
+  machine_id: string;
+  shift_id: string;
+  operator_id: string;
+  created_at: string; // BIGINT as string
+  updated_at: string; // BIGINT as string
+  is_deleted: boolean;
+  batch_sequence: number;
+  mezcladora?: string;
+  agitador?: string;
+  azucar_kg?: number;
+  licor_kg?: number;
+  cocoa_kg?: number;
+  grasa_vegetal_kg?: number;
+  lecitina_kg?: number;
+  reproceso_kg?: number;
+  viscosity_cps?: number;
+  discharge_temp?: number;
+  mezcladas?: number;
+  molidas?: number;
+  reproceso_total?: number;
+  desperdicio?: number;
+  inv_ini_azucar?: number;
+  inv_ini_licor?: number;
+  inv_ini_cocoa?: number;
+  inv_ini_grasa_vegetal?: number;
+  inv_ini_lecitina?: number;
+  inv_ini_reproceso?: number;
+  inv_fin_azucar?: number;
+  inv_fin_licor?: number;
+  inv_fin_cocoa?: number;
+  inv_fin_grasa_vegetal?: number;
+  inv_fin_lecitina?: number;
+  inv_fin_reproceso?: number;
+  consumo_azucar?: number;
+  consumo_licor?: number;
+  consumo_cocoa?: number;
+  consumo_grasa_vegetal?: number;
+  consumo_lecitina?: number;
+  consumo_reproceso?: number;
+}
+
+/**
+ * Maps a local RxDB mixing batch to GraphQL input format.
+ */
+export function toGraphQLMixingBatch(batch: IMixingBatch): Record<string, unknown> {
+  return {
+    id: batch.id,
+    line_id: batch.line_id,
+    machine_id: batch.machine_id,
+    shift_id: batch.shift_id,
+    operator_id: batch.operator_id,
+    created_at: batch.created_at.toString(),
+    updated_at: batch.updated_at.toString(),
+    is_deleted: batch.is_deleted,
+    batch_sequence: batch.batch_sequence,
+    mezcladora: batch.mezcladora,
+    agitador: batch.agitador,
+    azucar_kg: batch.azucar_kg,
+    licor_kg: batch.licor_kg,
+    cocoa_kg: batch.cocoa_kg,
+    grasa_vegetal_kg: batch.grasa_vegetal_kg,
+    lecitina_kg: batch.lecitina_kg,
+    reproceso_kg: batch.reproceso_kg,
+    viscosity_cps: batch.viscosity_cps,
+    discharge_temp: batch.discharge_temp,
+    mezcladas: batch.mezcladas,
+    molidas: batch.molidas,
+    reproceso_total: batch.reproceso_total,
+    desperdicio: batch.desperdicio,
+    inv_ini_azucar: batch.inv_ini_azucar,
+    inv_ini_licor: batch.inv_ini_licor,
+    inv_ini_cocoa: batch.inv_ini_cocoa,
+    inv_ini_grasa_vegetal: batch.inv_ini_grasa_vegetal,
+    inv_ini_lecitina: batch.inv_ini_lecitina,
+    inv_ini_reproceso: batch.inv_ini_reproceso,
+    inv_fin_azucar: batch.inv_fin_azucar,
+    inv_fin_licor: batch.inv_fin_licor,
+    inv_fin_cocoa: batch.inv_fin_cocoa,
+    inv_fin_grasa_vegetal: batch.inv_fin_grasa_vegetal,
+    inv_fin_lecitina: batch.inv_fin_lecitina,
+    inv_fin_reproceso: batch.inv_fin_reproceso,
+    consumo_azucar: batch.consumo_azucar,
+    consumo_licor: batch.consumo_licor,
+    consumo_cocoa: batch.consumo_cocoa,
+    consumo_grasa_vegetal: batch.consumo_grasa_vegetal,
+    consumo_lecitina: batch.consumo_lecitina,
+    consumo_reproceso: batch.consumo_reproceso,
+  };
+}
+
+/**
+ * Maps a GraphQL mixing batch response to local RxDB format.
+ */
+export function fromGraphQLMixingBatch(gql: GraphQLMixingBatch): IMixingBatch {
+  return {
+    id: gql.id,
+    line_id: gql.line_id,
+    machine_id: gql.machine_id,
+    shift_id: gql.shift_id,
+    operator_id: gql.operator_id,
+    created_at: parseInt(gql.created_at, 10),
+    updated_at: parseInt(gql.updated_at, 10),
+    is_deleted: gql.is_deleted,
+    batch_sequence: gql.batch_sequence,
+    mezcladora: gql.mezcladora ?? '',
+    agitador: gql.agitador ?? '',
+    azucar_kg: gql.azucar_kg ?? 0,
+    licor_kg: gql.licor_kg ?? 0,
+    cocoa_kg: gql.cocoa_kg ?? 0,
+    grasa_vegetal_kg: gql.grasa_vegetal_kg ?? 0,
+    lecitina_kg: gql.lecitina_kg ?? 0,
+    reproceso_kg: gql.reproceso_kg ?? 0,
+    viscosity_cps: gql.viscosity_cps ?? 0,
+    discharge_temp: gql.discharge_temp ?? 0,
+    mezcladas: gql.mezcladas ?? 0,
+    molidas: gql.molidas ?? 0,
+    reproceso_total: gql.reproceso_total ?? 0,
+    desperdicio: gql.desperdicio ?? 0,
+    inv_ini_azucar: gql.inv_ini_azucar ?? 0,
+    inv_ini_licor: gql.inv_ini_licor ?? 0,
+    inv_ini_cocoa: gql.inv_ini_cocoa ?? 0,
+    inv_ini_grasa_vegetal: gql.inv_ini_grasa_vegetal ?? 0,
+    inv_ini_lecitina: gql.inv_ini_lecitina ?? 0,
+    inv_ini_reproceso: gql.inv_ini_reproceso ?? 0,
+    inv_fin_azucar: gql.inv_fin_azucar ?? 0,
+    inv_fin_licor: gql.inv_fin_licor ?? 0,
+    inv_fin_cocoa: gql.inv_fin_cocoa ?? 0,
+    inv_fin_grasa_vegetal: gql.inv_fin_grasa_vegetal ?? 0,
+    inv_fin_lecitina: gql.inv_fin_lecitina ?? 0,
+    inv_fin_reproceso: gql.inv_fin_reproceso ?? 0,
+    consumo_azucar: gql.consumo_azucar ?? 0,
+    consumo_licor: gql.consumo_licor ?? 0,
+    consumo_cocoa: gql.consumo_cocoa ?? 0,
+    consumo_grasa_vegetal: gql.consumo_grasa_vegetal ?? 0,
+    consumo_lecitina: gql.consumo_lecitina ?? 0,
+    consumo_reproceso: gql.consumo_reproceso ?? 0,
+  };
+}
+
+// ─── Extractor Check Mappers ────────────────────────────────────────────────────
+
+/**
+ * GraphQL representation of an Extractor Check as returned by Hasura.
+ */
+export interface GraphQLExtractorCheck {
+  id: string;
+  line_id: string;
+  machine_id: string;
+  shift_id: string;
+  operator_id: string;
+  created_at: string; // BIGINT as string
+  updated_at: string; // BIGINT as string
+  is_deleted: boolean;
+  extractor_1_on: boolean;
+  extractor_2_on: boolean;
+  extractor_3_on: boolean;
+  extractor_4_on: boolean;
+  extractor_5_on: boolean;
+  extractor_6_on: boolean;
+  extractor_7_on: boolean;
+  extractor_8_on: boolean;
+  cedazo_tt_last_cleaning?: string; // BIGINT as string
+}
+
+/**
+ * Maps a local RxDB extractor check to GraphQL input format.
+ */
+export function toGraphQLExtractorCheck(check: IExtractorCheck): Record<string, unknown> {
+  return {
+    id: check.id,
+    line_id: check.line_id,
+    machine_id: check.machine_id,
+    shift_id: check.shift_id,
+    operator_id: check.operator_id,
+    created_at: check.created_at.toString(),
+    updated_at: check.updated_at.toString(),
+    is_deleted: check.is_deleted,
+    extractor_1_on: check.extractor_1_on,
+    extractor_2_on: check.extractor_2_on,
+    extractor_3_on: check.extractor_3_on,
+    extractor_4_on: check.extractor_4_on,
+    extractor_5_on: check.extractor_5_on,
+    extractor_6_on: check.extractor_6_on,
+    extractor_7_on: check.extractor_7_on,
+    extractor_8_on: check.extractor_8_on,
+    cedazo_tt_last_cleaning: check.cedazo_tt_last_cleaning?.toString(),
+  };
+}
+
+/**
+ * Maps a GraphQL extractor check response to local RxDB format.
+ */
+export function fromGraphQLExtractorCheck(gql: GraphQLExtractorCheck): IExtractorCheck {
+  return {
+    id: gql.id,
+    line_id: gql.line_id,
+    machine_id: gql.machine_id,
+    shift_id: gql.shift_id,
+    operator_id: gql.operator_id,
+    created_at: parseInt(gql.created_at, 10),
+    updated_at: parseInt(gql.updated_at, 10),
+    is_deleted: gql.is_deleted,
+    extractor_1_on: gql.extractor_1_on,
+    extractor_2_on: gql.extractor_2_on,
+    extractor_3_on: gql.extractor_3_on,
+    extractor_4_on: gql.extractor_4_on,
+    extractor_5_on: gql.extractor_5_on,
+    extractor_6_on: gql.extractor_6_on,
+    extractor_7_on: gql.extractor_7_on,
+    extractor_8_on: gql.extractor_8_on,
+    cedazo_tt_last_cleaning: gql.cedazo_tt_last_cleaning ? parseInt(gql.cedazo_tt_last_cleaning, 10) : 0,
+  };
+}
+
+// ─── Vitamin Kit Mappers ────────────────────────────────────────────────────────
+
+/**
+ * GraphQL representation of a Vitamin Kit as returned by Hasura.
+ * ingredients is stored as JSONB in the backend and passed through as-is.
+ */
+export interface GraphQLVitaminKit {
+  id: string;
+  line_id: string;
+  machine_id: string;
+  shift_id: string;
+  operator_id: string;
+  created_at: string; // BIGINT as string
+  updated_at: string; // BIGINT as string
+  is_deleted: boolean;
+  orden: string;
+  kit: string;
+  semi_terminado: string;
+  ingredients: Array<{ name: string; lote: string; quantity_kg: number }>;
+  verif_produccion: boolean;
+  verif_calidad: boolean;
+  peso_bascula_kg?: number;
+  peso_fisico_kg?: number;
+}
+
+/**
+ * Maps a local RxDB vitamin kit to GraphQL input format.
+ */
+export function toGraphQLVitaminKit(kit: IVitaminKit): Record<string, unknown> {
+  return {
+    id: kit.id,
+    line_id: kit.line_id,
+    machine_id: kit.machine_id,
+    shift_id: kit.shift_id,
+    operator_id: kit.operator_id,
+    created_at: kit.created_at.toString(),
+    updated_at: kit.updated_at.toString(),
+    is_deleted: kit.is_deleted,
+    orden: kit.orden,
+    kit: kit.kit,
+    semi_terminado: kit.semi_terminado,
+    ingredients: kit.ingredients,
+    verif_produccion: kit.verif_produccion,
+    verif_calidad: kit.verif_calidad,
+    peso_bascula_kg: kit.peso_bascula_kg,
+    peso_fisico_kg: kit.peso_fisico_kg,
+  };
+}
+
+/**
+ * Maps a GraphQL vitamin kit response to local RxDB format.
+ */
+export function fromGraphQLVitaminKit(gql: GraphQLVitaminKit): IVitaminKit {
+  return {
+    id: gql.id,
+    line_id: gql.line_id,
+    machine_id: gql.machine_id,
+    shift_id: gql.shift_id,
+    operator_id: gql.operator_id,
+    created_at: parseInt(gql.created_at, 10),
+    updated_at: parseInt(gql.updated_at, 10),
+    is_deleted: gql.is_deleted,
+    orden: gql.orden,
+    kit: gql.kit,
+    semi_terminado: gql.semi_terminado,
+    ingredients: gql.ingredients,
+    verif_produccion: gql.verif_produccion,
+    verif_calidad: gql.verif_calidad,
+    peso_bascula_kg: gql.peso_bascula_kg ?? 0,
+    peso_fisico_kg: gql.peso_fisico_kg ?? 0,
   };
 }
 
