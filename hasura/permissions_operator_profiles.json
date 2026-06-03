@@ -50,6 +50,25 @@
       "args": {
         "source": "default",
         "table": { "schema": "public", "name": "operator_profiles" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "id", "full_name", "role", "created_at", "updated_at"
+          ],
+          "check": {
+            "id": { "_eq": "X-Hasura-User-Id" }
+          },
+          "set": {
+            "id": "X-Hasura-User-Id"
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operator_profiles" },
         "role": "supervisor",
         "permission": {
           "columns": [
