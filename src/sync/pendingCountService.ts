@@ -7,9 +7,14 @@ import type { ChocolateIbarraDatabase } from '../data/database';
  * Subscribes to the RxDB oee_events collection.
  */
 export function startPendingCountService(db: ChocolateIbarraDatabase): Subscription {
-  return db.collections.oee_events.find().$.subscribe((events) => {
-    // In a real replication scenario we might check for docs not yet pushed.
-    // For now, we update the pending count based on local events.
-    useUIStore.getState().setPendingCount(events.length);
-  });
+  // Count documents that have NOT been synced yet by checking for absence of
+  // the internal RxDB replication field _lastSyncAt. This is an approximation:
+  // documents that exist locally but haven't been pushed to the server yet
+  // will lack this field. If the field isn't present in the RxDB data at all,
+  // the query returns all documents (current behavior preserved as fallback).
+  return db.collections.oee_events
+    .find({ selector: { _lastSyncAt: { $exists: false } } as any })
+    .$.subscribe((events) => {
+      useUIStore.getState().setPendingCount(events.length);
+    });
 }

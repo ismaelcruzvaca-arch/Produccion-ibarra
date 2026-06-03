@@ -37,6 +37,7 @@ import { SignaturePrompt } from '../molecules/SignaturePrompt';
 import { OeeSelectorBar } from '../OeeSelectorBar';
 import { useOeeValidation } from '../../../hooks/useOeeValidation';
 import { useAlertSnackbar } from '../molecules/AlertSnackbar';
+import { useUIStore } from '../../store/useUIStore';
 
 export default function OeeScreen() {
   const repository = useOeeEventsRepository();
@@ -52,6 +53,9 @@ export default function OeeScreen() {
   const isIotMachine = selectedMachine ? !!getMachineById(selectedMachine)?.is_iot_enabled : false;
   const selectedPpm = selectedProduct ? getProductById(selectedProduct)?.theoretical_ppm : undefined;
   const { isValid } = useOeeValidation();
+
+  // Pending sync count (updated by PendingCountService)
+  const pendingCount = useUIStore((s) => s.pendingCount);
 
   const { operatorId, fullName, role: currentRole } = useAuthStore();
 
@@ -328,6 +332,20 @@ export default function OeeScreen() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <OeeSelectorBar />
+        {pendingCount > 0 && (
+          <View style={styles.pendingSyncRow}>
+            <Chip compact style={styles.pendingSyncChip} textStyle={styles.pendingSyncChipText}>
+              {`${pendingCount} pendiente${pendingCount !== 1 ? 's' : ''} por sincronizar`}
+            </Chip>
+          </View>
+        )}
+        {pendingCount === 0 && (
+          <View style={styles.pendingSyncRow}>
+            <Chip compact style={styles.syncedChip} textStyle={styles.syncedChipText}>
+              {'\u2705'} Sincronizado
+            </Chip>
+          </View>
+        )}
         <View pointerEvents={isValid ? 'auto' : 'none'} style={{ opacity: isValid ? 1 : 0.5, flex: 1 }}>
           <OeeDashboard
             isActiveDowntime={!!activeDowntime}
@@ -527,5 +545,28 @@ const styles = StyleSheet.create({
     color: '#C62828',
     marginTop: 8,
     fontSize: 12,
+  },
+
+  // Pending sync badge (Phase 4)
+  pendingSyncRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  pendingSyncChip: {
+    backgroundColor: '#FFF3E0',
+    height: 28,
+  },
+  pendingSyncChipText: {
+    fontSize: 12,
+    color: '#E65100',
+  },
+  syncedChip: {
+    backgroundColor: '#E8F5E9',
+    height: 28,
+  },
+  syncedChipText: {
+    fontSize: 12,
+    color: '#2E7D32',
   },
 });

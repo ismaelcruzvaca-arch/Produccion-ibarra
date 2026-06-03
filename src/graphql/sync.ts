@@ -41,7 +41,7 @@ import {
 } from './dto';
 import type { IOeeEvent, ISignature, IQualityInspection, IDefectLog, IWeightLog } from '../core/types';
 import type { ChocolateIbarraDatabase } from '../data/database';
-import { createResilientReplication, type ResilientState } from '../sync/resilientReplication';
+import { createResilientReplication, runDLQDiagnosis, type ResilientState } from '../sync/resilientReplication';
 
 /**
  * GraphQL endpoint URL for Nhost (Hasura).
@@ -370,6 +370,14 @@ export interface ReplicationStates {
   weightLogs: RxGraphQLReplicationState<IWeightLog, GraphQLWeightLog>;
   /** Resilient replication controller for OEE events (backoff, circuit breaker, DLQ). */
   resilientOeeController?: { cleanup: () => void; getState: () => ResilientState };
+  /** Resilient replication controller for signatures (backoff + circuit breaker only). */
+  resilientSignaturesController?: { cleanup: () => void; getState: () => ResilientState };
+  /** Resilient replication controller for quality inspections (backoff + circuit breaker only). */
+  resilientQualityInspectionsController?: { cleanup: () => void; getState: () => ResilientState };
+  /** Resilient replication controller for defect logs (backoff + circuit breaker only). */
+  resilientDefectLogsController?: { cleanup: () => void; getState: () => ResilientState };
+  /** Resilient replication controller for weight logs (backoff + circuit breaker only). */
+  resilientWeightLogsController?: { cleanup: () => void; getState: () => ResilientState };
 }
 
 export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates {
@@ -399,6 +407,8 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
       replicationOeeEvents,
       db,
       { url: getGraphQLUrl(), getHeaders },
+      undefined,
+      runDLQDiagnosis,
     );
   } catch (err) {
     console.warn('OeeEvents replication failed to initialise:', err);
@@ -407,6 +417,7 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
 
   // ── Signatures replication ─────────────────────────────────────────────────
   let replicationSignatures: RxGraphQLReplicationState<ISignature, GraphQLSignature>;
+  let resilientSignaturesController: { cleanup: () => void; getState: () => ResilientState } | undefined;
   try {
     replicationSignatures = replicateGraphQL<ISignature, GraphQLSignature>({
       replicationIdentifier: 'signatures-graphql-replication',
@@ -421,9 +432,15 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
         queryBuilder: pushMutationBuilderSignatures,
       },
       live: false,
-      retryTime: 5000,
       autoStart: true,
     });
+
+    // Wrap with resilience (backoff + circuit breaker, no DLQ)
+    resilientSignaturesController = createResilientReplication(
+      replicationSignatures,
+      db,
+      { url: getGraphQLUrl(), getHeaders },
+    );
   } catch (err) {
     console.warn('Signatures replication failed to initialise:', err);
     replicationSignatures = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
@@ -431,6 +448,7 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
 
   // ── Quality Inspections replication ────────────────────────────────────────
   let replicationQualityInspections: RxGraphQLReplicationState<IQualityInspection, GraphQLQualityInspection>;
+  let resilientQualityInspectionsController: { cleanup: () => void; getState: () => ResilientState } | undefined;
   try {
     replicationQualityInspections = replicateGraphQL<IQualityInspection, GraphQLQualityInspection>({
       replicationIdentifier: 'quality-inspections-graphql-replication',
@@ -445,9 +463,15 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
         queryBuilder: pushMutationBuilderQualityInspections,
       },
       live: false,
-      retryTime: 5000,
       autoStart: true,
     });
+
+    // Wrap with resilience (backoff + circuit breaker, no DLQ)
+    resilientQualityInspectionsController = createResilientReplication(
+      replicationQualityInspections,
+      db,
+      { url: getGraphQLUrl(), getHeaders },
+    );
   } catch (err) {
     console.warn('QualityInspections replication failed to initialise:', err);
     replicationQualityInspections = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
@@ -455,6 +479,7 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
 
   // ── Defect Logs replication ────────────────────────────────────────────────
   let replicationDefectLogs: RxGraphQLReplicationState<IDefectLog, GraphQLDefectLog>;
+  let resilientDefectLogsController: { cleanup: () => void; getState: () => ResilientState } | undefined;
   try {
     replicationDefectLogs = replicateGraphQL<IDefectLog, GraphQLDefectLog>({
       replicationIdentifier: 'defect-logs-graphql-replication',
@@ -469,9 +494,15 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
         queryBuilder: pushMutationBuilderDefectLogs,
       },
       live: false,
-      retryTime: 5000,
       autoStart: true,
     });
+
+    // Wrap with resilience (backoff + circuit breaker, no DLQ)
+    resilientDefectLogsController = createResilientReplication(
+      replicationDefectLogs,
+      db,
+      { url: getGraphQLUrl(), getHeaders },
+    );
   } catch (err) {
     console.warn('DefectLogs replication failed to initialise:', err);
     replicationDefectLogs = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
@@ -479,6 +510,7 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
 
   // ── Weight Logs replication ────────────────────────────────────────────────
   let replicationWeightLogs: RxGraphQLReplicationState<IWeightLog, GraphQLWeightLog>;
+  let resilientWeightLogsController: { cleanup: () => void; getState: () => ResilientState } | undefined;
   try {
     replicationWeightLogs = replicateGraphQL<IWeightLog, GraphQLWeightLog>({
       replicationIdentifier: 'weight-logs-graphql-replication',
@@ -493,9 +525,15 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
         queryBuilder: pushMutationBuilderWeightLogs,
       },
       live: false,
-      retryTime: 5000,
       autoStart: true,
     });
+
+    // Wrap with resilience (backoff + circuit breaker, no DLQ)
+    resilientWeightLogsController = createResilientReplication(
+      replicationWeightLogs,
+      db,
+      { url: getGraphQLUrl(), getHeaders },
+    );
   } catch (err) {
     console.warn('WeightLogs replication failed to initialise:', err);
     replicationWeightLogs = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
@@ -508,5 +546,9 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
     defectLogs: replicationDefectLogs,
     weightLogs: replicationWeightLogs,
     resilientOeeController,
+    resilientSignaturesController,
+    resilientQualityInspectionsController,
+    resilientDefectLogsController,
+    resilientWeightLogsController,
   };
 }

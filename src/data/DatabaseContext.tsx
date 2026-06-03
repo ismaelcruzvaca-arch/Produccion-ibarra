@@ -49,6 +49,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
   useEffect(() => {
     let mounted = true;
     let pendingCountSub: Subscription | undefined;
+    const resilientControllers: Array<{ cleanup: () => void }> = [];
 
     getDatabase()
       .then((database) => {
@@ -83,6 +84,20 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
           console.warn('RxDB replication failed to start — app will run offline:', syncErr);
         }
 
+        if (replicationStates) {
+          // Collect resilient replication controllers for cleanup on unmount
+          const oeeCtrl = replicationStates.resilientOeeController;
+          if (oeeCtrl) resilientControllers.push(oeeCtrl);
+          const sigCtrl = replicationStates.resilientSignaturesController;
+          if (sigCtrl) resilientControllers.push(sigCtrl);
+          const qiCtrl = replicationStates.resilientQualityInspectionsController;
+          if (qiCtrl) resilientControllers.push(qiCtrl);
+          const dlCtrl = replicationStates.resilientDefectLogsController;
+          if (dlCtrl) resilientControllers.push(dlCtrl);
+          const wlCtrl = replicationStates.resilientWeightLogsController;
+          if (wlCtrl) resilientControllers.push(wlCtrl);
+        }
+
         if (mounted) {
           setDb(database);
           setReplication(replicationStates);
@@ -96,6 +111,7 @@ export function DatabaseProvider({ children }: DatabaseProviderProps) {
     return () => {
       mounted = false;
       pendingCountSub?.unsubscribe();
+      resilientControllers.forEach((ctrl) => ctrl.cleanup());
     };
   }, []);
 

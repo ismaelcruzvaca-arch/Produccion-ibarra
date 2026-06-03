@@ -321,11 +321,15 @@ describe('createResilientReplication', () => {
       const state = createMockReplicationState();
       const db = createMockDatabase();
 
+      // Mock DLQ diagnosis function to verify it gets called
+      const mockDqlDiagnosis = jest.fn().mockResolvedValue(0);
+
       const controller = createResilientReplication(
         state as any,
         db,
         mockGraphQLCtx,
-        fastOptions
+        fastOptions,
+        mockDqlDiagnosis,
       );
 
       // Emit a constraint error (FK violation)
@@ -337,8 +341,8 @@ describe('createResilientReplication', () => {
       // Allow async DLQ diagnosis to complete (mock uses jest.fakeTimers, may need flush)
       await jest.advanceTimersByTimeAsync(0);
 
-      // DLQ diagnosis tries to find pending docs
-      expect(db.collections.oee_events.find).toHaveBeenCalled();
+      // Verify the DLQ diagnosis function was called
+      expect(mockDqlDiagnosis).toHaveBeenCalled();
 
       controller.cleanup();
       state.complete();

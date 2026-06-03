@@ -232,7 +232,7 @@ async function tryPushSingleOeeEvent(
  * 4. If push fails: classify the error, quarantine to sync_errors, remove from oee_events
  * 5. Return count of quarantined docs
  */
-async function runDLQDiagnosis(
+export async function runDLQDiagnosis(
   db: ChocolateIbarraDatabase,
   gqlCtx: GraphQLContext
 ): Promise<number> {
@@ -313,11 +313,12 @@ async function runDLQDiagnosis(
  * @param options - Optional overrides for backoff/circuit breaker parameters
  * @returns Controller with cleanup() and getState()
  */
-export function createResilientReplication<CheckpointType = unknown>(
-  replicationState: RxGraphQLReplicationState<IOeeEvent, CheckpointType>,
+export function createResilientReplication<T, CheckpointType = any>(
+  replicationState: RxGraphQLReplicationState<T, CheckpointType>,
   db: ChocolateIbarraDatabase,
   gqlCtx: GraphQLContext,
-  options: Partial<ResilientReplicationOptions> = {}
+  options: Partial<ResilientReplicationOptions> = {},
+  dqlDiagnosis?: (db: ChocolateIbarraDatabase, gqlCtx: GraphQLContext) => Promise<number>,
 ): { cleanup: () => void; getState: () => ResilientState } {
   const opts: ResilientReplicationOptions = { ...DEFAULT_OPTIONS, ...options };
 
@@ -464,6 +465,14 @@ export function createResilientReplication<CheckpointType = unknown>(
 
   /** Handles a constraint error: triggers DLQ diagnosis to quarantine bad docs. */
   async function handleConstraintError(): Promise<void> {
+    if (!dqlDiagnosis) {
+      // No DLQ diagnosis for this collection — reset and resume
+      state.consecutiveErrors = 0;
+      state.currentDelay = opts.baseRetryTime;
+      state.lastError = null;
+      return;
+    }
+
     console.warn(
       '[resilientReplication] Constraint error detected — running DLQ diagnosis'
     );
@@ -476,7 +485,7 @@ export function createResilientReplication<CheckpointType = unknown>(
         // Already canceled
       }
 
-      const quarantined = await runDLQDiagnosis(db, gqlCtx);
+      const quarantined = await dqlDiagnosis(db, gqlCtx);
       state.dlqCount += quarantined;
 
       // Reset error state and resume replication

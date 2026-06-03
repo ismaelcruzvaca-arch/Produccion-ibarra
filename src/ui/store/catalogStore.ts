@@ -100,6 +100,7 @@ interface CatalogState {
 
   // Actions
   loadCatalogs: () => Promise<void>;
+  invalidateCache: () => void;
   setSelectedLine: (lineId: string | null) => void;
   setSelectedMachine: (machineId: string | null) => void;
   setSelectedShift: (shiftId: string | null) => void;
@@ -236,6 +237,18 @@ export const useCatalogStore = create<CatalogState>()(
             error: 'Usando datos locales (demo) — Nhost no disponible',
           });
         }
+      },
+
+      /**
+       * Invalidates the catalog cache by setting `lastFetchedAt` to 0.
+       * The next `loadCatalogs()` call will skip the TTL check and re-fetch
+       * from Hasura. Used after catalog mutations (create/update/delete) to
+       * ensure the UI reflects the latest data.
+       *
+       * @see design.md — cache invalidation data flow
+       */
+      invalidateCache: () => {
+        set({ lastFetchedAt: 0 });
       },
 
       setSelectedLine: (lineId: string | null) => {

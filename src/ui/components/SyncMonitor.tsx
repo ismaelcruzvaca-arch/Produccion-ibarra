@@ -118,6 +118,8 @@ export function SyncMonitor() {
   };
 
   const icon = getIcon();
+  const dlqCount = replication?.resilientOeeController?.getState()?.dlqCount ?? 0;
+
   const timestampText = lastSyncTimestamp
     ? `Última sinc: ${lastSyncTimestamp.toLocaleTimeString()}`
     : 'Última sinc: —';
@@ -138,6 +140,13 @@ export function SyncMonitor() {
           <Text variant="bodySmall" style={styles.syncingIndicator}>
             ●
           </Text>
+        )}
+        {dlqCount > 0 && (
+          <View style={styles.dlqBadge}>
+            <Text variant="bodySmall" style={styles.dlqBadgeText}>
+              {'\u26A0\uFE0F'} {dlqCount}
+            </Text>
+          </View>
         )}
       </View>
       <Text variant="bodySmall" style={styles.timestamp}>
@@ -176,5 +185,17 @@ const styles = StyleSheet.create({
     color: '#9E9E9E',
     fontSize: 11,
     marginLeft: 32,
+  },
+  dlqBadge: {
+    backgroundColor: '#FFEBEE',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 6,
+  },
+  dlqBadgeText: {
+    color: '#C62828',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });
