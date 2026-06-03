@@ -388,3 +388,237 @@ export async function deleteMachine(id: string): Promise<boolean> {
     return false;
   }
 }
+
+// ─── Product Mutations ──────────────────────────────────────────────────────────
+
+/** Insert a new product. */
+export const INSERT_PRODUCT = `
+  mutation InsertProduct($object: products_insert_input!) {
+    insert_products_one(object: $object) { id }
+  }
+` as const;
+
+/** Update an existing product by primary key. */
+export const UPDATE_PRODUCT = `
+  mutation UpdateProduct($id: uuid!, $set: products_set_input!) {
+    update_products_by_pk(pk_columns: { id: $id }, _set: $set) { id }
+  }
+` as const;
+
+/** Delete a product by primary key. */
+export const DELETE_PRODUCT = `
+  mutation DeleteProduct($id: uuid!) {
+    delete_products_by_pk(id: $id) { id }
+  }
+` as const;
+
+/** Input shape for inserting a product. */
+export interface InsertProductInput {
+  code: string;
+  name: string;
+  theoretical_ppm?: number;
+}
+
+/**
+ * Inserts a product with the current user set as `updated_by`.
+ * Returns `true` if the mutation succeeded, `false` on error.
+ */
+export async function insertProduct(vars: InsertProductInput): Promise<boolean> {
+  try {
+    const userId = getCurrentUserId();
+    const res = await withTimeout(
+      nhost.graphql.request<{ insert_products_one: { id: string } }>(
+        INSERT_PRODUCT,
+        { object: { ...vars, updated_by: userId } },
+      ),
+      CATALOG_TIMEOUT_MS,
+    );
+    if (res.error) {
+      console.warn('[catalogMutations] insertProduct GraphQL error:', res.error.message);
+      return false;
+    }
+    return !!res.data?.insert_products_one;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.warn('[catalogMutations] insertProduct failed:', message);
+    return false;
+  }
+}
+
+/** Input shape for updating a product (all fields optional). */
+export interface UpdateProductInput {
+  code?: string;
+  name?: string;
+  theoretical_ppm?: number;
+}
+
+/**
+ * Updates a product by ID with the current user set as `updated_by`.
+ * Returns `true` if a row was updated, `false` on error or if no row matched.
+ */
+export async function updateProduct(
+  id: string,
+  vars: UpdateProductInput,
+): Promise<boolean> {
+  try {
+    const userId = getCurrentUserId();
+    const res = await withTimeout(
+      nhost.graphql.request<{ update_products_by_pk: { id: string } | null }>(
+        UPDATE_PRODUCT,
+        { id, set: { ...vars, updated_by: userId } },
+      ),
+      CATALOG_TIMEOUT_MS,
+    );
+    if (res.error) {
+      console.warn('[catalogMutations] updateProduct GraphQL error:', res.error.message);
+      return false;
+    }
+    return !!res.data?.update_products_by_pk;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.warn('[catalogMutations] updateProduct failed:', message);
+    return false;
+  }
+}
+
+/**
+ * Deletes a product by ID.
+ * Returns `true` if a row was deleted, `false` on error or if no row matched.
+ */
+export async function deleteProduct(id: string): Promise<boolean> {
+  try {
+    const res = await withTimeout(
+      nhost.graphql.request<{ delete_products_by_pk: { id: string } | null }>(
+        DELETE_PRODUCT,
+        { id },
+      ),
+      CATALOG_TIMEOUT_MS,
+    );
+    if (res.error) {
+      console.warn('[catalogMutations] deleteProduct GraphQL error:', res.error.message);
+      return false;
+    }
+    return !!res.data?.delete_products_by_pk;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.warn('[catalogMutations] deleteProduct failed:', message);
+    return false;
+  }
+}
+
+// ─── Shift Mutations ────────────────────────────────────────────────────────────
+
+/** Insert a new shift. */
+export const INSERT_SHIFT = `
+  mutation InsertShift($object: shifts_insert_input!) {
+    insert_shifts_one(object: $object) { id }
+  }
+` as const;
+
+/** Update an existing shift by primary key. */
+export const UPDATE_SHIFT = `
+  mutation UpdateShift($id: uuid!, $set: shifts_set_input!) {
+    update_shifts_by_pk(pk_columns: { id: $id }, _set: $set) { id }
+  }
+` as const;
+
+/** Delete a shift by primary key. */
+export const DELETE_SHIFT = `
+  mutation DeleteShift($id: uuid!) {
+    delete_shifts_by_pk(id: $id) { id }
+  }
+` as const;
+
+/** Input shape for inserting a shift. */
+export interface InsertShiftInput {
+  label: string;
+  start_hour: number;
+  end_hour: number;
+}
+
+/**
+ * Inserts a shift with the current user set as `updated_by`.
+ * Returns `true` if the mutation succeeded, `false` on error.
+ */
+export async function insertShift(vars: InsertShiftInput): Promise<boolean> {
+  try {
+    const userId = getCurrentUserId();
+    const res = await withTimeout(
+      nhost.graphql.request<{ insert_shifts_one: { id: string } }>(
+        INSERT_SHIFT,
+        { object: { ...vars, updated_by: userId } },
+      ),
+      CATALOG_TIMEOUT_MS,
+    );
+    if (res.error) {
+      console.warn('[catalogMutations] insertShift GraphQL error:', res.error.message);
+      return false;
+    }
+    return !!res.data?.insert_shifts_one;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.warn('[catalogMutations] insertShift failed:', message);
+    return false;
+  }
+}
+
+/** Input shape for updating a shift (all fields optional). */
+export interface UpdateShiftInput {
+  label?: string;
+  start_hour?: number;
+  end_hour?: number;
+}
+
+/**
+ * Updates a shift by ID with the current user set as `updated_by`.
+ * Returns `true` if a row was updated, `false` on error or if no row matched.
+ */
+export async function updateShift(
+  id: string,
+  vars: UpdateShiftInput,
+): Promise<boolean> {
+  try {
+    const userId = getCurrentUserId();
+    const res = await withTimeout(
+      nhost.graphql.request<{ update_shifts_by_pk: { id: string } | null }>(
+        UPDATE_SHIFT,
+        { id, set: { ...vars, updated_by: userId } },
+      ),
+      CATALOG_TIMEOUT_MS,
+    );
+    if (res.error) {
+      console.warn('[catalogMutations] updateShift GraphQL error:', res.error.message);
+      return false;
+    }
+    return !!res.data?.update_shifts_by_pk;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.warn('[catalogMutations] updateShift failed:', message);
+    return false;
+  }
+}
+
+/**
+ * Deletes a shift by ID.
+ * Returns `true` if a row was deleted, `false` on error or if no row matched.
+ */
+export async function deleteShift(id: string): Promise<boolean> {
+  try {
+    const res = await withTimeout(
+      nhost.graphql.request<{ delete_shifts_by_pk: { id: string } | null }>(
+        DELETE_SHIFT,
+        { id },
+      ),
+      CATALOG_TIMEOUT_MS,
+    );
+    if (res.error) {
+      console.warn('[catalogMutations] deleteShift GraphQL error:', res.error.message);
+      return false;
+    }
+    return !!res.data?.delete_shifts_by_pk;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.warn('[catalogMutations] deleteShift failed:', message);
+    return false;
+  }
+}

@@ -24,12 +24,22 @@ import {
   insertMachine,
   updateMachine,
   deleteMachine,
+  insertProduct,
+  updateProduct,
+  deleteProduct,
+  insertShift,
+  updateShift,
+  deleteShift,
   type InsertStopReasonInput,
   type UpdateStopReasonInput,
   type InsertLineInput,
   type UpdateLineInput,
   type InsertMachineInput,
   type UpdateMachineInput,
+  type InsertProductInput,
+  type UpdateProductInput,
+  type InsertShiftInput,
+  type UpdateShiftInput,
 } from '../../../../graphql/catalogMutations';
 
 const STOP_REASONS_CONFIG: CatalogTableConfig = {
@@ -76,6 +86,34 @@ const MACHINES_CONFIG: CatalogTableConfig = {
   delete: (id) => deleteMachine(id),
 };
 
+const PRODUCTS_CONFIG: CatalogTableConfig = {
+  title: 'Productos',
+  dataKey: 'products',
+  displayField: 'name',
+  fields: [
+    { name: 'code', label: 'Código', type: 'text', required: true },
+    { name: 'name', label: 'Nombre', type: 'text', required: true },
+    { name: 'theoretical_ppm', label: 'PPM Teórico', type: 'number' },
+  ],
+  insert: (vars) => insertProduct(vars as unknown as InsertProductInput),
+  update: (id, vars) => updateProduct(id, vars as unknown as UpdateProductInput),
+  delete: (id) => deleteProduct(id),
+};
+
+const SHIFTS_CONFIG: CatalogTableConfig = {
+  title: 'Turnos',
+  dataKey: 'shifts',
+  displayField: 'label',
+  fields: [
+    { name: 'label', label: 'Etiqueta', type: 'text', required: true },
+    { name: 'start_hour', label: 'Hora Inicio', type: 'number', required: true },
+    { name: 'end_hour', label: 'Hora Fin', type: 'number', required: true },
+  ],
+  insert: (vars) => insertShift(vars as unknown as InsertShiftInput),
+  update: (id, vars) => updateShift(id, vars as unknown as UpdateShiftInput),
+  delete: (id) => deleteShift(id),
+};
+
 export function SettingsCatalogs() {
   const role = useAuthStore((s) => s.role);
 
@@ -95,6 +133,8 @@ export function SettingsCatalogs() {
       <CatalogSection config={STOP_REASONS_CONFIG} />
       <CatalogSection config={LINES_CONFIG} />
       <CatalogSection config={MACHINES_CONFIG} />
+      <CatalogSection config={PRODUCTS_CONFIG} />
+      <CatalogSection config={SHIFTS_CONFIG} />
     </View>
   );
 }
