@@ -17,6 +17,7 @@
 import { createRxDatabase, addRxPlugin, type RxDatabase, type RxCollection } from 'rxdb';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode';
+import { RxDBMigrationSchemaPlugin } from 'rxdb/plugins/migration-schema';
 
 import {
   assetSchema,
@@ -94,6 +95,9 @@ export async function getDatabase(): Promise<ChocolateIbarraDatabase> {
     if (__DEV__) {
       addRxPlugin(RxDBDevModePlugin);
     }
+
+    // Required for all versioned schemas with migration strategies
+    addRxPlugin(RxDBMigrationSchemaPlugin);
 
     const storage = getRxStorageDexie();
 
