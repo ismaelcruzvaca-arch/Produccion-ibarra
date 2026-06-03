@@ -1,0 +1,127 @@
+{
+  "type": "bulk",
+  "args": [
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operator_profiles" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "id", "full_name", "role", "created_at", "updated_at"
+          ],
+          "filter": {
+            "id": { "_eq": "X-Hasura-User-Id" }
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operator_profiles" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "full_name", "role", "created_at", "updated_at"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operator_profiles" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "full_name", "role", "created_at", "updated_at"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operator_profiles" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "full_name", "role", "created_at", "updated_at"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operator_profiles" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "full_name", "role", "created_at", "updated_at"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operator_profiles" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "full_name", "role", "created_at", "updated_at"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operator_profiles" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "full_name", "role", "created_at", "updated_at"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operator_profiles" },
+        "role": "supervisor",
+        "permission": { "filter": {} }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operator_profiles" },
+        "role": "admin",
+        "permission": { "filter": {} }
+      }
+    }
+  ]
+}

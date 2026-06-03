@@ -9,7 +9,7 @@
         "role": "operator",
         "permission": {
           "columns": [
-            "id", "updated_at", "deleted", "line_id", "machine_id",
+            "id", "updated_at",             "deleted", "device_id", "line_id", "machine_id",
             "operator_id", "shift_id", "event_type", "timestamp",
             "reason_code", "quantity", "planned_boxes", "notes",
             "is_retroactive", "related_event_id"
@@ -42,7 +42,7 @@
         "role": "supervisor",
         "permission": {
           "columns": [
-            "id", "updated_at", "deleted", "line_id", "machine_id",
+            "id", "updated_at",             "deleted", "device_id", "line_id", "machine_id",
             "operator_id", "shift_id", "event_type", "timestamp",
             "reason_code", "quantity", "planned_boxes", "notes",
             "is_retroactive", "related_event_id"
@@ -60,7 +60,7 @@
         "role": "admin",
         "permission": {
           "columns": [
-            "id", "updated_at", "deleted", "line_id", "machine_id",
+            "id", "updated_at",             "deleted", "device_id", "line_id", "machine_id",
             "operator_id", "shift_id", "event_type", "timestamp",
             "reason_code", "quantity", "planned_boxes", "notes",
             "is_retroactive", "related_event_id"
@@ -78,7 +78,7 @@
         "role": "operator",
         "permission": {
           "columns": [
-            "id", "updated_at", "deleted", "line_id", "machine_id",
+            "id", "updated_at",             "deleted", "device_id", "line_id", "machine_id",
             "operator_id", "shift_id", "event_type", "timestamp",
             "reason_code", "quantity", "planned_boxes", "notes",
             "is_retroactive", "related_event_id"
@@ -108,7 +108,7 @@
         "role": "supervisor",
         "permission": {
           "columns": [
-            "id", "updated_at", "deleted", "line_id", "machine_id",
+            "id", "updated_at",             "deleted", "device_id", "line_id", "machine_id",
             "operator_id", "shift_id", "event_type", "timestamp",
             "reason_code", "quantity", "planned_boxes", "notes",
             "is_retroactive", "related_event_id"
@@ -126,7 +126,7 @@
         "role": "admin",
         "permission": {
           "columns": [
-            "id", "updated_at", "deleted", "line_id", "machine_id",
+            "id", "updated_at",             "deleted", "device_id", "line_id", "machine_id",
             "operator_id", "shift_id", "event_type", "timestamp",
             "reason_code", "quantity", "planned_boxes", "notes",
             "is_retroactive", "related_event_id"
@@ -144,7 +144,7 @@
         "role": "operator",
         "permission": {
           "columns": [
-            "updated_at", "deleted", "line_id", "machine_id",
+            "updated_at",             "deleted", "device_id", "line_id", "machine_id",
             "shift_id", "event_type", "timestamp", "reason_code",
             "quantity", "planned_boxes", "notes", "is_retroactive",
             "related_event_id"
@@ -182,7 +182,7 @@
         "role": "supervisor",
         "permission": {
           "columns": [
-            "updated_at", "deleted", "line_id", "machine_id",
+            "updated_at",             "deleted", "device_id", "line_id", "machine_id",
             "operator_id", "shift_id", "event_type", "timestamp",
             "reason_code", "quantity", "planned_boxes", "notes",
             "is_retroactive", "related_event_id"
@@ -200,7 +200,7 @@
         "role": "admin",
         "permission": {
           "columns": [
-            "updated_at", "deleted", "line_id", "machine_id",
+            "updated_at",             "deleted", "device_id", "line_id", "machine_id",
             "operator_id", "shift_id", "event_type", "timestamp",
             "reason_code", "quantity", "planned_boxes", "notes",
             "is_retroactive", "related_event_id"

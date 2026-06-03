@@ -1,0 +1,616 @@
+{
+  "type": "bulk",
+  "args": [
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "stop_reasons" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "id", "code", "label", "category", "macro",
+            "stops_line", "sort_order", "is_active"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "stop_reasons" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "code", "label", "category", "macro",
+            "stops_line", "sort_order", "is_active"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "stop_reasons" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "code", "label", "category", "macro",
+            "stops_line", "sort_order", "is_active"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "stop_reasons" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "code", "label", "category", "macro",
+            "stops_line", "sort_order", "is_active"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "stop_reasons" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "code", "label", "category", "macro",
+            "stops_line", "sort_order", "is_active"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "stop_reasons" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "code", "label", "category", "macro",
+            "stops_line", "sort_order", "is_active"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "stop_reasons" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "code", "label", "category", "macro",
+            "stops_line", "sort_order", "is_active"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "stop_reasons" },
+        "role": "supervisor",
+        "permission": { "filter": {} }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "stop_reasons" },
+        "role": "admin",
+        "permission": { "filter": {} }
+      }
+    },
+
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "products" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "id", "code", "name", "theoretical_ppm", "is_active"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "products" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "code", "name", "theoretical_ppm", "is_active"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "products" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "code", "name", "theoretical_ppm", "is_active"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "products" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "code", "name", "theoretical_ppm", "is_active"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "products" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "code", "name", "theoretical_ppm", "is_active"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "products" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "code", "name", "theoretical_ppm", "is_active"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "products" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "code", "name", "theoretical_ppm", "is_active"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "products" },
+        "role": "supervisor",
+        "permission": { "filter": {} }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "products" },
+        "role": "admin",
+        "permission": { "filter": {} }
+      }
+    },
+
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shifts" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "id", "label", "start_hour", "end_hour", "is_active"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shifts" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "label", "start_hour", "end_hour", "is_active"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shifts" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "label", "start_hour", "end_hour", "is_active"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shifts" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "label", "start_hour", "end_hour", "is_active"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shifts" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "label", "start_hour", "end_hour", "is_active"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shifts" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "label", "start_hour", "end_hour", "is_active"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shifts" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "label", "start_hour", "end_hour", "is_active"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shifts" },
+        "role": "supervisor",
+        "permission": { "filter": {} }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shifts" },
+        "role": "admin",
+        "permission": { "filter": {} }
+      }
+    },
+
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "lines" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "id", "name", "description", "is_active"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "lines" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "name", "description", "is_active"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "lines" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "name", "description", "is_active"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "lines" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "name", "description", "is_active"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "lines" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "name", "description", "is_active"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "lines" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "name", "description", "is_active"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "lines" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "name", "description", "is_active"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "lines" },
+        "role": "supervisor",
+        "permission": { "filter": {} }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "lines" },
+        "role": "admin",
+        "permission": { "filter": {} }
+      }
+    },
+
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "machines" },
+        "role": "operator",
+        "permission": {
+          "columns": [
+            "id", "line_id", "name", "description", "is_active"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "machines" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "line_id", "name", "description", "is_active"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "machines" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "line_id", "name", "description", "is_active"
+          ],
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "machines" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "line_id", "name", "description", "is_active"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "machines" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "line_id", "name", "description", "is_active"
+          ],
+          "check": {},
+          "set": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "machines" },
+        "role": "supervisor",
+        "permission": {
+          "columns": [
+            "id", "line_id", "name", "description", "is_active"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "machines" },
+        "role": "admin",
+        "permission": {
+          "columns": [
+            "id", "line_id", "name", "description", "is_active"
+          ],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "machines" },
+        "role": "supervisor",
+        "permission": { "filter": {} }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "machines" },
+        "role": "admin",
+        "permission": { "filter": {} }
+      }
+    }
+  ]
+}

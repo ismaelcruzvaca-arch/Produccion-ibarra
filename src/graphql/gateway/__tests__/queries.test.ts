@@ -120,34 +120,34 @@ const MOCK_ENGINE_HEALTH = [
 // ─── Query String Snapshots ────────────────────────────────────────────────────
 
 describe('query string constants', () => {
-  it('GET_ALERT_RULES queries gateway_alert_rules with plantId filter', () => {
-    expect(GET_ALERT_RULES).toContain('gateway_alert_rules');
+  it('GET_ALERT_RULES queries alert_rules with plantId filter', () => {
+    expect(GET_ALERT_RULES).toContain('alert_rules');
     expect(GET_ALERT_RULES).toContain('$plantId: uuid!');
     expect(GET_ALERT_RULES).toContain('plant_id: { _eq: $plantId }');
   });
 
-  it('GET_NODES queries gateway_nodes with plant-scoped filter', () => {
-    expect(GET_NODES).toContain('gateway_nodes');
+  it('GET_NODES queries nodes with plant-scoped filter', () => {
+    expect(GET_NODES).toContain('nodes');
     expect(GET_NODES).toContain('$plantId: uuid!');
     expect(GET_NODES).toContain('plant_id: { _eq: $plantId }');
     expect(GET_NODES).toContain('device_model');
     expect(GET_NODES).toContain('alert_capability');
   });
 
-  it('GET_TELEMETRY queries gateway_norvi_telemetry with nodeId filter', () => {
-    expect(GET_TELEMETRY).toContain('gateway_norvi_telemetry');
+  it('GET_TELEMETRY queries norvi_telemetry with nodeId filter', () => {
+    expect(GET_TELEMETRY).toContain('norvi_telemetry');
     expect(GET_TELEMETRY).toContain('$nodeId: String!');
     expect(GET_TELEMETRY).toContain('event_ts: desc');
   });
 
-  it('GET_ALERT_EVENTS queries gateway_alert_events with plantId filter', () => {
-    expect(GET_ALERT_EVENTS).toContain('gateway_alert_events');
+  it('GET_ALERT_EVENTS queries alert_events with plantId filter', () => {
+    expect(GET_ALERT_EVENTS).toContain('alert_events');
     expect(GET_ALERT_EVENTS).toContain('$plantId: uuid!');
     expect(GET_ALERT_EVENTS).toContain('detected_at: desc');
   });
 
-  it('GET_ENGINE_HEALTH queries gateway_alert_engine_health', () => {
-    expect(GET_ENGINE_HEALTH).toContain('gateway_alert_engine_health');
+  it('GET_ENGINE_HEALTH queries alert_engine_health', () => {
+    expect(GET_ENGINE_HEALTH).toContain('alert_engine_health');
     expect(GET_ENGINE_HEALTH).toContain('checked_at: desc');
     expect(GET_ENGINE_HEALTH).toContain('limit: 1');
   });
@@ -162,7 +162,7 @@ describe('fetchAlertRules', () => {
 
   it('returns parsed alert rules on success', async () => {
     mockRequest.mockResolvedValue({
-      data: { gateway_alert_rules: MOCK_ALERT_RULES },
+      data: { alert_rules: MOCK_ALERT_RULES },
       error: null,
     });
 
@@ -175,7 +175,7 @@ describe('fetchAlertRules', () => {
 
   it('passes the correct plantId variable to the query', async () => {
     mockRequest.mockResolvedValue({
-      data: { gateway_alert_rules: [] },
+      data: { alert_rules: [] },
       error: null,
     });
 
@@ -222,7 +222,7 @@ describe('fetchNodes', () => {
 
   it('returns parsed nodes on success', async () => {
     mockRequest.mockResolvedValue({
-      data: { gateway_nodes: MOCK_NODES },
+      data: { nodes: MOCK_NODES },
       error: null,
     });
 
@@ -237,7 +237,7 @@ describe('fetchNodes', () => {
 
   it('passes plantId variable correctly', async () => {
     mockRequest.mockResolvedValue({
-      data: { gateway_nodes: [] },
+      data: { nodes: [] },
       error: null,
     });
 
@@ -273,7 +273,7 @@ describe('fetchTelemetryByNode', () => {
 
   it('returns parsed telemetry on success', async () => {
     mockRequest.mockResolvedValue({
-      data: { gateway_norvi_telemetry: MOCK_TELEMETRY },
+      data: { norvi_telemetry: MOCK_TELEMETRY },
       error: null,
     });
 
@@ -286,7 +286,7 @@ describe('fetchTelemetryByNode', () => {
 
   it('passes correct variables with default limit', async () => {
     mockRequest.mockResolvedValue({
-      data: { gateway_norvi_telemetry: [] },
+      data: { norvi_telemetry: [] },
       error: null,
     });
 
@@ -300,7 +300,7 @@ describe('fetchTelemetryByNode', () => {
 
   it('passes custom limit when provided', async () => {
     mockRequest.mockResolvedValue({
-      data: { gateway_norvi_telemetry: [] },
+      data: { norvi_telemetry: [] },
       error: null,
     });
 
@@ -339,7 +339,7 @@ describe('fetchAlertEvents', () => {
 
   it('returns parsed alert events on success', async () => {
     mockRequest.mockResolvedValue({
-      data: { gateway_alert_events: MOCK_ALERT_EVENTS },
+      data: { alert_events: MOCK_ALERT_EVENTS },
       error: null,
     });
 
@@ -352,7 +352,7 @@ describe('fetchAlertEvents', () => {
 
   it('passes correct variables with default limit', async () => {
     mockRequest.mockResolvedValue({
-      data: { gateway_alert_events: [] },
+      data: { alert_events: [] },
       error: null,
     });
 
@@ -383,7 +383,7 @@ describe('fetchEngineHealth', () => {
 
   it('returns engine health record on success', async () => {
     mockRequest.mockResolvedValue({
-      data: { gateway_alert_engine_health: MOCK_ENGINE_HEALTH },
+      data: { alert_engine_health: MOCK_ENGINE_HEALTH },
       error: null,
     });
 
@@ -396,7 +396,7 @@ describe('fetchEngineHealth', () => {
 
   it('returns null when no health records exist', async () => {
     mockRequest.mockResolvedValue({
-      data: { gateway_alert_engine_health: [] },
+      data: { alert_engine_health: [] },
       error: null,
     });
 

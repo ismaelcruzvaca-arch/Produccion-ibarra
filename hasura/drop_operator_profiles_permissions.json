@@ -1,0 +1,17 @@
+{
+  "type": "bulk",
+  "args": [
+    { "type": "pg_drop_select_permission", "args": { "source": "default", "table": { "schema": "public", "name": "operator_profiles" }, "role": "operator" } },
+    { "type": "pg_drop_select_permission", "args": { "source": "default", "table": { "schema": "public", "name": "operator_profiles" }, "role": "supervisor" } },
+    { "type": "pg_drop_select_permission", "args": { "source": "default", "table": { "schema": "public", "name": "operator_profiles" }, "role": "admin" } },
+    { "type": "pg_drop_insert_permission", "args": { "source": "default", "table": { "schema": "public", "name": "operator_profiles" }, "role": "operator" } },
+    { "type": "pg_drop_insert_permission", "args": { "source": "default", "table": { "schema": "public", "name": "operator_profiles" }, "role": "supervisor" } },
+    { "type": "pg_drop_insert_permission", "args": { "source": "default", "table": { "schema": "public", "name": "operator_profiles" }, "role": "admin" } },
+    { "type": "pg_drop_update_permission", "args": { "source": "default", "table": { "schema": "public", "name": "operator_profiles" }, "role": "operator" } },
+    { "type": "pg_drop_update_permission", "args": { "source": "default", "table": { "schema": "public", "name": "operator_profiles" }, "role": "supervisor" } },
+    { "type": "pg_drop_update_permission", "args": { "source": "default", "table": { "schema": "public", "name": "operator_profiles" }, "role": "admin" } },
+    { "type": "pg_drop_delete_permission", "args": { "source": "default", "table": { "schema": "public", "name": "operator_profiles" }, "role": "operator" } },
+    { "type": "pg_drop_delete_permission", "args": { "source": "default", "table": { "schema": "public", "name": "operator_profiles" }, "role": "supervisor" } },
+    { "type": "pg_drop_delete_permission", "args": { "source": "default", "table": { "schema": "public", "name": "operator_profiles" }, "role": "admin" } }
+  ]
+}

@@ -7,7 +7,7 @@
  *   direct fetch calls and Zustand store actions — same pattern as catalogStore.ts.
  * - Async fetch functions wrap nhost.graphql.request() with typed response parsing
  *   and error handling.
- * - All gateway tables are prefixed with `gateway_` by Nhost's Remote Schema.
+ * - The 5 gateway table queries no longer use the `gateway_` prefix — tables are accessed directly by name.
  *
  * Usage:
  *   // Direct call (in a hook or store action):
@@ -34,7 +34,7 @@ import type {
 /** Fetch alert rules scoped to a plant. RLS applies x-hasura-plant-id automatically. */
 export const GET_ALERT_RULES = `
   query GetAlertRules($plantId: uuid!) {
-    gateway_alert_rules(
+    alert_rules(
       where: { plant_id: { _eq: $plantId }, scope: { _eq: "USER_DEFINED" } }
       order_by: { created_at: desc }
     ) {
@@ -56,7 +56,7 @@ export const GET_ALERT_RULES = `
 /** Fetch node catalog with device model capabilities, scoped to a plant. */
 export const GET_NODES = `
   query GetNodes($plantId: uuid!) {
-    gateway_nodes(
+    nodes(
       where: { machine: { line: { plant_id: { _eq: $plantId } } } }
       order_by: { node_ident: asc }
     ) {
@@ -87,7 +87,7 @@ export const GET_NODES = `
 /** Fetch telemetry records for a specific node, newest first. */
 export const GET_TELEMETRY = `
   query GetTelemetry($nodeId: String!, $limit: Int = 50) {
-    gateway_norvi_telemetry(
+    norvi_telemetry(
       where: { node_id: { _eq: $nodeId } }
       order_by: { event_ts: desc }
       limit: $limit
@@ -105,7 +105,7 @@ export const GET_TELEMETRY = `
 /** Fetch alert event history scoped to a plant. */
 export const GET_ALERT_EVENTS = `
   query GetAlertEvents($plantId: uuid!, $limit: Int = 50) {
-    gateway_alert_events(
+    alert_events(
       where: { plant_id: { _eq: $plantId } }
       order_by: { detected_at: desc }
       limit: $limit
@@ -125,7 +125,7 @@ export const GET_ALERT_EVENTS = `
 /** Fetch alert engine health status. */
 export const GET_ENGINE_HEALTH = `
   query GetEngineHealth {
-    gateway_alert_engine_health(
+    alert_engine_health(
       order_by: { checked_at: desc }
       limit: 1
     ) {
@@ -146,23 +146,23 @@ interface QueryResponse<T> {
 }
 
 interface AlertRulesData {
-  gateway_alert_rules: GatewayAlertRule[];
+  alert_rules: GatewayAlertRule[];
 }
 
 interface NodesData {
-  gateway_nodes: GatewayNode[];
+  nodes: GatewayNode[];
 }
 
 interface TelemetryData {
-  gateway_norvi_telemetry: GatewayTelemetry[];
+  norvi_telemetry: GatewayTelemetry[];
 }
 
 interface AlertEventsData {
-  gateway_alert_events: GatewayAlertEvent[];
+  alert_events: GatewayAlertEvent[];
 }
 
 interface EngineHealthData {
-  gateway_alert_engine_health: GatewayEngineHealth[];
+  alert_engine_health: GatewayEngineHealth[];
 }
 
 // ─── Timeout ───────────────────────────────────────────────────────────────────
@@ -186,7 +186,7 @@ export async function fetchAlertRules(plantId: string): Promise<GatewayAlertRule
       console.warn('[gateway] fetchAlertRules GraphQL error:', res.error.message);
       return [];
     }
-    return res.data?.gateway_alert_rules ?? [];
+    return res.data?.alert_rules ?? [];
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[gateway] fetchAlertRules failed:', message);
@@ -208,7 +208,7 @@ export async function fetchNodes(plantId: string): Promise<GatewayNode[]> {
       console.warn('[gateway] fetchNodes GraphQL error:', res.error.message);
       return [];
     }
-    return res.data?.gateway_nodes ?? [];
+    return res.data?.nodes ?? [];
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[gateway] fetchNodes failed:', message);
@@ -234,7 +234,7 @@ export async function fetchTelemetryByNode(
       console.warn('[gateway] fetchTelemetryByNode GraphQL error:', res.error.message);
       return [];
     }
-    return res.data?.gateway_norvi_telemetry ?? [];
+    return res.data?.norvi_telemetry ?? [];
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[gateway] fetchTelemetryByNode failed:', message);
@@ -259,7 +259,7 @@ export async function fetchAlertEvents(
       console.warn('[gateway] fetchAlertEvents GraphQL error:', res.error.message);
       return [];
     }
-    return res.data?.gateway_alert_events ?? [];
+    return res.data?.alert_events ?? [];
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[gateway] fetchAlertEvents failed:', message);
@@ -281,7 +281,7 @@ export async function fetchEngineHealth(): Promise<GatewayEngineHealth | null> {
       console.warn('[gateway] fetchEngineHealth GraphQL error:', res.error.message);
       return null;
     }
-    const records = res.data?.gateway_alert_engine_health ?? [];
+    const records = res.data?.alert_engine_health ?? [];
     return records.length > 0 ? records[0] : null;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';

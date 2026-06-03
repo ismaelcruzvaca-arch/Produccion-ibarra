@@ -3,7 +3,7 @@
  *
  * Pattern: Domain Interface Definitions (mirrors src/core/types.ts catalog pattern)
  * Why: These types map to tables exposed via the `gateway` Remote Schema in Hasura.
- * Table names are auto-prefixed with `gateway_` by Nhost (e.g., `gateway_nodes`).
+ * Table names no longer use the `gateway_` prefix — queries reference the bare table name (e.g., `nodes`).
  * Fields use snake_case to match GraphQL wire format — no mapper needed since
  * these are consumed directly from nhost.graphql.request() responses.
  *
