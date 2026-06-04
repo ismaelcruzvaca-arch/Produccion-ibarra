@@ -611,7 +611,32 @@ export type RxProductWeightStandard = RxDocument<IProductWeightStandard>;
 // Downtime Conciliation — Phase: downtime-conciliation
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export type ConciliationStatus = 'pending' | 'reconciled' | 'disputed';
+export type ConciliationStatus = 'pending' | 'reconciled' | 'disputed' | 'escalated';
+
+/**
+ * Department Verdict — individual department's sign-off on a conciliation.
+ * Each involved department must submit a verdict (agree or dispute) before
+ * the conciliation can move to 'reconciled' or 'escalated'.
+ */
+export interface IDepartmentVerdict {
+  department: string;       // e.g., "MTTO", "CALIDAD", "LOGISTICA"
+  agreed: boolean;          // true = accept, false = dispute
+  notes?: string;           // optional explanation
+  signed_by: string;        // user ID who signed
+  signed_at: number;        // epoch ms
+}
+
+/**
+ * Corrective Action — action plan to prevent recurrence of a root cause.
+ * Aligned with IT-AC-09 and ISO 9001 corrective action requirements.
+ */
+export interface ICorrectiveAction {
+  description: string;      // what needs to be done
+  responsible: string;      // person/role responsible
+  department: string;       // owning department
+  due_date: number;         // epoch ms — deadline
+  status: 'open' | 'in_progress' | 'completed';
+}
 
 /**
  * Downtime Conciliation — bridges Production downtime events with Maintenance action.
@@ -653,6 +678,31 @@ export interface IDowntimeConciliation {
 
   is_mtto: boolean;              // whether the original reason is MTTO category
   device_id: string;
+
+  // ── Wave 5: RCA + Multi-Department Verdicts ────────────────────────────────
+
+  /** Departments involved in this downtime event (derived from reason_code mapping) */
+  involved_departments: string[];           // e.g. ["MTTO", "CALIDAD"]
+  /** Per-department verdicts — one entry per involved department */
+  verdicts: IDepartmentVerdict[];            // empty until departments sign
+  /** RCA method: 5 Whys or Ishikawa diagram */
+  analysis_method?: '5whys' | 'ishikawa';
+  /** 5 Whys individual fields (flat fields for RxDB compatibility) */
+  why_1?: string;
+  why_2?: string;
+  why_3?: string;
+  why_4?: string;
+  why_5?: string;
+  /** Final root cause summary */
+  root_cause?: string;
+  /** Corrective action plan to prevent recurrence */
+  corrective_action?: ICorrectiveAction;
+  /** Epoch ms deadline for escalation (created_at + escalation_hours config) */
+  escalation_deadline: number;
+  /** Epoch ms when escalation was triggered */
+  escalated_at?: number;
+  /** Escalation target (manager / department head) */
+  escalated_to?: string;
 }
 
 export type RxDowntimeConciliation = RxDocument<IDowntimeConciliation>;
@@ -694,6 +744,16 @@ export interface IShiftSummary {
   performance_pct?: number;       // e.g., 85.50
   has_pending_conciliation: boolean;
   device_id: string;
+
+  // ── Wave 5: Stop Classification ─────────────────────────────────────────────
+
+  /** Per-stop classification from shift close screen */
+  classified_stops?: Array<{
+    oee_event_id: string;
+    classification: 'planned' | 'unplanned';
+    explained_missing_boxes?: number;
+    notes?: string;
+  }>;
 }
 
 export type RxShiftSummary = RxDocument<IShiftSummary>;

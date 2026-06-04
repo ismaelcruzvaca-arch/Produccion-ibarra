@@ -493,7 +493,7 @@ export const productWeightStandardSchema: RxJsonSchema<IProductWeightStandard> =
  * Vincula eventos de paro (oee_events) con diagnóstico de supervisor y trigger de OT.
  */
 export const downtimeConciliationSchema: RxJsonSchema<IDowntimeConciliation> = {
-  version: 1,
+  version: 2,
   primaryKey: 'id',
   type: 'object',
   required: ['id', 'created_at', 'updated_at', 'is_deleted', 'oee_event_id', 'machine_id', 'reason_code', 'status', 'conciliated', 'ot_sent', 'is_mtto', 'device_id'],
@@ -517,12 +517,33 @@ export const downtimeConciliationSchema: RxJsonSchema<IDowntimeConciliation> = {
     conciliated_by_mtto: { type: 'string' },
     conciliated_at:    { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     conciliation_notes:{ type: 'string' },
-    status:            { type: 'string', enum: ['pending', 'reconciled', 'disputed'] },
+    status:            { type: 'string', enum: ['pending', 'reconciled', 'disputed', 'escalated'] },
     ot_sent:           { type: 'boolean' },
     ot_response:       { type: 'string' },
     ot_sent_at:        { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_mtto:           { type: 'boolean' },
     device_id:         { type: 'string' },
+
+    // Wave 5: RCA + Multi-Department Verdicts
+    involved_departments:    { type: 'array' },
+    verdicts:               { type: 'array' },
+    analysis_method:        { type: 'string', enum: ['5whys', 'ishikawa'] },
+    why_1:                  { type: 'string' },
+    why_2:                  { type: 'string' },
+    why_3:                  { type: 'string' },
+    why_4:                  { type: 'string' },
+    why_5:                  { type: 'string' },
+    root_cause:             { type: 'string' },
+    corrective_action:      { type: 'object', properties: {
+      description:  { type: 'string' },
+      responsible:  { type: 'string' },
+      department:   { type: 'string' },
+      due_date:     { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+      status:       { type: 'string', enum: ['open', 'in_progress', 'completed'] },
+    } },
+    escalation_deadline:    { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    escalated_at:           { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    escalated_to:           { type: 'string' },
   },
   indexes: ['status', 'machine_id', 'shift_session_id', 'updated_at'],
 };
@@ -553,7 +574,7 @@ export const plantConfigSchema: RxJsonSchema<IPlantConfig> = {
  * No autoritativo — siempre derivable de oee_events.
  */
 export const shiftSummarySchema: RxJsonSchema<IShiftSummary> = {
-  version: 1,
+  version: 2,
   primaryKey: 'id',
   type: 'object',
   required: ['id', 'created_at', 'updated_at', 'is_deleted', 'shift_session_id', 'total_planned_min', 'total_downtime_min', 'total_micro_stop_min', 'total_mtto_min', 'total_prod_min', 'total_boxes', 'total_rejects', 'has_pending_conciliation', 'device_id'],
@@ -573,6 +594,9 @@ export const shiftSummarySchema: RxJsonSchema<IShiftSummary> = {
     performance_pct:         { type: 'number' },
     has_pending_conciliation:{ type: 'boolean' },
     device_id:               { type: 'string' },
+
+    // Wave 5: Stop Classification
+    classified_stops:        { type: 'array' },
   },
   indexes: ['shift_session_id', 'updated_at'],
 };

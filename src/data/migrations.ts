@@ -249,12 +249,32 @@ export const MIGRATIONS: Record<string, MigrationStrategies> = {
     },
   },
 
-  // ── Downtime Conciliation Schema v0→v1 ──────────────────────────────────
+  // ── Downtime Conciliation Schema ─────────────────────────────────────────
+  // v0→v1: add created_at
+  // v1→v2: add RCA + multi-department verdict fields
   downtimeConciliationSchema: {
     1: (oldDoc: any) => {
       return {
         ...oldDoc,
         created_at: oldDoc.created_at ?? now(),
+      };
+    },
+    2: (oldDoc: any) => {
+      return {
+        ...oldDoc,
+        involved_departments: undefined,
+        verdicts: undefined,
+        analysis_method: undefined,
+        why_1: undefined,
+        why_2: undefined,
+        why_3: undefined,
+        why_4: undefined,
+        why_5: undefined,
+        root_cause: undefined,
+        corrective_action: undefined,
+        escalation_deadline: undefined,
+        escalated_at: undefined,
+        escalated_to: undefined,
       };
     },
   },
@@ -269,12 +289,20 @@ export const MIGRATIONS: Record<string, MigrationStrategies> = {
     },
   },
 
-  // ── Shift Summary Schema v0→v1 ──────────────────────────────────────────
+  // ── Shift Summary Schema ────────────────────────────────────────────────
+  // v0→v1: add created_at
+  // v1→v2: add classified_stops
   shiftSummarySchema: {
     1: (oldDoc: any) => {
       return {
         ...oldDoc,
         created_at: oldDoc.created_at ?? now(),
+      };
+    },
+    2: (oldDoc: any) => {
+      return {
+        ...oldDoc,
+        classified_stops: undefined,
       };
     },
   },
