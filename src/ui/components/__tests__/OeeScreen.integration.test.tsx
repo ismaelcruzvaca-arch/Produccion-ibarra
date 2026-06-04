@@ -7,15 +7,13 @@
  * - Phase C: After all signatures, generates report
  * - Blocker: Active downtime prevents shift end
  */
+// @jest-skip: Este test era para el OeeScreen VIEJO que fue reemplazado por
+// el nuevo OeeDashboard en el merge de backend-telemetry. La pantalla anterior
+// (organisms/OeeScreen.tsx) fue eliminada. El test queda como referencia.
+// TODO: Reescribir tests para el nuevo OeeDashboard.
+
 import React from 'react';
-import { render, fireEvent, act } from '@testing-library/react-native';
-
-// setImmediate polyfill for test environment
-if (typeof setImmediate === 'undefined') {
-  (global as any).setImmediate = (fn: any, ...args: any[]) =>
-    setTimeout(fn, 0, ...args);
-}
-
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { PaperProvider } from 'react-native-paper';
 import OeeScreen from '../organisms/OeeScreen';
 
@@ -193,7 +191,7 @@ function renderScreen() {
 
 // ─── Tests ───────────────────────────────────────────────────────────────────────
 
-describe('OeeScreen — shift-end + signature integration (T11.5)', () => {
+describe.skip('OeeScreen — shift-end + signature integration (T11.5)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 

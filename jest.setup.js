@@ -31,6 +31,7 @@ jest.mock('react-native-paper', () => {
   const { View, Text, TextInput } = require('react-native');
   return {
     Provider: ({ children }) => React.createElement(View, null, children),
+    PaperProvider: ({ children }) => React.createElement(View, null, children),
     Snackbar: ({ children, onDismiss, ...props }) =>
       React.createElement(View, props, children),
     Dialog: ({ children, visible, ...props }) =>
