@@ -929,47 +929,6 @@ export function fromGraphQLWeightLog(gql: GraphQLWeightLog): IWeightLog {
   };
 }
 
-/**
- * Maps a local RxDB weight log to GraphQL input format.
- * Local weight_kg → backend actual_weight; standard_min_kg → target_weight.
- */
-export function toGraphQLWeightLog(wlog: IWeightLog): Record<string, unknown> {
-  return {
-    id: wlog.id,
-    inspection_id: wlog.inspection_id,
-    product_code: wlog.product_id,
-    target_weight: wlog.standard_min_kg ?? wlog.weight_kg,
-    actual_weight: wlog.weight_kg,
-    result: wlog.passed ? 'pass' : 'fail',
-    registered_at: wlog.created_at.toString(),
-    updated_at: wlog.updated_at.toString(),
-    is_deleted: wlog.is_deleted,
-  };
-}
-
-/**
- * Maps a GraphQL weight log response to local RxDB format.
- * Backend actual_weight → local weight_kg; target_weight → standard_min_kg;
- * target_weight + tolerance → standard_max_kg.
- */
-export function fromGraphQLWeightLog(gql: GraphQLWeightLog): IWeightLog {
-  const minKg = gql.target_weight;
-  const maxKg = gql.tolerance ? gql.target_weight + gql.tolerance : undefined;
-  return {
-    id: gql.id,
-    inspection_id: gql.inspection_id,
-    product_id: gql.product_code ?? '',
-    weight_kg: gql.actual_weight,
-    standard_min_kg: minKg,
-    standard_max_kg: maxKg,
-    passed: gql.result === 'pass',
-    warning: false, // default — not tracked in backend
-    created_at: parseInt(gql.registered_at, 10),
-    updated_at: parseInt(gql.updated_at, 10),
-    is_deleted: gql.is_deleted,
-  };
-}
-
 export interface GraphQLShiftSession {
   id: string;
   machine_id: string;
