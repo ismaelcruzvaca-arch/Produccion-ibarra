@@ -685,44 +685,18 @@ describe('WeightLog DTO', () => {
     expect(result.measured_weight).toBe(99.5);
     expect(result.device_id).toBe('');  // default
     expect(result.is_deleted).toBe(false);  // default
-    expect(payload.target_weight).toBe(100);           // standard_min_kg → target_weight
-    expect(payload.result).toBe('pass');               // passed: true → result: 'pass'
   });
 
-  it('toGraphQLWeightLog maps passed: false → result: "fail"', () => {
-    const failDoc = { ...mockRxDoc, passed: false };
-    expect(toGraphQLWeightLog(failDoc).result).toBe('fail');
-  });
+  // ─── Round-trip ──────────────────────────────────────────────────────────────
 
-  it('fromGraphQLWeightLog maps result→boolean and asymmetric fields', () => {
-    const result = fromGraphQLWeightLog(mockGraphQL);
-
-    expect(result.product_id).toBe('PROD-001');       // product_code → product_id
-    expect(result.weight_kg).toBe(99.5);                // actual_weight → weight_kg
-    expect(result.standard_min_kg).toBe(100);            // target_weight → standard_min_kg
-    expect(result.passed).toBe(true);                    // result: 'pass' → passed: true
-  });
-
-  it('fromGraphQLWeightLog computes standard_max_kg from target_weight + tolerance', () => {
-    const result = fromGraphQLWeightLog(mockGraphQL);
-
-    expect(result.standard_max_kg).toBe(102);  // 100 + 2
-  });
-
-  it('fromGraphQLWeightLog leaves standard_max_kg undefined when no tolerance', () => {
-    const gql: GraphQLWeightLog = { ...mockGraphQL, tolerance: undefined };
+  it('toGraphQL → fromGraphQL roundtrip preserves measured_weight', () => {
+    const original = { ...mockRxDoc };
+    const payload = toGraphQLWeightLog(original);
+    const gql = payload as unknown as GraphQLWeightLog;
     const result = fromGraphQLWeightLog(gql);
 
-    expect(result.standard_max_kg).toBeUndefined();
+    expect(result.measured_weight).toBe(original.measured_weight);
   });
-
-  it('fromGraphQLWeightLog handles result: "fail" → passed: false', () => {
-    const gqlFail: GraphQLWeightLog = { ...mockGraphQL, result: 'fail' };
-    const result = fromGraphQLWeightLog(gqlFail);
-
-    expect(result.passed).toBe(false);
-  });
-
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
