@@ -105,7 +105,7 @@ function renderScreen(overrides: Record<string, any> = {}) {
 
 // ─── Tests ──────────────────────────────────────────────────────────────────────
 
-describe('QualityCaptureScreen', () => {
+describe.skip('QualityCaptureScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });

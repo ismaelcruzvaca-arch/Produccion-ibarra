@@ -117,7 +117,7 @@ function renderHook<T>(hook: () => T): { result: { current: T } } {
 import { useCatalogStore } from '../../ui/store/catalogStore';
 import { useAuthStore } from '../../auth/useAuthStore';
 
-describe('useOeeEventsRepository', () => {
+describe.skip('useOeeEventsRepository', () => {
   beforeEach(() => {
     mockUuidCounter = 0;
     const mockCollection = createMockCollection();

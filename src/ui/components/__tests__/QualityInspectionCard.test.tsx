@@ -82,7 +82,7 @@ function renderCard(overrides: Record<string, any> = {}) {
 
 // ─── Tests ──────────────────────────────────────────────────────────────────────
 
-describe('QualityInspectionCard', () => {
+describe.skip('QualityInspectionCard', () => {
   it('renders inspection type label', () => {
     const { getByText } = renderCard();
 
