@@ -31,6 +31,10 @@ export default function ShiftsLayout() {
         name="[id]"
         options={{ title: 'Detalle del Turno' }}
       />
+      <Stack.Screen
+        name="close/[id]"
+        options={{ title: 'Cerrar Turno' }}
+      />
     </Stack>
   );
 }

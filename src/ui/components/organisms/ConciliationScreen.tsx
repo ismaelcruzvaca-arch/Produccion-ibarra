@@ -4,7 +4,7 @@
  * Pattern: Atomic Design — Organism (Screen)
  * Why:
  * - Displays pending downtime conciliation records grouped by machine.
- * - Two-step workflow: production diagnosis → maintenance diagnosis → reconcile/dispute.
+ * - Four-step workflow: Production Diagnosis → RCA → Verdicts → Corrective Action → Finalize.
  * - Micro-stops (duration < threshold) are excluded from the list.
  *
  * Visibility: Supervisor/Admin only (enforced by parent route).
@@ -12,7 +12,10 @@
  * Workflow:
  *   1. List: Shows pending records grouped by machine, with reason, duration, status.
  *   2. Diagnose: Supervisor selects root cause code and adds notes.
- *   3. Finalize: Supervisor reviews mechanic diagnosis, finalizes as reconciled or disputed.
+ *   3. RCA (optional): 5 Whys or Ishikawa analysis when duration >= threshold.
+ *   4. Verdicts: Involved departments sign agree/disagree.
+ *   5. Corrective Action (optional): Action plan description.
+ *   6. Finalize: Supervisor reviews, finalizes as reconciled, disputed, or escalated.
  */
 
 import React, { useEffect, useCallback } from 'react';
@@ -30,6 +33,8 @@ import {
   Divider,
   List,
   IconButton,
+  SegmentedButtons,
+  Switch,
 } from 'react-native-paper';
 import { useDowntimeConciliation, type EnrichedOeeEvent, type EnrichedPendingRecord } from '../../hooks/useDowntimeConciliation';
 import type { IShiftSummary, ConciliationStatus } from '../../../core/types';
@@ -84,6 +89,17 @@ export function ConciliationScreen({ shiftSessionId, shiftId }: ConciliationScre
     summaryEvents,
     shiftSummary,
     summaryLoading,
+    analysisMethod,
+    why_1,
+    why_2,
+    why_3,
+    why_4,
+    why_5,
+    rootCause,
+    verdicts,
+    correctiveAction,
+    escalationOverdue: isEscalationOverdue,
+    escalationCountdown,
     actions,
   } = useDowntimeConciliation();
 
@@ -110,11 +126,13 @@ export function ConciliationScreen({ shiftSessionId, shiftId }: ConciliationScre
       pending: colors.caution,
       reconciled: colors.success,
       disputed: colors.error,
+      escalated: colors.error,
     };
     const labels: Record<string, string> = {
       pending: 'Pendiente',
       reconciled: 'Reconciliado',
       disputed: 'Disputado',
+      escalated: 'Escalado',
     };
     return (
       <Chip
@@ -203,6 +221,17 @@ export function ConciliationScreen({ shiftSessionId, shiftId }: ConciliationScre
                   mode="contained"
                   compact
                   style={styles.actionButton}
+                  contentStyle={styles.actionButtonContent}
+                  onPress={() => actions.selectForRca(item)}
+                >
+                  Analizar RCA
+                </Button>
+              )}
+              {isDiagnosed && item.status === 'pending' && (
+                <Button
+                  mode="contained"
+                  compact
+                  style={[styles.actionButton, { marginLeft: spacing.xxs }]}
                   contentStyle={styles.actionButtonContent}
                   onPress={() => actions.selectForFinalization(item)}
                 >
@@ -314,6 +343,362 @@ export function ConciliationScreen({ shiftSessionId, shiftId }: ConciliationScre
     );
   };
 
+  // ─── RCA step (Wave 5) ─────────────────────────────────────────────────────
+  const renderRcaStep = () => {
+    if (!selectedRecord) return null;
+    return (
+      <ScrollView style={styles.stepContainer}>
+        <View style={styles.stepHeader}>
+          <IconButton icon="arrow-left" size={24} onPress={actions.backToList} />
+          <Text variant="titleMedium" style={styles.stepTitle}>
+            Análisis RCA
+          </Text>
+        </View>
+
+        <Card style={styles.infoCard} mode="outlined">
+          <Card.Content>
+            <Text variant="bodySmall" style={styles.infoLabel}>Código de paro</Text>
+            <Text variant="bodyMedium" style={styles.infoValue}>{selectedRecord.reason_code}</Text>
+            <Text variant="bodySmall" style={styles.infoLabel}>Duración</Text>
+            <Text variant="bodyMedium" style={styles.infoValue}>{formatDuration(selectedRecord.duration_min)}</Text>
+            <Text variant="bodySmall" style={styles.infoLabel}>Máquina</Text>
+            <Text variant="bodyMedium" style={styles.infoValue}>{selectedRecord.machine_id}</Text>
+          </Card.Content>
+        </Card>
+
+        {/* Method selector */}
+        <Text variant="titleSmall" style={styles.sectionTitle}>
+          Método de análisis
+        </Text>
+        <SegmentedButtons
+          value={analysisMethod ?? ''}
+          onValueChange={(val) => {
+            if (val === '5whys' || val === 'ishikawa' || val === '') {
+              actions.setAnalysisMethod(val === '' ? null : val);
+            }
+          }}
+          buttons={[
+            { value: '5whys', label: '5 Porqués' },
+            { value: 'ishikawa', label: 'Ishikawa' },
+            { value: '', label: 'Ninguno' },
+          ]}
+          style={styles.methodSelector}
+        />
+
+        {/* 5 Whys inputs */}
+        {analysisMethod === '5whys' && (
+          <>
+            <Text variant="titleSmall" style={styles.sectionTitle}>
+              Cadena de 5 Porqués
+            </Text>
+            {([1, 2, 3, 4, 5] as const).map((idx) => (
+              <TextInput
+                key={idx}
+                label={`¿Por qué? (${idx}/5)`}
+                value={
+                  idx === 1 ? why_1 :
+                  idx === 2 ? why_2 :
+                  idx === 3 ? why_3 :
+                  idx === 4 ? why_4 : why_5
+                }
+                onChangeText={(val) => actions.setWhy(idx, val)}
+                mode="outlined"
+                multiline
+                numberOfLines={2}
+                style={styles.whyInput}
+                placeholder={`Causa ${idx}...`}
+              />
+            ))}
+          </>
+        )}
+
+        {/* Ishikawa placeholder */}
+        {analysisMethod === 'ishikawa' && (
+          <>
+            <Text variant="titleSmall" style={styles.sectionTitle}>
+              Diagrama Ishikawa
+            </Text>
+            <Text variant="bodySmall" style={styles.ishikawaHint}>
+              Seleccione las categorías aplicables y describa la causa raíz.
+            </Text>
+            <TextInput
+              label="Categorías identificadas"
+              value={why_1} // reuse why_1 for ishikawa notes
+              onChangeText={(val) => actions.setWhy(1, val)}
+              mode="outlined"
+              multiline
+              numberOfLines={3}
+              style={styles.whyInput}
+              placeholder="Máquina, Método, Material, Mano de obra, Medición, Medio ambiente..."
+            />
+          </>
+        )}
+
+        {/* Root cause */}
+        <Text variant="titleSmall" style={styles.sectionTitle}>
+          Causa Raíz
+        </Text>
+        <TextInput
+          label="Resumen de causa raíz"
+          value={rootCause}
+          onChangeText={actions.setRootCause}
+          mode="outlined"
+          multiline
+          numberOfLines={3}
+          style={styles.whyInput}
+          placeholder="Describa la causa raíz identificada..."
+        />
+
+        <View style={styles.stepNavButtons}>
+          <Button
+            mode="contained"
+            onPress={actions.proceedToVerdicts}
+            style={styles.primaryButton}
+            contentStyle={styles.primaryButtonContent}
+          >
+            Siguiente: Firmas
+          </Button>
+        </View>
+      </ScrollView>
+    );
+  };
+
+  // ─── Verdicts step (Wave 5) ──────────────────────────────────────────────────
+  const renderVerdictsStep = () => {
+    if (!selectedRecord) return null;
+    const involvedDepts = selectedRecord.involved_departments ?? [];
+
+    return (
+      <ScrollView style={styles.stepContainer}>
+        <View style={styles.stepHeader}>
+          <IconButton icon="arrow-left" size={24} onPress={actions.backToList} />
+          <Text variant="titleMedium" style={styles.stepTitle}>
+            Firmas de Departamentos
+          </Text>
+        </View>
+
+        <Card style={styles.infoCard} mode="outlined">
+          <Card.Content>
+            <Text variant="bodySmall" style={styles.infoLabel}>Código de paro</Text>
+            <Text variant="bodyMedium" style={styles.infoValue}>{selectedRecord.reason_code}</Text>
+            <Text variant="bodySmall" style={styles.infoLabel}>Departamentos involucrados</Text>
+            <Text variant="bodyMedium" style={styles.infoValue}>{involvedDepts.join(', ') || '—'}</Text>
+          </Card.Content>
+        </Card>
+
+        {involvedDepts.length === 0 ? (
+          <View style={styles.centerContent}>
+            <Text variant="bodyMedium" style={styles.emptyText}>
+              No hay departamentos involucrados en este paro.
+            </Text>
+            <Button
+              mode="contained"
+              onPress={actions.proceedToCorrectiveAction}
+              style={styles.primaryButton}
+              contentStyle={styles.primaryButtonContent}
+            >
+              Siguiente: Acción Correctiva
+            </Button>
+          </View>
+        ) : (
+          <>
+            {involvedDepts.map((dept) => {
+              const existingVerdict = verdicts.find((v) => v.department === dept);
+              return (
+                <Card key={dept} style={styles.verdictCard} mode="outlined">
+                  <Card.Content>
+                    <View style={styles.verdictHeader}>
+                      <Text variant="bodyMedium" style={styles.verdictDept}>
+                        {dept}
+                      </Text>
+                      <View style={styles.verdictToggle}>
+                        <Text variant="bodySmall" style={styles.verdictToggleLabel}>
+                          En desacuerdo
+                        </Text>
+                        <Switch
+                          value={existingVerdict?.agreed ?? true}
+                          onValueChange={(agreed) => {
+                            if (existingVerdict) {
+                              actions.updateVerdict(dept, { agreed });
+                            } else {
+                              actions.addVerdict({
+                                department: dept,
+                                agreed,
+                                signed_by: 'supervisor', // TODO: get actual user
+                                signed_at: Date.now(),
+                                notes: '',
+                              });
+                            }
+                          }}
+                          color={colors.success}
+                        />
+                        <Text variant="bodySmall" style={styles.verdictToggleLabel}>
+                          De acuerdo
+                        </Text>
+                      </View>
+                    </View>
+
+                    <TextInput
+                      label="Notas"
+                      value={existingVerdict?.notes ?? ''}
+                      onChangeText={(val) => {
+                        if (existingVerdict) {
+                          actions.updateVerdict(dept, { notes: val });
+                        } else {
+                          actions.addVerdict({
+                            department: dept,
+                            agreed: true,
+                            signed_by: 'supervisor',
+                            signed_at: Date.now(),
+                            notes: val,
+                          });
+                        }
+                      }}
+                      mode="outlined"
+                      dense
+                      multiline
+                      numberOfLines={2}
+                      style={styles.notesInput}
+                      placeholder="Observaciones..."
+                    />
+                  </Card.Content>
+                </Card>
+              );
+            })}
+
+            <Button
+              mode="contained"
+              onPress={actions.proceedToCorrectiveAction}
+              style={styles.primaryButton}
+              contentStyle={styles.primaryButtonContent}
+            >
+              Siguiente: Acción Correctiva
+            </Button>
+          </>
+        )}
+      </ScrollView>
+    );
+  };
+
+  // ─── Corrective Action step (Wave 5) ─────────────────────────────────────────
+  const renderCorrectiveActionStep = () => {
+    if (!selectedRecord) return null;
+    const hasCorrectiveAction = correctiveAction !== null;
+
+    return (
+      <ScrollView style={styles.stepContainer}>
+        <View style={styles.stepHeader}>
+          <IconButton icon="arrow-left" size={24} onPress={actions.backToList} />
+          <Text variant="titleMedium" style={styles.stepTitle}>
+            Plan de Acción Correctiva
+          </Text>
+        </View>
+
+        <Card style={styles.infoCard} mode="outlined">
+          <Card.Content>
+            <Text variant="bodySmall" style={styles.infoLabel}>Código de paro</Text>
+            <Text variant="bodyMedium" style={styles.infoValue}>{selectedRecord.reason_code}</Text>
+            <Text variant="bodySmall" style={styles.infoLabel}>Causa raíz</Text>
+            <Text variant="bodyMedium" style={styles.infoValue}>{rootCause || '—'}</Text>
+          </Card.Content>
+        </Card>
+
+        {!hasCorrectiveAction ? (
+          <View style={styles.optionalSection}>
+            <Text variant="bodyMedium" style={styles.optionalText}>
+              ¿Desea registrar una acción correctiva para este paro?
+            </Text>
+            <View style={styles.optionalActions}>
+              <Button
+                mode="contained"
+                onPress={() =>
+                  actions.setCorrectiveAction({
+                    description: '',
+                    responsible: '',
+                    department: selectedRecord.involved_departments?.[0] ?? '',
+                    due_date: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days default
+                    status: 'open',
+                  })
+                }
+                style={styles.primaryButton}
+                contentStyle={styles.primaryButtonContent}
+              >
+                Sí, registrar acción
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={actions.submitConciliation}
+                loading={saving}
+                disabled={saving}
+                style={styles.skipButton}
+                contentStyle={styles.primaryButtonContent}
+              >
+                No, finalizar sin acción
+              </Button>
+            </View>
+          </View>
+        ) : (
+          <>
+            <TextInput
+              label="Descripción"
+              value={correctiveAction.description}
+              onChangeText={(val) =>
+                actions.setCorrectiveAction({ ...correctiveAction, description: val })
+              }
+              mode="outlined"
+              multiline
+              numberOfLines={3}
+              style={styles.whyInput}
+              placeholder="Describa la acción a tomar..."
+            />
+
+            <TextInput
+              label="Responsable"
+              value={correctiveAction.responsible}
+              onChangeText={(val) =>
+                actions.setCorrectiveAction({ ...correctiveAction, responsible: val })
+              }
+              mode="outlined"
+              style={styles.whyInput}
+              placeholder="Nombre o rol del responsable"
+            />
+
+            <TextInput
+              label="Departamento"
+              value={correctiveAction.department}
+              onChangeText={(val) =>
+                actions.setCorrectiveAction({ ...correctiveAction, department: val })
+              }
+              mode="outlined"
+              style={styles.whyInput}
+              placeholder="Departamento responsable"
+            />
+
+            <TextInput
+              label="Fecha de vencimiento"
+              value={new Date(correctiveAction.due_date).toLocaleDateString('es-MX')}
+              mode="outlined"
+              disabled
+              style={styles.whyInput}
+            />
+
+            <Button
+              mode="contained"
+              onPress={actions.submitConciliation}
+              loading={saving}
+              disabled={saving || !correctiveAction.description || !correctiveAction.responsible}
+              style={styles.primaryButton}
+              contentStyle={styles.primaryButtonContent}
+              icon="check-circle"
+            >
+              {saving ? 'Finalizando...' : 'Finalizar Conciliación'}
+            </Button>
+          </>
+        )}
+      </ScrollView>
+    );
+  };
+
   // ─── Finalize step ──────────────────────────────────────────────────────────
   const renderFinalizeStep = () => {
     if (!selectedRecord) return null;
@@ -396,6 +781,29 @@ export function ConciliationScreen({ shiftSessionId, shiftId }: ConciliationScre
           placeholder="Acuerdo entre producción y mantenimiento..."
         />
 
+        {/* Escalation banner */}
+        {isEscalationOverdue && selectedRecord?.escalation_deadline && (
+          <View style={styles.escalationInlineBanner}>
+            <List.Icon icon="clock-alert-outline" color={colors.error} size={18} />
+            <View style={styles.escalationInlineContent}>
+              <Text variant="bodySmall" style={styles.escalationInlineText}>
+                Esta conciliación superó el plazo de escalación.
+              </Text>
+              <Button
+                mode="text"
+                compact
+                onPress={actions.escalateConciliation}
+                loading={saving}
+                disabled={saving}
+                textColor={colors.error}
+                labelStyle={styles.escalationButtonLabel}
+              >
+                Escalar a Gerencia
+              </Button>
+            </View>
+          </View>
+        )}
+
         <View style={styles.finalActions}>
           <Button
             mode="contained"
@@ -419,6 +827,20 @@ export function ConciliationScreen({ shiftSessionId, shiftId }: ConciliationScre
             textColor={colors.error}
           >
             Disputar
+          </Button>
+
+          <Button
+            mode="text"
+            onPress={() => {
+              if (selectedRecord) actions.selectForRca(selectedRecord);
+            }}
+            disabled={saving}
+            style={styles.rcaNavButton}
+            contentStyle={styles.primaryButtonContent}
+            icon="magnify-expand"
+            textColor={colors.primary}
+          >
+            Ir a RCA
           </Button>
         </View>
       </ScrollView>
@@ -645,6 +1067,21 @@ export function ConciliationScreen({ shiftSessionId, shiftId }: ConciliationScre
     return renderDiagnoseStep();
   }
 
+  // Show RCA step (Wave 5)
+  if (step === 'rca') {
+    return renderRcaStep();
+  }
+
+  // Show verdicts step (Wave 5)
+  if (step === 'verdicts') {
+    return renderVerdictsStep();
+  }
+
+  // Show corrective action step (Wave 5)
+  if (step === 'corrective_action') {
+    return renderCorrectiveActionStep();
+  }
+
   // Show finalize step
   if (step === 'finalize') {
     return renderFinalizeStep();
@@ -656,6 +1093,8 @@ export function ConciliationScreen({ shiftSessionId, shiftId }: ConciliationScre
   }
 
   // ─── List step (default) ────────────────────────────────────────────────────
+  const hasEscalations = pendingRecords.some((r) => r.status === 'escalated');
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -686,6 +1125,21 @@ export function ConciliationScreen({ shiftSessionId, shiftId }: ConciliationScre
       </View>
 
       <Divider style={styles.headerDivider} />
+
+      {/* Wave 5: Escalation banner */}
+      {isEscalationOverdue && (
+        <View style={styles.escalationBanner}>
+          <List.Icon icon="alert-decagram" color={colors.error} size={20} />
+          <View style={styles.escalationBannerContent}>
+            <Text variant="bodySmall" style={styles.escalationBannerTitle}>
+              Conciliaciones vencidas
+            </Text>
+            <Text variant="bodySmall" style={styles.escalationBannerText}>
+              Hay conciliaciones que han superado el plazo de escalación.
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Content */}
       {loading ? (
@@ -1036,5 +1490,112 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: typography.weights.semibold,
     marginTop: 2,
+  },
+  // ── Wave 5: Escalation banner styles ─────────────────────────────────
+  escalationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bgRed,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+  },
+  escalationBannerContent: {
+    flex: 1,
+    marginLeft: spacing.xs,
+  },
+  escalationBannerTitle: {
+    color: colors.textError,
+    fontWeight: typography.weights.bold,
+  },
+  escalationBannerText: {
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  // ── Wave 5: RCA step styles ───────────────────────────────────────────
+  methodSelector: {
+    marginBottom: spacing.md,
+  },
+  whyInput: {
+    backgroundColor: colors.white,
+    marginBottom: spacing.md,
+  },
+  ishikawaHint: {
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    fontStyle: 'italic',
+  },
+  stepNavButtons: {
+    marginTop: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  // ── Wave 5: Verdicts step styles ──────────────────────────────────────
+  verdictCard: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.sm,
+  },
+  verdictHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  verdictDept: {
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
+  },
+  verdictToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  verdictToggleLabel: {
+    color: colors.textSecondary,
+    fontSize: 11,
+  },
+  // ── Wave 5: Corrective action step styles ─────────────────────────────
+  optionalSection: {
+    padding: spacing.md,
+    alignItems: 'center',
+  },
+  optionalText: {
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  optionalActions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  skipButton: {
+    flex: 1,
+    borderRadius: borderRadius.sm,
+    marginTop: spacing.sm,
+  },
+  rcaNavButton: {
+    borderRadius: borderRadius.sm,
+  },
+  // ── Wave 5: Escalation inline banner (in finalize step) ───────────────
+  escalationInlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bgRed,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    marginTop: spacing.md,
+  },
+  escalationInlineContent: {
+    flex: 1,
+    marginLeft: spacing.xs,
+  },
+  escalationInlineText: {
+    color: colors.textError,
+    fontWeight: typography.weights.medium,
+  },
+  escalationButtonLabel: {
+    fontSize: 12,
+    fontWeight: typography.weights.bold,
   },
 });

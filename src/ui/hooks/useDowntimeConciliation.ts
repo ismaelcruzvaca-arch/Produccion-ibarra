@@ -24,7 +24,7 @@ import { useOeeEventsRepository } from '../../repositories/useOeeEventsRepositor
 import { usePlantConfigRepository } from '../../repositories/usePlantConfigRepository';
 import { useShiftSummaryRepository } from '../../repositories/useShiftSummaryRepository';
 import { useDatabase } from '../../data/DatabaseContext';
-import type { IDowntimeConciliation, ConciliationStatus, IOeeEvent, IShiftSummary, IWorkOrder } from '../../core/types';
+import type { IDowntimeConciliation, ConciliationStatus, IOeeEvent, IShiftSummary, IWorkOrder, IDepartmentVerdict, ICorrectiveAction } from '../../core/types';
 import { nowMs } from '../../utils/timestamp';
 
 // ─── Micro-stop filter ─────────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ export function filterByMicroStopThreshold(
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
-export type WorkflowStep = 'list' | 'diagnose' | 'finalize' | 'summary';
+export type WorkflowStep = 'list' | 'diagnose' | 'rca' | 'verdicts' | 'corrective_action' | 'finalize' | 'summary';
 
 /**
  * An OEE event enriched with its conciliation status (if applicable).
@@ -108,6 +108,36 @@ export interface ConciliationScreenState {
   /** Success message */
   success: string | null;
 
+  // ── Wave 5: RCA fields (R8) ───────────────────────────────────────────
+
+  /** RCA method: 5 Whys or Ishikawa */
+  analysisMethod: '5whys' | 'ishikawa' | null;
+  /** 5 Whys individual entries */
+  why_1: string;
+  why_2: string;
+  why_3: string;
+  why_4: string;
+  why_5: string;
+  /** Final root cause summary */
+  rootCause: string;
+
+  // ── Wave 5: Verdicts (R9) ─────────────────────────────────────────────
+
+  /** Per-department verdicts for current conciliation */
+  verdicts: IDepartmentVerdict[];
+
+  // ── Wave 5: Corrective Action (R10) ────────────────────────────────────
+
+  /** Current corrective action being drafted */
+  correctiveAction: ICorrectiveAction | null;
+
+  // ── Wave 5: Escalation ─────────────────────────────────────────────────
+
+  /** Whether the escalation deadline has passed */
+  escalationOverdue: boolean;
+  /** Formatted countdown text */
+  escalationCountdown: string;
+
   // ── Summary view fields (R7) ──────────────────────────────────────────
 
   /** All OEE events for the shift, enriched with conciliation status */
@@ -157,6 +187,48 @@ export interface ConciliationScreenActions {
   /** Clear messages */
   clearMessages: () => void;
 
+  // ── Wave 5: RCA actions (R8) ──────────────────────────────────────────
+
+  /** Set RCA analysis method */
+  setAnalysisMethod: (method: '5whys' | 'ishikawa' | null) => void;
+  /** Set a specific "why" entry (1-5) */
+  setWhy: (index: 1 | 2 | 3 | 4 | 5, value: string) => void;
+  /** Set root cause summary */
+  setRootCause: (cause: string) => void;
+
+  // ── Wave 5: Verdict actions (R9) ──────────────────────────────────────
+
+  /** Add a department verdict */
+  addVerdict: (verdict: IDepartmentVerdict) => void;
+  /** Remove a department verdict */
+  removeVerdict: (department: string) => void;
+  /** Update an existing verdict */
+  updateVerdict: (department: string, patch: Partial<IDepartmentVerdict>) => void;
+
+  // ── Wave 5: Corrective action actions (R10) ───────────────────────────
+
+  /** Set the corrective action plan */
+  setCorrectiveAction: (action: ICorrectiveAction | null) => void;
+
+  // ── Wave 5: Escalation actions ────────────────────────────────────────
+
+  /** Escalate the conciliation */
+  escalateConciliation: () => Promise<void>;
+
+  // ── Wave 5: Submit ────────────────────────────────────────────────────
+
+  /** Submit the full conciliation (validates all steps) */
+  submitConciliation: () => Promise<void>;
+
+  /** Select a record for RCA analysis */
+  selectForRca: (record: EnrichedPendingRecord) => void;
+
+  /** Start the verdicts step */
+  proceedToVerdicts: () => void;
+
+  /** Start the corrective action step */
+  proceedToCorrectiveAction: () => void;
+
   // ── Summary view actions (R7) ─────────────────────────────────────────
 
   /** Load shift summary data (events + conciliations + shift_summary) */
@@ -180,6 +252,17 @@ const INITIAL_STATE: ConciliationScreenState = {
   saving: false,
   error: null,
   success: null,
+  analysisMethod: null,
+  why_1: '',
+  why_2: '',
+  why_3: '',
+  why_4: '',
+  why_5: '',
+  rootCause: '',
+  verdicts: [],
+  correctiveAction: null,
+  escalationOverdue: false,
+  escalationCountdown: '',
   summaryEvents: [],
   shiftSummary: null,
   summaryLoading: false,
@@ -412,6 +495,191 @@ export function useDowntimeConciliation() {
     }
   }, [state.selectedRecord, state.conciliatedCode, state.conciliatedMacro, state.notes, conciliationRepo, loadPendingByShift]);
 
+  // ─── Wave 5: RCA actions ────────────────────────────────────────────────────
+  const selectForRca = useCallback((record: EnrichedPendingRecord) => {
+    setState((prev) => ({
+      ...prev,
+      step: 'rca',
+      selectedRecord: record,
+      analysisMethod: record.analysis_method ?? null,
+      why_1: record.why_1 ?? '',
+      why_2: record.why_2 ?? '',
+      why_3: record.why_3 ?? '',
+      why_4: record.why_4 ?? '',
+      why_5: record.why_5 ?? '',
+      rootCause: record.root_cause ?? '',
+      verdicts: record.verdicts ?? [],
+      correctiveAction: record.corrective_action ?? null,
+    }));
+  }, []);
+
+  const setAnalysisMethod = useCallback((method: '5whys' | 'ishikawa' | null) => {
+    setState((prev) => ({ ...prev, analysisMethod: method }));
+  }, []);
+
+  const setWhy = useCallback((index: 1 | 2 | 3 | 4 | 5, value: string) => {
+    setState((prev) => {
+      const key = `why_${index}` as const;
+      return { ...prev, [key]: value };
+    });
+  }, []);
+
+  const setRootCause = useCallback((cause: string) => {
+    setState((prev) => ({ ...prev, rootCause: cause }));
+  }, []);
+
+  // ─── Wave 5: Verdict actions ────────────────────────────────────────────────
+  const addVerdict = useCallback((verdict: IDepartmentVerdict) => {
+    setState((prev) => ({
+      ...prev,
+      verdicts: [...prev.verdicts.filter((v) => v.department !== verdict.department), verdict],
+    }));
+  }, []);
+
+  const removeVerdict = useCallback((department: string) => {
+    setState((prev) => ({
+      ...prev,
+      verdicts: prev.verdicts.filter((v) => v.department !== department),
+    }));
+  }, []);
+
+  const updateVerdict = useCallback((department: string, patch: Partial<IDepartmentVerdict>) => {
+    setState((prev) => ({
+      ...prev,
+      verdicts: prev.verdicts.map((v) =>
+        v.department === department ? { ...v, ...patch } : v,
+      ),
+    }));
+  }, []);
+
+  // ─── Wave 5: Corrective action ──────────────────────────────────────────────
+  const setCorrectiveAction = useCallback((action: ICorrectiveAction | null) => {
+    setState((prev) => ({ ...prev, correctiveAction: action }));
+  }, []);
+
+  // ─── Wave 5: Navigation ────────────────────────────────────────────────────
+  const proceedToVerdicts = useCallback(() => {
+    setState((prev) => ({ ...prev, step: 'verdicts' }));
+  }, []);
+
+  const proceedToCorrectiveAction = useCallback(() => {
+    setState((prev) => ({ ...prev, step: 'corrective_action' }));
+  }, []);
+
+  // ─── Wave 5: Escalation ───────────────────────────────────────────────────
+  const escalateConciliation = useCallback(async () => {
+    const record = state.selectedRecord;
+    if (!record) return;
+
+    setState((prev) => ({ ...prev, saving: true, error: null }));
+    try {
+      await conciliationRepo.update(record.id, {
+        status: 'escalated',
+        escalated_at: nowMs(),
+        escalated_to: 'manager', // TODO: support dynamic escalation target
+        conciliation_notes: state.notes || 'Escalado - sin acuerdo en conciliación',
+      });
+
+      setState((prev) => ({
+        ...prev,
+        saving: false,
+        step: 'list',
+        selectedRecord: null,
+        success: 'Conciliación escalada a gerencia',
+      }));
+
+      await loadPendingByShift(record.shift_session_id);
+    } catch (err: any) {
+      setState((prev) => ({
+        ...prev,
+        saving: false,
+        error: err?.message ?? 'Error al escalar conciliación',
+      }));
+    }
+  }, [state.selectedRecord, state.notes, conciliationRepo, loadPendingByShift]);
+
+  // ─── Wave 5: Submit conciliation ───────────────────────────────────────────
+  const submitConciliation = useCallback(async () => {
+    const record = state.selectedRecord;
+    if (!record) return;
+
+    // Validation
+    const errors: string[] = [];
+
+    // Check all required departments have signed
+    const requiredDepts = record.involved_departments ?? [];
+    const signedDepts = state.verdicts.map((v) => v.department);
+    const missingDepts = requiredDepts.filter((d) => !signedDepts.includes(d));
+    if (missingDepts.length > 0) {
+      errors.push(`Faltan firmas de: ${missingDepts.join(', ')}`);
+    }
+
+    // If 5 Whys, check all fields filled
+    if (state.analysisMethod === '5whys') {
+      const whys = [state.why_1, state.why_2, state.why_3, state.why_4, state.why_5];
+      const emptyWhys = whys.some((w) => !w.trim());
+      if (emptyWhys) {
+        errors.push('Debe completar todos los 5 Porqués');
+      }
+      if (!state.rootCause.trim()) {
+        errors.push('Debe ingresar la causa raíz');
+      }
+    }
+
+    // If disputed, at least one note
+    const hasDisputedVerdict = state.verdicts.some((v) => !v.agreed);
+    if (hasDisputedVerdict && !state.notes.trim()) {
+      errors.push('Debe agregar notas cuando hay un veredicto en disputa');
+    }
+
+    if (errors.length > 0) {
+      setState((prev) => ({ ...prev, error: errors.join('. ') }));
+      return;
+    }
+
+    setState((prev) => ({ ...prev, saving: true, error: null }));
+    try {
+      await conciliationRepo.update(record.id, {
+        analysis_method: state.analysisMethod ?? undefined,
+        why_1: state.why_1 || undefined,
+        why_2: state.why_2 || undefined,
+        why_3: state.why_3 || undefined,
+        why_4: state.why_4 || undefined,
+        why_5: state.why_5 || undefined,
+        root_cause: state.rootCause || undefined,
+        verdicts: state.verdicts,
+        corrective_action: state.correctiveAction ?? undefined,
+        status: hasDisputedVerdict ? 'disputed' : 'reconciled',
+        conciliated: true,
+        conciliated_at: nowMs(),
+        conciliation_notes: state.notes || undefined,
+      });
+
+      setState((prev) => ({
+        ...prev,
+        saving: false,
+        step: 'list',
+        selectedRecord: null,
+        success: hasDisputedVerdict
+          ? 'Conciliación finalizada con disputa — será escalada'
+          : 'Conciliación finalizada correctamente',
+      }));
+
+      await loadPendingByShift(record.shift_session_id);
+    } catch (err: any) {
+      setState((prev) => ({
+        ...prev,
+        saving: false,
+        error: err?.message ?? 'Error al finalizar conciliación',
+      }));
+    }
+  }, [
+    state.selectedRecord, state.analysisMethod, state.why_1, state.why_2,
+    state.why_3, state.why_4, state.why_5, state.rootCause,
+    state.verdicts, state.correctiveAction, state.notes,
+    conciliationRepo, loadPendingByShift,
+  ]);
+
   // ─── Navigation ──────────────────────────────────────────────────────────────
   const backToList = useCallback(() => {
     setState((prev) => ({
@@ -518,6 +786,18 @@ export function useDowntimeConciliation() {
       dispute,
       backToList,
       clearMessages,
+      selectForRca,
+      setAnalysisMethod,
+      setWhy,
+      setRootCause,
+      addVerdict,
+      removeVerdict,
+      updateVerdict,
+      setCorrectiveAction,
+      escalateConciliation,
+      submitConciliation,
+      proceedToVerdicts,
+      proceedToCorrectiveAction,
       loadShiftSummary,
       showSummaryView,
     }),
@@ -534,6 +814,18 @@ export function useDowntimeConciliation() {
       dispute,
       backToList,
       clearMessages,
+      selectForRca,
+      setAnalysisMethod,
+      setWhy,
+      setRootCause,
+      addVerdict,
+      removeVerdict,
+      updateVerdict,
+      setCorrectiveAction,
+      escalateConciliation,
+      submitConciliation,
+      proceedToVerdicts,
+      proceedToCorrectiveAction,
       loadShiftSummary,
       showSummaryView,
     ],
