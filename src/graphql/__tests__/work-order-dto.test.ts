@@ -64,7 +64,8 @@ describe('Work Order DTO — completed_at', () => {
       assigned_to: 'mec-1',
       scheduled_date: 1717000000000,
       completed_date: 1717086400000,
-      client_updated_at: 1717086400000,
+      created_at: 1717086400000,
+      updated_at: 1717086400000,
       is_deleted: false,
 
       lifecycle_phase: 'INPRG',
@@ -92,7 +93,8 @@ describe('Work Order DTO — completed_at', () => {
       description: 'Sin completar',
       status: 'open',
       priority: 'medium',
-      client_updated_at: 1717086400000,
+      created_at: 1717086400000,
+      updated_at: 1717086400000,
       is_deleted: false,
     };
 
@@ -140,7 +142,8 @@ describe('Work Order DTO — completed_at', () => {
       description: 'Lubricación programada',
       status: 'open',
       priority: 'low',
-      client_updated_at: 1717086400000,
+      created_at: 1717086400000,
+      updated_at: 1717086400000,
       is_deleted: false,
 
       lifecycle_phase: 'COMP',
@@ -175,7 +178,8 @@ describe('Work Order DTO — completed_at', () => {
       description: 'Test field mapping',
       status: 'open',
       priority: 'medium',
-      client_updated_at: 1717086400000,
+      created_at: 1717086400000,
+      updated_at: 1717086400000,
       is_deleted: true,
     };
 

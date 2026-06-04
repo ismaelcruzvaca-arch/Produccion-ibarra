@@ -1346,6 +1346,12 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
     resilientVitaminKitsController,
   };
 }
+
+// ─── Pull Query Builder (Operators — pull-only) ─────────────────────────────
+
+function pullQueryBuilderOperators(checkpoint: GraphQLOperator | undefined, _limit: number) {
+  return {
+    query: `
       query PullOperators($lastCheckpoint: timestamptz!) {
         operators(
           where: { updated_at: { _gt: $lastCheckpoint } },
@@ -1354,6 +1360,33 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
           id
           full_name
           is_active
+          updated_at
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ?? '1970-01-01T00:00:00Z' },
+  };
+}
+
+// ─── Pull Query Builder (Shift Sessions — pull/push) ───────────────────────
+
+function pullQueryBuilderShiftSessions(checkpoint: GraphQLShiftSession | undefined, _limit: number) {
+  return {
+    query: `
+      query PullShiftSessions($lastCheckpoint: timestamptz!) {
+        shift_sessions(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          machine_id
+          operator_id
+          shift_type
+          status
+          started_at
+          ended_at
+          planned_boxes
+          product_code
           updated_at
         }
       }

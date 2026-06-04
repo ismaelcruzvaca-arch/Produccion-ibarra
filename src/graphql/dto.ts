@@ -1270,3 +1270,4 @@ export function fromGraphQLShiftSummary(gql: GraphQLShiftSummary): IShiftSummary
     device_id: '',
     is_deleted: false,
   };
+}
