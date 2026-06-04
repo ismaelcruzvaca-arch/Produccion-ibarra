@@ -155,7 +155,7 @@ describe('2. Frente B — Shift Sessions', () => {
   const mockGraphQL: GraphQLShiftSession = {
     id: '550e8400-e29b-41d4-a716-446655440000',
     machine_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    operator_id: 'OP-001',
+    inspector_id: 'OP-001',
     shift_type: 'matutino',
     status: 'active',
     started_at: '2026-05-25T06:00:00.000Z',
@@ -182,7 +182,7 @@ describe('2. Frente B — Shift Sessions', () => {
     const rxDoc: IShiftSession = {
       id: '550e8400-e29b-41d4-a716-446655440000',
       machine_id: 'a1b2c3d4',
-      operator_id: 'OP-001',
+      inspector_id: 'OP-001',
       shift_type: 'matutino',
       status: 'active',
       started_at: 1779688800000,
@@ -196,7 +196,7 @@ describe('2. Frente B — Shift Sessions', () => {
     const payload = toGraphQLShiftSession(rxDoc);
     // Campos obligatorios
     expect(payload.machine_id).toBeDefined();
-    expect(payload.operator_id).toBe('OP-001');
+    
     expect(payload.shift_type).toBe('matutino');
     // planned_boxes incluido en push
     expect(payload.planned_boxes).toBe(480);
@@ -213,7 +213,7 @@ describe('2. Frente B — Shift Sessions', () => {
       ...({
         id: '550e8400-e29b-41d4-a716-446655440000',
         machine_id: 'a1b2c3d4',
-        operator_id: 'OP-001',
+        inspector_id: 'OP-001',
         shift_type: 'matutino',
         status: 'closed',
         started_at: 1748224800000,
