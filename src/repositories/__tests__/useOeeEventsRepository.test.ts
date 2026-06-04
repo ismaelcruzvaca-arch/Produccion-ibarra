@@ -53,7 +53,7 @@ const createMockCollection = () => {
     })),
     find: jest.fn((query?: { selector?: Record<string, any> }) => ({
       exec: jest.fn(async () => {
-        const allDocs = Array.from(docs.values()).filter(d => !d.deleted);
+        const allDocs = Array.from(docs.values()).filter(d => !d.is_deleted);
         let results: Record<string, unknown>[] = [];
         if (query?.selector?.shift_id?.$eq) {
           results = allDocs.filter(d => d.shift_id === query.selector!.shift_id.$eq);
@@ -82,7 +82,7 @@ const createMockCollection = () => {
       }),
       $: {
         subscribe: jest.fn((cb: (docs: unknown[]) => void) => {
-          cb(Array.from(docs.values()).filter(d => !d.deleted));
+          cb(Array.from(docs.values()).filter(d => !d.is_deleted));
           return { unsubscribe: jest.fn() };
         }),
       },

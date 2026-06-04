@@ -29,7 +29,7 @@ describe('NumpadModal', () => {
     );
 
     expect(getByText('Registrar Cajas')).toBeTruthy();
-    expect(getByTestId('numpad-display-text').props.children).toBe('0');
+    expect(getByTestId('numpad-display-text').props.children).toEqual(['0', ' cajas']);
   });
 
   it('handles numerical inputs sequentially', () => {
@@ -48,7 +48,7 @@ describe('NumpadModal', () => {
     fireEvent.press(getByTestId('numpad-key-2'));
     fireEvent.press(getByTestId('numpad-key-0'));
 
-    expect(getByTestId('numpad-display-text').props.children).toBe('520');
+    expect(getByTestId('numpad-display-text').props.children).toEqual(['520', ' cajas']);
   });
 
   it('performs backspace and clears values correctly', () => {
@@ -65,13 +65,13 @@ describe('NumpadModal', () => {
 
     fireEvent.press(getByTestId('numpad-key-9'));
     fireEvent.press(getByTestId('numpad-key-8'));
-    expect(getByTestId('numpad-display-text').props.children).toBe('98');
+    expect(getByTestId('numpad-display-text').props.children).toEqual(['98', ' cajas']);
 
     fireEvent.press(getByTestId('numpad-key-backspace'));
-    expect(getByTestId('numpad-display-text').props.children).toBe('9');
+    expect(getByTestId('numpad-display-text').props.children).toEqual(['9', ' cajas']);
 
     fireEvent.press(getByTestId('numpad-key-clear'));
-    expect(getByTestId('numpad-display-text').props.children).toBe('0');
+    expect(getByTestId('numpad-display-text').props.children).toEqual(['0', ' cajas']);
   });
 
   it('disables registration when input is 0 or less', () => {
@@ -110,7 +110,7 @@ describe('NumpadModal', () => {
     fireEvent.press(getByTestId('numpad-key-0'));
     fireEvent.press(getByTestId('numpad-key-0'));
 
-    expect(getByTestId('numpad-display-text').props.children).toBe('100,000');
+    expect(getByTestId('numpad-display-text').props.children).toEqual(['100,000', ' cajas']);
     expect(getByTestId('numpad-warning-text')).toBeTruthy();
     expect(getByTestId('numpad-submit').props.accessibilityState.disabled).toBe(true);
   });

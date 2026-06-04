@@ -87,15 +87,34 @@ apply_metadata \
   "user_line_assignments: SELECT + INSERT + DELETE permissions (operator role)" \
   "$SCRIPT_DIR/permissions_user_line_assignments.json"
 
-# 3. Quality tables permissions (3 tables × 4 operations × 3 roles)
-# Drop first to ensure clean re-apply
+# 3. telemetry_raw_staging + epicor_sync_queue: track tables + admin select permissions
 apply_metadata \
-  "quality: DROP existing permissions (clean slate)" \
-  "$SCRIPT_DIR/drop_quality_permissions.json" || true
+  "telemetry_raw_staging + epicor_sync_queue: track tables + select permissions (admin role)" \
+  "$SCRIPT_DIR/telemetry_permissions.json"
 
+# 4. quality tables: product_weight_standards, quality_inspections, defect_logs, weight_logs
+#    SELECT for operator/supervisor/admin | INSERT for operator/supervisor/admin | UPDATE for operator/supervisor/admin
 apply_metadata \
-  "quality_inspections + defect_logs + weight_logs: FULL permissions (SELECT, INSERT, UPDATE, DELETE for operator, supervisor, admin)" \
+  "quality tables: product_weight_standards, quality_inspections, defect_logs, weight_logs — full CRUD permissions (operator/supervisor/admin roles)" \
   "$SCRIPT_DIR/quality_permissions.json"
+
+# 5. operator + shift_sessions: SELECT + INSERT + UPDATE + DELETE permissions
+#    Updated to include planned_boxes and product_code columns from migration 013
+apply_metadata \
+  "operator + shift_sessions: full CRUD permissions with planned_boxes + product_code (operator/supervisor/admin roles)" \
+  "$SCRIPT_DIR/operator_sessions_permissions.json"
+
+# 6. Track 5 SQL views + re-track tables with new columns (planned_boxes, product_code, data_source)
+apply_metadata \
+  "Views analíticas: track 5 SQL views + SELECT permissions for supervisor/admin roles" \
+  "$SCRIPT_DIR/track_views_and_columns.json"
+
+# 7. REST endpoint: upsert_work_order_from_cmms
+#    POST /api/rest/upsert_work_order_from_cmms
+#    GraphQL mutation upsert work_orders by cmms_wo_id vía on_conflict
+apply_metadata \
+  "REST endpoint: upsert_work_order_from_cmms — upsert work_orders por cmms_wo_id" \
+  "$SCRIPT_DIR/endpoint_upsert_work_order.json"
 
 # --- Verify ---
 echo "=== Verification ==="
@@ -119,4 +138,45 @@ VERIFY_RESPONSE=$(curl -s \
 echo "oee_events permissions: $VERIFY_RESPONSE"
 echo ""
 
+VERIFY_RESPONSE=$(curl -s \
+  -X POST "$ENDPOINT/v1/metadata" \
+  -H "Content-Type: application/json" \
+  -H "X-Hasura-Admin-Secret: $ADMIN_SECRET" \
+  -d '{
+    "type": "pg_get_table_permissions",
+    "args": {
+      "source": "default",
+      "table": {
+        "schema": "public",
+        "name": "telemetry_raw_staging"
+      }
+    }
+  }')
+
+echo "telemetry_raw_staging permissions: $VERIFY_RESPONSE"
+echo ""
+
+VERIFY_RESPONSE=$(curl -s \
+  -X POST "$ENDPOINT/v1/metadata" \
+  -H "Content-Type: application/json" \
+  -H "X-Hasura-Admin-Secret: $ADMIN_SECRET" \
+  -d '{
+    "type": "pg_get_table_permissions",
+    "args": {
+      "source": "default",
+      "table": {
+        "schema": "public",
+        "name": "epicor_sync_queue"
+      }
+    }
+  }')
+
+echo "epicor_sync_queue permissions: $VERIFY_RESPONSE"
+echo ""
+
+echo "=== Post-Apply: Validar Triggers Epicor Outbox ==="
+echo ""
+echo "Ejecutar contra Postgres:"
+echo "  psql -U <user> -d <database> -f $PROJECT_ROOT/migrations/verify_019_outbox_triggers.sql"
+echo ""
 echo "=== Done. RLS metadata applied successfully. ==="

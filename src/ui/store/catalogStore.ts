@@ -116,6 +116,7 @@ interface CatalogState {
   getMachineById: (id: string) => ICatalogMachine | undefined;
   getMachinesByLine: (lineId: string) => ICatalogMachine[];
   getProductById: (id: string) => ICatalogProduct | undefined;
+  getShiftById: (id: string) => ICatalogShift | undefined;
 }
 
 // ─── Store ───────────────────────────────────────────────────────────────────────
@@ -279,6 +280,7 @@ export const useCatalogStore = create<CatalogState>()(
       getMachinesByLine: (lineId: string) =>
         get().machines.filter((m) => m.line_id === lineId),
       getProductById: (id: string) => get().products.find((p) => p.id === id),
+  getShiftById: (id: string) => get().shifts.find((s) => s.id === id),
     }),
     {
       name: 'catalog-storage',

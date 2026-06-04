@@ -1,231 +1,151 @@
 /**
- * QualityInspectionCard — card displaying a single quality inspection with pass/fail chip.
+ * QualityInspectionCard — Card displaying a quality inspection summary.
  *
- * Spec compliance:
- * - QC-10: MUST pass/fail chip per inspection card
- * - QC-5: MUST read-only detail showing all fields
+ * Pattern: Atomic Design — Molecule
+ * Why:
+ * - Shows disposition badge (🟢 liberado / 🔴 rechazado / 🟡 reproceso) instead of pass/fail.
+ * - Shows shift_type and inspector_id instead of inspection_type and operator_id.
+ * - Post-reconciliation: no more value, defect_code, inspection_type fields.
  */
+
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Card, Text, Chip, useTheme } from 'react-native-paper';
-import type { IQualityInspection } from '../../../core/types';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Text } from 'react-native-paper';
+import { colors, spacing, typography, borderRadius, shadows } from '../../theme/tokens';
+import type { IQualityInspection, DispositionType } from '../../../core/types';
+import { AppBadge } from '../atoms/AppBadge';
 
-// ─── Type Labels ────────────────────────────────────────────────────────────────
-
-const TYPE_LABELS: Record<IQualityInspection['inspection_type'], string> = {
-  visual: 'Visual',
-  weight: 'Peso',
-  temp: 'Temperatura',
-  metal_detector: 'Detector de Metales',
+const DISPOSITION_CONFIG: Record<DispositionType, { label: string; variant: 'success' | 'error' | 'warning' | 'info' }> = {
+  liberado: { label: '🟢 Liberado', variant: 'success' },
+  rechazado: { label: '🔴 Rechazado', variant: 'error' },
+  reproceso: { label: '🟡 Reproceso', variant: 'warning' },
 };
 
-const TYPE_ICONS: Record<IQualityInspection['inspection_type'], string> = {
-  visual: 'eye',
-  weight: 'scale-balance',
-  temp: 'thermometer',
-  metal_detector: 'magnet',
-};
-
-// ─── Component ──────────────────────────────────────────────────────────────────
-
-interface QualityInspectionCardProps {
-  inspection: IQualityInspection;
-  defectLabel?: string;
-  defectSeverity?: string;
-  onPress?: () => void;
-}
-
-export function QualityInspectionCard({
-  inspection,
-  defectLabel,
-  defectSeverity,
-  onPress,
-}: QualityInspectionCardProps) {
-  const theme = useTheme();
-
-  const formattedDate = new Date(inspection.updated_at).toLocaleString('es-MX', {
+function formatTimestamp(ts: number): string {
+  const d = new Date(ts);
+  return d.toLocaleString('es-MX', {
     hour: '2-digit',
     minute: '2-digit',
     day: '2-digit',
     month: '2-digit',
   });
+}
+
+interface QualityInspectionCardProps {
+  inspection: IQualityInspection;
+  onPress: () => void;
+  testID?: string;
+}
+
+export function QualityInspectionCard({
+  inspection,
+  onPress,
+  testID,
+}: QualityInspectionCardProps) {
+  const dispCfg = DISPOSITION_CONFIG[inspection.disposition] ?? DISPOSITION_CONFIG.liberado;
 
   return (
-    <Card
+    <TouchableOpacity
       style={styles.card}
       onPress={onPress}
-      mode="elevated"
+      activeOpacity={0.7}
+      testID={testID ?? `quality-card-${inspection.id}`}
     >
-      <Card.Content>
-        {/* Header row: type icon + label + pass/fail chip */}
-        <View style={styles.header}>
-          <View style={styles.typeRow}>
-            <Text style={styles.typeIcon}>{getTypeIcon(inspection.inspection_type)}</Text>
-            <Text variant="titleSmall" style={styles.typeLabel}>
-              {TYPE_LABELS[inspection.inspection_type]}
-            </Text>
-          </View>
-          <Chip
-            style={[
-              styles.statusChip,
-              {
-                backgroundColor: inspection.passed
-                  ? '#E8F5E9'
-                  : '#FFEBEE',
-              },
-            ]}
-            textStyle={{
-              color: inspection.passed ? '#2E7D32' : '#C62828',
-              fontWeight: '600',
-              fontSize: 12,
-            }}
-            compact
-          >
-            {inspection.passed ? 'PASA' : 'FALLA'}
-          </Chip>
+      <View style={styles.row}>
+        {/* Icon */}
+        <View style={styles.iconContainer}>
+          <Text style={styles.icon}>📋</Text>
         </View>
 
-        {/* Value row */}
-        <View style={styles.valueRow}>
-          <Text variant="bodyLarge" style={styles.value}>
-            {inspection.value} {inspection.unit}
+        {/* Info column */}
+        <View style={styles.info}>
+          <Text style={styles.inspectorLabel}>Inspector: {inspection.inspector_id}</Text>
+          <Text style={styles.timestamp}>{formatTimestamp(inspection.updated_at)}</Text>
+
+          <Text style={styles.shiftLabel}>
+            Turno: {inspection.shift_type} | Máquina: {inspection.machine_id}
           </Text>
         </View>
 
-        {/* Standards row (weight inspections) */}
-        {(inspection.standard_min !== undefined ||
-          inspection.standard_max !== undefined) && (
-          <View style={styles.standardRow}>
-            <Text variant="bodySmall" style={styles.standardText}>
-              Estándar: {inspection.standard_min ?? '?'} – {inspection.standard_max ?? '?'}{' '}
-              {inspection.unit}
-            </Text>
-            {inspection.standard_warning && (
-              <Chip
-                style={styles.warningChip}
-                textStyle={styles.warningChipText}
-                compact
-              >
-                Sin estándar
-              </Chip>
-            )}
-          </View>
-        )}
+        {/* Disposition badge */}
+        <View style={styles.badgeContainer}>
+          <AppBadge
+            variant={dispCfg.variant}
+            label={dispCfg.label}
+          />
+        </View>
+      </View>
 
-        {/* Defect info */}
-        {defectLabel && (
-          <View style={styles.defectRow}>
-            <Text variant="bodySmall" style={styles.defectLabel}>
-              Defecto: {defectLabel}
-            </Text>
-            {defectSeverity && (
-              <Chip
-                style={[
-                  styles.severityChip,
-                  {
-                    backgroundColor:
-                      defectSeverity === 'critical'
-                        ? '#FFEBEE'
-                        : defectSeverity === 'major'
-                        ? '#FFF3E0'
-                        : '#E3F2FD',
-                  },
-                ]}
-                textStyle={{ fontSize: 11 }}
-                compact
-              >
-                {defectSeverity === 'critical'
-                  ? 'Crítico'
-                  : defectSeverity === 'major'
-                  ? 'Mayor'
-                  : 'Menor'}
-              </Chip>
-            )}
-          </View>
-        )}
-
-        {/* Timestamp */}
-        <Text variant="bodySmall" style={styles.timestamp}>
-          {formattedDate}
-        </Text>
-      </Card.Content>
-    </Card>
+      {/* Notes if present */}
+      {inspection.notes && (
+        <View style={styles.notesContainer}>
+          <Text style={styles.notesText} numberOfLines={2}>
+            {inspection.notes}
+          </Text>
+        </View>
+      )}
+    </TouchableOpacity>
   );
-}
-
-function getTypeIcon(type: IQualityInspection['inspection_type']): string {
-  const icons: Record<string, string> = {
-    visual: '👁️',
-    weight: '⚖️',
-    temp: '🌡️',
-    metal_detector: '🧲',
-  };
-  return icons[type] ?? '📋';
 }
 
 const styles = StyleSheet.create({
   card: {
-    marginVertical: 4,
-    marginHorizontal: 0,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginHorizontal: spacing.md,
+    marginVertical: spacing.xxs,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
   },
-  header: {
+  row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.bgGray,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginRight: spacing.sm,
   },
-  typeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  icon: {
+    fontSize: 24,
   },
-  typeIcon: {
-    fontSize: 20,
-  },
-  typeLabel: {
-    fontWeight: '600',
-  },
-  statusChip: {
-    height: 28,
-  },
-  valueRow: {
-    marginBottom: 4,
-  },
-  value: {
-    fontWeight: '700',
-  },
-  standardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  standardText: {
-    opacity: 0.6,
-  },
-  warningChip: {
-    backgroundColor: '#FFF3E0',
-    height: 22,
-  },
-  warningChipText: {
-    fontSize: 10,
-    color: '#E65100',
-  },
-  defectRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  defectLabel: {
-    color: '#C62828',
+  info: {
     flex: 1,
+    marginRight: spacing.sm,
   },
-  severityChip: {
-    height: 24,
+  inspectorLabel: {
+    fontSize: typography.sizes.titleSmall,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
   },
   timestamp: {
-    opacity: 0.5,
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  shiftLabel: {
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
     marginTop: 4,
+  },
+  badgeContainer: {
+    justifyContent: 'flex-start',
+  },
+  notesContainer: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  notesText: {
+    fontSize: typography.sizes.bodySmall,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
   },
 });

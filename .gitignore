@@ -21,3 +21,10 @@ sdd/
 .env*.local
 .env.production
 .env
+
+# Coverage reports
+coverage/
+
+# Engram artifacts
+.engram/
+engram-*.json

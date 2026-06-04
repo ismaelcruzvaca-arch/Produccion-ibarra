@@ -18,20 +18,11 @@
 
 import type { RxJsonSchema } from 'rxdb';
 import type {
-  IAsset,
-  IAssetType,
-  IWorkOrder,
-  IReport,
-  IOeeEvent,
-  ISyncError,
-  ISignature,
-  IToasterLog,
-  IMixingBatch,
-  IExtractorCheck,
-  IVitaminKit,
-  IQualityInspection,
-  IDefectLog,
-  IWeightLog,
+  IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent, ISyncError,
+  ISignature, IToasterLog, IMixingBatch, IExtractorCheck, IVitaminKit,
+  IQualityInspection, IDefectLog, IWeightLog,
+  IShiftSession, IOperator, IProductWeightStandard,
+  IDowntimeConciliation, IPlantConfig, IShiftSummary,
 } from '../core/types';
 
 /**
@@ -85,9 +76,13 @@ export const assetTypeSchema: RxJsonSchema<IAssetType> = {
 /**
  * Work Order schema.
  * Represents a maintenance/repair task assigned to an asset.
+ * 
+ * v1: Added lifecycle_phase, symptom_note, cause_note, action_note,
+ *     actual_start_at, cmms_wo_id (wo-lifecycle-outbox integration).
+ * v2: Added completed_at (wo-lifecycle-integration).
  */
 export const workOrderSchema: RxJsonSchema<IWorkOrder> = {
-  version: 1,
+  version: 2,
   primaryKey: 'id',
   type: 'object',
   required: ['id', 'created_at', 'updated_at', 'is_deleted'],
@@ -103,9 +98,41 @@ export const workOrderSchema: RxJsonSchema<IWorkOrder> = {
     created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
+
+    // wo-lifecycle-outbox v1: campos desde cmms-ibero
+    lifecycle_phase: { type: 'string' },
+    symptom_note: { type: 'string' },
+    cause_note: { type: 'string' },
+    action_note: { type: 'string' },
+    actual_start_at: { type: 'number' },
+    completed_at: { type: 'number' },   // v2: cuándo finalizó la intervención
+    cmms_wo_id: { type: 'string' },
   },
   indexes: ['updated_at'],
 };
+
+/**
+ * Migration strategy for work_orders v0 → v1.
+ * Adds default values for new optional fields (all undefined = safe).
+ */
+export const workOrderSchemaV0ToV1 = (oldDoc: Record<string, unknown>) => ({
+  ...oldDoc,
+  lifecycle_phase: undefined,
+  symptom_note: undefined,
+  cause_note: undefined,
+  action_note: undefined,
+  actual_start_at: undefined,
+  cmms_wo_id: undefined,
+});
+
+/**
+ * Migration strategy for work_orders v1 → v2.
+ * Adds completed_at for the wo-lifecycle-integration.
+ */
+export const workOrderSchemaV1ToV2 = (oldDoc: Record<string, unknown>) => ({
+  ...oldDoc,
+  completed_at: undefined,
+});
 
 /**
  * Report collection schema.
@@ -190,27 +217,11 @@ export const syncErrorSchema: RxJsonSchema<ISyncError> = {
 
 // ─── Digital Signatures ─────────────────────────────────────────────────────────
 
-/**
- * Signatures collection schema.
- * Indexes: updated_at for replication, document_id, [document_type, document_id].
- */
 export const signatureSchema: RxJsonSchema<ISignature> = {
   version: 1,
   primaryKey: 'id',
   type: 'object',
-  required: [
-    'id',
-    'created_at',
-    'updated_at',
-    'is_deleted',
-    'document_type',
-    'document_id',
-    'signer_id',
-    'signer_name',
-    'signer_role',
-    'signed_at',
-    'sequence',
-  ],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'document_type', 'document_id', 'signer_id', 'signer_name', 'signer_role', 'signed_at', 'sequence'],
   properties: {
     id: { type: 'string', maxLength: 100 },
     created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
@@ -244,28 +255,15 @@ export const toasterLogSchema: RxJsonSchema<IToasterLog> = {
     shift_id: { type: 'string' },
     operator_id: { type: 'string' },
     batch_number: { type: 'string' },
-    temp_superior: { type: 'number' },
-    temp_media: { type: 'number' },
-    temp_inferior: { type: 'number' },
-    rpm: { type: 'number' },
-    vapor_pressure: { type: 'number' },
-    cacao_crudo_humidity: { type: 'number' },
-    cacao_tostado_humidity: { type: 'number' },
-    pesadas: { type: 'number' },
-    silo: { type: 'string' },
-    lotes: { type: 'string' },
-    tiempo_muerto_min: { type: 'number' },
-    tiempo_muerto_cause: { type: 'string' },
-    inv_ini_cascarilla: { type: 'number' },
-    inv_ini_polvillo: { type: 'number' },
-    inv_ini_granilla: { type: 'number' },
-    inv_ini_cacao_crudo: { type: 'number' },
-    inv_ini_azucar: { type: 'number' },
-    inv_fin_cascarilla: { type: 'number' },
-    inv_fin_polvillo: { type: 'number' },
-    inv_fin_granilla: { type: 'number' },
-    inv_fin_cacao_crudo: { type: 'number' },
-    inv_fin_azucar: { type: 'number' },
+    temp_superior: { type: 'number' }, temp_media: { type: 'number' }, temp_inferior: { type: 'number' },
+    rpm: { type: 'number' }, vapor_pressure: { type: 'number' },
+    cacao_crudo_humidity: { type: 'number' }, cacao_tostado_humidity: { type: 'number' },
+    pesadas: { type: 'number' }, silo: { type: 'string' }, lotes: { type: 'string' },
+    tiempo_muerto_min: { type: 'number' }, tiempo_muerto_cause: { type: 'string' },
+    inv_ini_cascarilla: { type: 'number' }, inv_ini_polvillo: { type: 'number' },
+    inv_ini_granilla: { type: 'number' }, inv_ini_cacao_crudo: { type: 'number' }, inv_ini_azucar: { type: 'number' },
+    inv_fin_cascarilla: { type: 'number' }, inv_fin_polvillo: { type: 'number' },
+    inv_fin_granilla: { type: 'number' }, inv_fin_cacao_crudo: { type: 'number' }, inv_fin_azucar: { type: 'number' },
   },
   indexes: ['updated_at', 'shift_id', ['shift_id', 'batch_number']],
 };
@@ -282,43 +280,18 @@ export const mixingBatchSchema: RxJsonSchema<IMixingBatch> = {
     created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
-    line_id: { type: 'string' },
-    machine_id: { type: 'string' },
-    shift_id: { type: 'string' },
-    operator_id: { type: 'string' },
-    batch_sequence: { type: 'number' },
-    mezcladora: { type: 'string' },
-    agitador: { type: 'string' },
-    azucar_kg: { type: 'number' },
-    licor_kg: { type: 'number' },
-    cocoa_kg: { type: 'number' },
-    grasa_vegetal_kg: { type: 'number' },
-    lecitina_kg: { type: 'number' },
-    reproceso_kg: { type: 'number' },
-    viscosity_cps: { type: 'number' },
-    discharge_temp: { type: 'number' },
-    mezcladas: { type: 'number' },
-    molidas: { type: 'number' },
-    reproceso_total: { type: 'number' },
-    desperdicio: { type: 'number' },
-    inv_ini_azucar: { type: 'number' },
-    inv_ini_licor: { type: 'number' },
-    inv_ini_cocoa: { type: 'number' },
-    inv_ini_grasa_vegetal: { type: 'number' },
-    inv_ini_lecitina: { type: 'number' },
-    inv_ini_reproceso: { type: 'number' },
-    inv_fin_azucar: { type: 'number' },
-    inv_fin_licor: { type: 'number' },
-    inv_fin_cocoa: { type: 'number' },
-    inv_fin_grasa_vegetal: { type: 'number' },
-    inv_fin_lecitina: { type: 'number' },
-    inv_fin_reproceso: { type: 'number' },
-    consumo_azucar: { type: 'number' },
-    consumo_licor: { type: 'number' },
-    consumo_cocoa: { type: 'number' },
-    consumo_grasa_vegetal: { type: 'number' },
-    consumo_lecitina: { type: 'number' },
-    consumo_reproceso: { type: 'number' },
+    line_id: { type: 'string' }, machine_id: { type: 'string' }, shift_id: { type: 'string' }, operator_id: { type: 'string' },
+    batch_sequence: { type: 'number' }, mezcladora: { type: 'string' }, agitador: { type: 'string' },
+    azucar_kg: { type: 'number' }, licor_kg: { type: 'number' }, cocoa_kg: { type: 'number' },
+    grasa_vegetal_kg: { type: 'number' }, lecitina_kg: { type: 'number' }, reproceso_kg: { type: 'number' },
+    viscosity_cps: { type: 'number' }, discharge_temp: { type: 'number' },
+    mezcladas: { type: 'number' }, molidas: { type: 'number' }, reproceso_total: { type: 'number' }, desperdicio: { type: 'number' },
+    inv_ini_azucar: { type: 'number' }, inv_ini_licor: { type: 'number' }, inv_ini_cocoa: { type: 'number' },
+    inv_ini_grasa_vegetal: { type: 'number' }, inv_ini_lecitina: { type: 'number' }, inv_ini_reproceso: { type: 'number' },
+    inv_fin_azucar: { type: 'number' }, inv_fin_licor: { type: 'number' }, inv_fin_cocoa: { type: 'number' },
+    inv_fin_grasa_vegetal: { type: 'number' }, inv_fin_lecitina: { type: 'number' }, inv_fin_reproceso: { type: 'number' },
+    consumo_azucar: { type: 'number' }, consumo_licor: { type: 'number' }, consumo_cocoa: { type: 'number' },
+    consumo_grasa_vegetal: { type: 'number' }, consumo_lecitina: { type: 'number' }, consumo_reproceso: { type: 'number' },
   },
   indexes: ['updated_at', 'shift_id', 'batch_sequence'],
 };
@@ -335,18 +308,11 @@ export const extractorCheckSchema: RxJsonSchema<IExtractorCheck> = {
     created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
-    line_id: { type: 'string' },
-    machine_id: { type: 'string' },
-    shift_id: { type: 'string' },
-    operator_id: { type: 'string' },
-    extractor_1_on: { type: 'boolean' },
-    extractor_2_on: { type: 'boolean' },
-    extractor_3_on: { type: 'boolean' },
-    extractor_4_on: { type: 'boolean' },
-    extractor_5_on: { type: 'boolean' },
-    extractor_6_on: { type: 'boolean' },
-    extractor_7_on: { type: 'boolean' },
-    extractor_8_on: { type: 'boolean' },
+    line_id: { type: 'string' }, machine_id: { type: 'string' }, shift_id: { type: 'string' }, operator_id: { type: 'string' },
+    extractor_1_on: { type: 'boolean' }, extractor_2_on: { type: 'boolean' },
+    extractor_3_on: { type: 'boolean' }, extractor_4_on: { type: 'boolean' },
+    extractor_5_on: { type: 'boolean' }, extractor_6_on: { type: 'boolean' },
+    extractor_7_on: { type: 'boolean' }, extractor_8_on: { type: 'boolean' },
     cedazo_tt_last_cleaning: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
   },
   indexes: ['updated_at', 'shift_id'],
@@ -364,143 +330,249 @@ export const vitaminKitSchema: RxJsonSchema<IVitaminKit> = {
     created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
-    line_id: { type: 'string' },
-    machine_id: { type: 'string' },
-    shift_id: { type: 'string' },
-    operator_id: { type: 'string' },
-    orden: { type: 'string' },
-    kit: { type: 'string' },
-    semi_terminado: { type: 'string' },
+    line_id: { type: 'string' }, machine_id: { type: 'string' }, shift_id: { type: 'string' }, operator_id: { type: 'string' },
+    orden: { type: 'string' }, kit: { type: 'string' }, semi_terminado: { type: 'string' },
     ingredients: { type: 'array' },
-    verif_produccion: { type: 'boolean' },
-    verif_calidad: { type: 'boolean' },
-    peso_bascula_kg: { type: 'number' },
-    peso_fisico_kg: { type: 'number' },
+    verif_produccion: { type: 'boolean' }, verif_calidad: { type: 'boolean' },
+    peso_bascula_kg: { type: 'number' }, peso_fisico_kg: { type: 'number' },
   },
   indexes: ['updated_at', 'shift_id'],
 };
 
-// ─── Quality Inspection ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// Phase 3: New Collections — Quality, Shifts, Operators
+// ─── Adaptados a version 1 con created_at + updated_at para trazabilidad
+// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Quality Inspection schema.
- * Indexes: shift_session_id for active shift queries, [shift_session_id, updated_at] for DESC sort.
+ * Quality Inspection schema (IT-AC-09).
+ * Modelo de disposición (liberado/rechazado/reproceso) con data_source para IoT.
+ * Indexes: machine_id, shift_type para filtrado por máquina/turno.
  */
 export const qualityInspectionSchema: RxJsonSchema<IQualityInspection> = {
   version: 1,
   primaryKey: 'id',
   type: 'object',
-  required: [
-    'id',
-    'created_at',
-    'updated_at',
-    'is_deleted',
-    'line_id',
-    'machine_id',
-    'shift_session_id',
-    'operator_id',
-    'product_id',
-    'inspection_type',
-    'value',
-    'unit',
-    'passed',
-  ],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'machine_id', 'inspector_id', 'shift_type', 'disposition', 'data_source', 'device_id'],
   properties: {
-    id: { type: 'string', maxLength: 100 },
-    created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
-    updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
-    is_deleted: { type: 'boolean' },
-    line_id: { type: 'string' },
-    machine_id: { type: 'string' },
-    shift_session_id: { type: 'string' },
-    operator_id: { type: 'string' },
-    product_id: { type: 'string' },
-    inspection_type: {
-      type: 'string',
-      enum: ['visual', 'weight', 'temp', 'metal_detector'],
-    },
-    value: { type: 'number' },
-    unit: { type: 'string' },
-    passed: { type: 'boolean' },
-    defect_id: { type: 'string' },
-    defect_label: { type: 'string' },
-    defect_severity: { type: 'string' },
-    notes: { type: 'string' },
-    standard_min: { type: 'number' },
-    standard_max: { type: 'number' },
-    standard_warning: { type: 'boolean' },
+    id:           { type: 'string', maxLength: 100 },
+    created_at:   { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    updated_at:   { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted:   { type: 'boolean' },
+    machine_id:   { type: 'string', maxLength: 100 },
+    inspector_id: { type: 'string', maxLength: 100 },
+    shift_type:   { type: 'string', enum: ['matutino', 'vespertino', 'nocturno'] },
+    disposition:  { type: 'string', enum: ['pending', 'liberado', 'rechazado', 'reproceso'] },
+    notes:        { type: 'string' },
+    data_source:  { type: 'string', enum: ['vision', 'manual', 'hybrid'] },
+    device_id:    { type: 'string' },
   },
-  indexes: ['shift_session_id', ['shift_session_id', 'updated_at']],
+  indexes: ['machine_id', 'shift_type'],
 };
 
-// ─── Defect Log ─────────────────────────────────────────────────────────────────
-
 /**
- * Defect Log schema.
- * Indexes: updated_at for replication, inspection_id for lookup.
+ * Defect Log schema — 1:N child of quality_inspections (IT-AC-09).
+ * Severidad: critical (inocuidad), major, minor. defect_type en texto libre.
  */
 export const defectLogSchema: RxJsonSchema<IDefectLog> = {
   version: 1,
   primaryKey: 'id',
   type: 'object',
-  required: [
-    'id',
-    'created_at',
-    'updated_at',
-    'is_deleted',
-    'inspection_id',
-    'defect_id',
-    'defect_label',
-    'defect_severity',
-    'quantity',
-  ],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'inspection_id', 'severity', 'defect_type', 'defect_count', 'device_id'],
   properties: {
-    id: { type: 'string', maxLength: 100 },
-    created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
-    updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
-    is_deleted: { type: 'boolean' },
-    inspection_id: { type: 'string' },
-    defect_id: { type: 'string' },
-    defect_label: { type: 'string' },
-    defect_severity: { type: 'string', enum: ['critical', 'major', 'minor'] },
-    quantity: { type: 'number' },
-    notes: { type: 'string' },
+    id:            { type: 'string', maxLength: 100 },
+    created_at:    { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    updated_at:    { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted:    { type: 'boolean' },
+    inspection_id: { type: 'string', maxLength: 100 },
+    severity:      { type: 'string', enum: ['critical', 'major', 'minor'] },
+    defect_type:   { type: 'string' },
+    defect_count:  { type: 'number' },
+    device_id:     { type: 'string' },
   },
-  indexes: ['updated_at', 'inspection_id'],
+  indexes: ['inspection_id'],
 };
 
-// ─── Weight Log ─────────────────────────────────────────────────────────────────
-
 /**
- * Weight Log schema.
- * Indexes: updated_at for replication, inspection_id for lookup.
+ * Weight Log schema — 1:N child of quality_inspections (IT-AC-09).
+ * Validado contra product_weight_standards.
  */
 export const weightLogSchema: RxJsonSchema<IWeightLog> = {
   version: 1,
   primaryKey: 'id',
   type: 'object',
-  required: [
-    'id',
-    'created_at',
-    'updated_at',
-    'is_deleted',
-    'inspection_id',
-    'product_id',
-    'weight_kg',
-    'passed',
-  ],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'inspection_id', 'measured_weight', 'device_id'],
   properties: {
-    id: { type: 'string', maxLength: 100 },
+    id:             { type: 'string', maxLength: 100 },
+    created_at:     { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    updated_at:     { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted:     { type: 'boolean' },
+    inspection_id:  { type: 'string', maxLength: 100 },
+    measured_weight:{ type: 'number' },
+    device_id:      { type: 'string' },
+  },
+  indexes: ['inspection_id'],
+};
+
+/**
+ * Shift Session schema — ciclo de vida del turno de producción.
+ * shift_type (matutino/vespertino/nocturno), started_at/ended_at, planned_boxes, product_code.
+ */
+export const shiftSessionSchema: RxJsonSchema<IShiftSession> = {
+  version: 1,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'machine_id', 'operator_id', 'shift_type', 'status', 'started_at', 'device_id'],
+  properties: {
+    id:           { type: 'string', maxLength: 100 },
+    created_at:   { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    updated_at:   { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted:   { type: 'boolean' },
+    machine_id:   { type: 'string', maxLength: 100 },
+    operator_id:  { type: 'string', maxLength: 100 },
+    shift_type:   { type: 'string', enum: ['matutino', 'vespertino', 'nocturno'] },
+    status:       { type: 'string', enum: ['active', 'closed'] },
+    started_at:   { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    ended_at:     { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    planned_boxes:{ type: 'number' },
+    product_code: { type: 'string' },
+    device_id:    { type: 'string' },
+  },
+  indexes: ['started_at', 'status'],
+};
+
+/**
+ * Operator schema — referencia de operadores (Epicor payroll code = id).
+ */
+export const operatorSchema: RxJsonSchema<IOperator> = {
+  version: 1,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'full_name', 'is_active', 'device_id'],
+  properties: {
+    id:         { type: 'string', maxLength: 100 },
     created_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     updated_at: { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
     is_deleted: { type: 'boolean' },
-    inspection_id: { type: 'string' },
-    product_id: { type: 'string' },
-    weight_kg: { type: 'number' },
-    standard_min_kg: { type: 'number' },
-    standard_max_kg: { type: 'number' },
-    passed: { type: 'boolean' },
-    warning: { type: 'boolean' },
+    full_name:  { type: 'string' },
+    is_active:  { type: 'boolean' },
+    device_id:  { type: 'string' },
   },
-  indexes: ['updated_at', 'inspection_id'],
+  indexes: [],
+};
+
+/**
+ * Product Weight Standard schema (IT-AC-09 — tabla de pesos máximos y mínimos).
+ * Primary key: sku (Epicor natural key). Pull-only desde Hasura.
+ */
+export const productWeightStandardSchema: RxJsonSchema<IProductWeightStandard> = {
+  version: 1,
+  primaryKey: 'sku',
+  type: 'object',
+  required: ['sku', 'created_at', 'updated_at', 'is_deleted', 'name', 'lower_limit', 'upper_limit', 'requires_tare', 'device_id'],
+  properties: {
+    sku:          { type: 'string', maxLength: 100 },
+    created_at:   { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    updated_at:   { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted:   { type: 'boolean' },
+    name:         { type: 'string' },
+    lower_limit:  { type: 'number' },
+    upper_limit:  { type: 'number' },
+    requires_tare:{ type: 'boolean' },
+    device_id:    { type: 'string' },
+  },
+  indexes: ['sku'],
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Downtime Conciliation — bridge Production ↔ Maintenance
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Downtime Conciliation schema.
+ * Vincula eventos de paro (oee_events) con diagnóstico de supervisor y trigger de OT.
+ */
+export const downtimeConciliationSchema: RxJsonSchema<IDowntimeConciliation> = {
+  version: 1,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'oee_event_id', 'machine_id', 'reason_code', 'status', 'conciliated', 'ot_sent', 'is_mtto', 'device_id'],
+  properties: {
+    id:                { type: 'string', maxLength: 100 },
+    created_at:        { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    updated_at:        { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted:        { type: 'boolean' },
+    oee_event_id:      { type: 'string', maxLength: 100 },
+    shift_session_id:  { type: 'string', maxLength: 100 },
+    machine_id:        { type: 'string', maxLength: 100 },
+    reason_code:       { type: 'string' },
+    duration_min:      { type: 'number' },
+    diagnosed_code:    { type: 'string' },
+    diagnosed_by:      { type: 'string' },
+    diagnosed_at:      { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    conciliated:       { type: 'boolean' },
+    conciliated_code:  { type: 'string' },
+    conciliated_macro: { type: 'string' },
+    conciliated_by_prod: { type: 'string' },
+    conciliated_by_mtto: { type: 'string' },
+    conciliated_at:    { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    conciliation_notes:{ type: 'string' },
+    status:            { type: 'string', enum: ['pending', 'reconciled', 'disputed'] },
+    ot_sent:           { type: 'boolean' },
+    ot_response:       { type: 'string' },
+    ot_sent_at:        { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_mtto:           { type: 'boolean' },
+    device_id:         { type: 'string' },
+  },
+  indexes: ['status', 'machine_id', 'shift_session_id', 'updated_at'],
+};
+
+/**
+ * Plant Config schema — parámetros clave-valor de planta.
+ * Primer key: micro_stop_threshold_min.
+ */
+export const plantConfigSchema: RxJsonSchema<IPlantConfig> = {
+  version: 1,
+  primaryKey: 'key',
+  type: 'object',
+  required: ['key', 'created_at', 'updated_at', 'is_deleted', 'value', 'device_id'],
+  properties: {
+    key:          { type: 'string', maxLength: 100 },
+    created_at:   { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    updated_at:   { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted:   { type: 'boolean' },
+    value:        { type: 'string' },
+    description:  { type: 'string' },
+    device_id:    { type: 'string' },
+  },
+  indexes: ['updated_at'],
+};
+
+/**
+ * Shift Summary schema — agregados cacheados por turno.
+ * No autoritativo — siempre derivable de oee_events.
+ */
+export const shiftSummarySchema: RxJsonSchema<IShiftSummary> = {
+  version: 1,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'shift_session_id', 'total_planned_min', 'total_downtime_min', 'total_micro_stop_min', 'total_mtto_min', 'total_prod_min', 'total_boxes', 'total_rejects', 'has_pending_conciliation', 'device_id'],
+  properties: {
+    id:                      { type: 'string', maxLength: 100 },
+    created_at:              { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    updated_at:              { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted:              { type: 'boolean' },
+    shift_session_id:        { type: 'string', maxLength: 100 },
+    total_planned_min:       { type: 'number' },
+    total_downtime_min:      { type: 'number' },
+    total_micro_stop_min:    { type: 'number' },
+    total_mtto_min:          { type: 'number' },
+    total_prod_min:          { type: 'number' },
+    total_boxes:             { type: 'number' },
+    total_rejects:           { type: 'number' },
+    performance_pct:         { type: 'number' },
+    has_pending_conciliation:{ type: 'boolean' },
+    device_id:               { type: 'string' },
+  },
+  indexes: ['shift_session_id', 'updated_at'],
 };

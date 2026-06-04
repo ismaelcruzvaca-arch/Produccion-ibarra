@@ -1,0 +1,185 @@
+{
+  "type": "bulk",
+  "args": [
+    {
+      "type": "pg_track_table",
+      "args": {
+        "source": "default",
+        "table": {
+          "schema": "public",
+          "name": "view_oee_hr_x_hr"
+        }
+      }
+    },
+    {
+      "type": "pg_track_table",
+      "args": {
+        "source": "default",
+        "table": {
+          "schema": "public",
+          "name": "view_quality_defects_by_shift"
+        }
+      }
+    },
+    {
+      "type": "pg_track_table",
+      "args": {
+        "source": "default",
+        "table": {
+          "schema": "public",
+          "name": "view_mezclado_mesa"
+        }
+      }
+    },
+    {
+      "type": "pg_track_table",
+      "args": {
+        "source": "default",
+        "table": {
+          "schema": "public",
+          "name": "view_tostadores"
+        }
+      }
+    },
+    {
+      "type": "pg_track_table",
+      "args": {
+        "source": "default",
+        "table": {
+          "schema": "public",
+          "name": "view_mezclado_vitaminas"
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "view_oee_hr_x_hr" },
+        "role": "supervisor",
+        "permission": {
+          "columns": "*",
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "view_oee_hr_x_hr" },
+        "role": "admin",
+        "permission": {
+          "columns": "*",
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "view_quality_defects_by_shift" },
+        "role": "supervisor",
+        "permission": {
+          "columns": "*",
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "view_quality_defects_by_shift" },
+        "role": "admin",
+        "permission": {
+          "columns": "*",
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "view_mezclado_mesa" },
+        "role": "supervisor",
+        "permission": {
+          "columns": "*",
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "view_mezclado_mesa" },
+        "role": "admin",
+        "permission": {
+          "columns": "*",
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "view_tostadores" },
+        "role": "supervisor",
+        "permission": {
+          "columns": "*",
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "view_tostadores" },
+        "role": "admin",
+        "permission": {
+          "columns": "*",
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "view_mezclado_vitaminas" },
+        "role": "supervisor",
+        "permission": {
+          "columns": "*",
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "view_mezclado_vitaminas" },
+        "role": "admin",
+        "permission": {
+          "columns": "*",
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    }
+  ]
+}

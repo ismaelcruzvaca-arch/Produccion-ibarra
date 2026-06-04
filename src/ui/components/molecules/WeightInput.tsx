@@ -1,125 +1,108 @@
 /**
- * WeightInput — weight measurement input with validation against product_weight_standards.
+ * WeightInput — SmartNumpad wrapper with weight validation against product standards.
  *
- * Spec compliance:
- * - QC-3: MUST validate weight against cached product_weight_standards
- * - QC-8: SHALL pass with warning when standard missing
+ * Pattern: Atomic Design — Molecule
+ * Why:
+ * - Post-reconciliation: uses findBySku (natural key) instead of findByProduct.
+ * - Shows weight standard range and validation.
+ *
+ * Touch targets ≥56 dp for industrial tablet with gloves.
  */
-import React, { useState, useCallback } from 'react';
+
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, TextInput, HelperText, Chip } from 'react-native-paper';
+import { Text } from 'react-native-paper';
+import { colors, spacing, typography, borderRadius } from '../../theme/tokens';
+import { SmartNumpad } from '../atoms/SmartNumpad';
+import { useProductWeightStandardsRepository } from '../../../repositories/useProductWeightStandardsRepository';
 
 interface WeightInputProps {
-  value: number | null;
-  onChangeValue: (value: number, standardMin?: number, standardMax?: number) => void;
-  standardMin?: number;
-  standardMax?: number;
-  disabled?: boolean;
+  visible: boolean;
+  sku: string;
+  onDismiss: () => void;
+  onValidated: (result: { value: number; valid: boolean; message?: string }) => void;
+  testID?: string;
 }
 
 export function WeightInput({
-  value,
-  onChangeValue,
-  standardMin,
-  standardMax,
-  disabled = false,
+  visible,
+  sku,
+  onDismiss,
+  onValidated,
+  testID,
 }: WeightInputProps) {
-  const [inputText, setInputText] = useState(value !== null ? String(value) : '');
-  const [hasInteracted, setHasInteracted] = useState(false);
+  const standardsRepo = useProductWeightStandardsRepository();
+  const [standard, setStandard] = useState<{
+    lower_limit: number;
+    upper_limit: number;
+  } | null>(null);
 
-  const hasStandard =
-    standardMin !== undefined && standardMax !== undefined;
-  const numericValue = parseFloat(inputText);
+  // Load weight standard when modal opens
+  useEffect(() => {
+    if (visible && sku) {
+      standardsRepo.findBySku(sku).then((s) => {
+        if (s) {
+          setStandard({ lower_limit: s.lower_limit, upper_limit: s.upper_limit });
+        } else {
+          setStandard(null);
+        }
+      });
+    }
+  }, [visible, sku, standardsRepo]);
 
-  const isWithinRange =
-    hasStandard && !isNaN(numericValue)
-      ? numericValue >= standardMin! && numericValue <= standardMax!
-      : true;
-
-  const showWarning = hasInteracted && hasStandard && !isNaN(numericValue) && !isWithinRange;
-
-  const handleChangeText = useCallback(
-    (text: string) => {
-      // Allow only numbers and decimal point
-      const cleaned = text.replace(/[^0-9.]/g, '');
-      setInputText(cleaned);
-      setHasInteracted(true);
-
-      const parsed = parseFloat(cleaned);
-      if (!isNaN(parsed)) {
-        onChangeValue(parsed, standardMin, standardMax);
-      }
-    },
-    [onChangeValue, standardMin, standardMax]
-  );
+  const handleConfirm = async (value: number) => {
+    const result = await standardsRepo.validateWeight(sku, value);
+    onValidated({ value, ...result });
+  };
 
   return (
-    <View style={styles.container}>
-      <Text variant="titleMedium" style={styles.title}>
-        Peso (kg)
-      </Text>
-
-      {hasStandard && (
-        <View style={styles.standardRow}>
-          <Chip icon="information" style={styles.chip}>
-            Estándar: {standardMin} – {standardMax} kg
-          </Chip>
+    <View testID={testID ?? 'weight-input'}>
+      {/* Standard range header — shown when available */}
+      {visible && standard && (
+        <View style={styles.header}>
+          <Text style={styles.headerText}>
+            Rango válido: {standard.lower_limit}g – {standard.upper_limit}g
+          </Text>
         </View>
       )}
 
-      {!hasStandard && (
-        <View style={styles.standardRow}>
-          <Chip icon="alert" style={styles.warningChip}>
-            Sin estándar configurado — pase con advertencia
-          </Chip>
+      {visible && !standard && (
+        <View style={styles.header}>
+          <Text style={styles.headerWarning}>
+            Sin estándar de peso configurado
+          </Text>
         </View>
       )}
 
-      <TextInput
-        mode="outlined"
-        value={inputText}
-        onChangeText={handleChangeText}
-        keyboardType="decimal-pad"
-        disabled={disabled}
-        placeholder="0.00"
-        error={showWarning}
-        style={styles.input}
+      <SmartNumpad
+        visible={visible}
+        title="Registrar Peso"
+        onDismiss={onDismiss}
+        onConfirm={handleConfirm}
+        min={1}
+        max={99999}
+        precision={0}
+        unit=" g"
+        label="peso"
       />
-
-      {showWarning && (
-        <HelperText type="error" visible={showWarning}>
-          El peso está fuera del rango estándar ({standardMin} – {standardMax} kg)
-        </HelperText>
-      )}
-
-      {!hasStandard && hasInteracted && (
-        <HelperText type="info" visible={true}>
-          Peso registrado sin verificación de estándar
-        </HelperText>
-      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginVertical: 8,
+  header: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+    alignItems: 'center',
   },
-  title: {
-    marginBottom: 8,
-    fontWeight: '600',
+  headerText: {
+    fontSize: typography.sizes.bodyMedium,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
   },
-  standardRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  chip: {
-    backgroundColor: '#E3F2FD',
-  },
-  warningChip: {
-    backgroundColor: '#FFF3E0',
-  },
-  input: {
-    backgroundColor: '#FFFFFF',
+  headerWarning: {
+    fontSize: typography.sizes.bodySmall,
+    color: colors.caution,
+    fontStyle: 'italic',
   },
 });
