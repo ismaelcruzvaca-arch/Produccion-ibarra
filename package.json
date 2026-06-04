@@ -15,7 +15,9 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:mutation": "stryker run",
+    "test:ci": "jest --coverage --maxWorkers=2"
   },
   "dependencies": {
     "@expo/metro-runtime": "~4.0.1",
@@ -44,6 +46,8 @@
   "devDependencies": {
     "@babel/core": "^7.25.0",
     "@playwright/test": "^1.59.1",
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/jest-runner": "^9.6.1",
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^12.4.0",
     "@types/jest": "^29.5.0",
