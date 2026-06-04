@@ -905,15 +905,28 @@ export function fromGraphQLVitaminKit(gql: GraphQLVitaminKit): IVitaminKit {
 export interface GraphQLWeightLog {
   id: string;
   inspection_id: string;
-  product_code?: string;
-  target_weight: number; // numeric(10,2)
-  actual_weight: number; // numeric(10,2)
-  tolerance?: number; // numeric(10,2)
-  unit?: string;
-  result: string; // 'pass' | 'fail'
-  registered_at: string; // BIGINT as string
-  updated_at: string; // BIGINT as string
-  is_deleted: boolean;
+  measured_weight: number;
+  updated_at: string; // TIMESTAMPTZ → ISO 8601
+}
+
+export function toGraphQLWeightLog(wl: IWeightLog): Record<string, unknown> {
+  return {
+    id: wl.id,
+    inspection_id: wl.inspection_id,
+    measured_weight: wl.measured_weight,
+    updated_at: new Date(wl.updated_at).toISOString(),
+  };
+}
+
+export function fromGraphQLWeightLog(gql: GraphQLWeightLog): IWeightLog {
+  return {
+    id: gql.id,
+    inspection_id: gql.inspection_id,
+    measured_weight: gql.measured_weight,
+    updated_at: new Date(gql.updated_at).getTime(),
+    device_id: '',
+    is_deleted: false,
+  };
 }
 
 /**

@@ -587,67 +587,53 @@ const mockRxDoc = {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('DefectLog DTO', () => {
-  const EPOCH_MS = 1717086400000;
+  const ISO_TS = '2023-11-14T22:53:20.000Z';
+  const EPOCH_MS = 1700000000000;
 
   const mockGraphQL: GraphQLDefectLog = {
     id: 'dl-uuid-1',
     inspection_id: 'qi-uuid-1',
-    defect_type: 'RAYA',
-    defect_code: 'R-001',
-    quantity: 5,
-    severity: 'high',
-    notes: 'Raya en superficie',
-    registered_at: EPOCH_MS.toString(),
-    updated_at: EPOCH_MS.toString(),
-    is_deleted: false,
+    severity: 'critical',
+    defect_type: 'Materia extraña',
+    defect_count: 3,
+    updated_at: ISO_TS,
   };
 
   const mockRxDoc = {
     id: 'dl-uuid-1',
     inspection_id: 'qi-uuid-1',
-    defect_id: 'RAYA',
-    defect_label: 'R-001',
-    defect_severity: 'high',
-    quantity: 5,
-    notes: 'Raya en superficie',
-    created_at: EPOCH_MS,
+    severity: 'critical' as const,
+    defect_type: 'Materia extraña',
+    defect_count: 3,
     updated_at: EPOCH_MS,
+    device_id: '',
     is_deleted: false,
   } as unknown as IDefectLog;
 
-  it('toGraphQLDefectLog maps asymmetric fields: defect_id→defect_type, defect_label→defect_code', () => {
+  it('toGraphQLDefectLog maps fields correctly', () => {
     const payload = toGraphQLDefectLog(mockRxDoc);
 
-    expect(payload.defect_type).toBe('RAYA');
-    expect(payload.defect_code).toBe('R-001');
-    expect(payload.severity).toBe('high');
-    expect(payload.quantity).toBe(5);
-    expect(payload.registered_at).toBe(EPOCH_MS.toString());
-    expect(payload.is_deleted).toBe(false);
+    expect(payload.severity).toBe('critical');
+    expect(payload.defect_type).toBe('Materia extraña');
+    expect(payload.defect_count).toBe(3);
+    // RxDB-only fields should NOT be in GraphQL payload
+    expect(payload.device_id).toBeUndefined();
+    expect(payload.is_deleted).toBeUndefined();
   });
 
-  it('fromGraphQLDefectLog maps asymmetric fields: defect_type→defect_id, defect_code→defect_label', () => {
+  it('fromGraphQLDefectLog maps fields correctly', () => {
     const result = fromGraphQLDefectLog(mockGraphQL);
 
-    expect(result.defect_id).toBe('RAYA');
-    expect(result.defect_label).toBe('R-001');
-    expect(result.defect_severity).toBe('high');
-    expect(result.quantity).toBe(5);
+    expect(result.severity).toBe('critical');
+    expect(result.defect_type).toBe('Materia extraña');
+    expect(result.defect_count).toBe(3);
+    expect(result.id).toBe('dl-uuid-1');
+    // RxDB-only fields get defaults
+    expect(result.device_id).toBe('');
     expect(result.is_deleted).toBe(false);
   });
 
-  it('fromGraphQLDefectLog applies ?? "" defaults for missing fields', () => {
-    const gql: GraphQLDefectLog = {
-      ...mockGraphQL,
-      defect_type: undefined,
-      defect_code: undefined,
-    };
-
-    const result = fromGraphQLDefectLog(gql);
-
-    expect(result.defect_id).toBe('');
-    expect(result.defect_label).toBe('');
-  });
+  // ─── Round-trip ──────────────────────────────────────────────────────────────
 
   it('toGraphQL → fromGraphQL roundtrip preserves semantic fields', () => {
     const original = { ...mockRxDoc };
@@ -655,52 +641,50 @@ describe('DefectLog DTO', () => {
     const gql = payload as unknown as GraphQLDefectLog;
     const result = fromGraphQLDefectLog(gql);
 
-    expect(result.id).toBe(original.id);
-    expect(result.inspection_id).toBe(original.inspection_id);
-    expect(result.defect_severity).toBe(original.defect_severity);
-    expect(result.quantity).toBe(original.quantity);
-    expect(result.is_deleted).toBe(original.is_deleted);
+    expect(result.severity).toBe(original.severity);
+    expect(result.defect_type).toBe(original.defect_type);
+    expect(result.defect_count).toBe(original.defect_count);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 8. WEIGHT LOG — asymmetric fields, boolean→result
+// 8. WEIGHT LOG
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('WeightLog DTO', () => {
-  const EPOCH_MS = 1717086400000;
+  const ISO_TS = '2023-11-14T22:53:20.000Z';
+  const EPOCH_MS = 1700000000000;
 
   const mockGraphQL: GraphQLWeightLog = {
     id: 'wl-uuid-1',
     inspection_id: 'qi-uuid-1',
-    product_code: 'PROD-001',
-    target_weight: 100,
-    actual_weight: 99.5,
-    tolerance: 2,
-    unit: 'g',
-    result: 'pass',
-    registered_at: EPOCH_MS.toString(),
-    updated_at: EPOCH_MS.toString(),
-    is_deleted: false,
+    measured_weight: 99.5,
+    updated_at: ISO_TS,
   };
 
   const mockRxDoc = {
     id: 'wl-uuid-1',
     inspection_id: 'qi-uuid-1',
-    product_id: 'PROD-001',
-    weight_kg: 99.5,
-    standard_min_kg: 100,
-    passed: true,
-    created_at: EPOCH_MS,
+    measured_weight: 99.5,
     updated_at: EPOCH_MS,
+    device_id: '',
     is_deleted: false,
   } as unknown as IWeightLog;
 
-  it('toGraphQLWeightLog maps asymmetric fields and boolean→result', () => {
+  it('toGraphQLWeightLog maps fields correctly', () => {
     const payload = toGraphQLWeightLog(mockRxDoc);
 
-    expect(payload.product_code).toBe('PROD-001');  // product_id → product_code
-    expect(payload.actual_weight).toBe(99.5);         // weight_kg → actual_weight
+    expect(payload.measured_weight).toBe(99.5);
+    expect(payload.device_id).toBeUndefined();
+    expect(payload.is_deleted).toBeUndefined();
+  });
+
+  it('fromGraphQLWeightLog maps fields correctly', () => {
+    const result = fromGraphQLWeightLog(mockGraphQL);
+
+    expect(result.measured_weight).toBe(99.5);
+    expect(result.device_id).toBe('');  // default
+    expect(result.is_deleted).toBe(false);  // default
     expect(payload.target_weight).toBe(100);           // standard_min_kg → target_weight
     expect(payload.result).toBe('pass');               // passed: true → result: 'pass'
   });
@@ -739,12 +723,6 @@ describe('WeightLog DTO', () => {
     expect(result.passed).toBe(false);
   });
 
-  it('fromGraphQLWeightLog applies ?? "" for product_code', () => {
-    const gql: GraphQLWeightLog = { ...mockGraphQL, product_code: undefined };
-    const result = fromGraphQLWeightLog(gql);
-
-    expect(result.product_id).toBe('');
-  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
