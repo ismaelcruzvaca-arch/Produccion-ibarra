@@ -19,7 +19,13 @@
  * by network-level naming conventions.
  */
 
-import type { IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent, ISignature, IQualityInspection, IDefectLog, IWeightLog, IToasterLog, IMixingBatch, IExtractorCheck, IVitaminKit } from '../core/types';
+import type {
+  IAsset, IAssetType, IWorkOrder, IReport, IOeeEvent,
+  ISignature, IToasterLog, IMixingBatch, IExtractorCheck, IVitaminKit,
+  IQualityInspection, IDefectLog, IWeightLog,
+  IShiftSession, IOperator, IProductWeightStandard,
+  IDowntimeConciliation, IPlantConfig, IShiftSummary,
+} from '../core/types';
 
 // ─── Asset Mappers ─────────────────────────────────────────────────────────────
 
@@ -153,6 +159,15 @@ export interface GraphQLWorkOrder {
   completed_date?: string;
   client_updated_at: string;
   deleted: boolean;
+
+  // wo-lifecycle-outbox: campos desde cmms-ibero
+  lifecycle_phase?: string;
+  symptom_note?: string;
+  cause_note?: string;
+  action_note?: string;
+  actual_start_at?: string;    // TIMESTAMPTZ → ISO 8601 string from Hasura
+  completed_at?: string;       // TIMESTAMPTZ → ISO 8601 string from Hasura
+  cmms_wo_id?: string;
 }
 
 /**
@@ -170,6 +185,14 @@ export function toGraphQLWorkOrder(wo: IWorkOrder): Record<string, unknown> {
     completed_date: wo.completed_date?.toString(),
     client_updated_at: wo.updated_at.toString(),
     deleted: wo.is_deleted,
+
+    lifecycle_phase: wo.lifecycle_phase,
+    symptom_note: wo.symptom_note,
+    cause_note: wo.cause_note,
+    action_note: wo.action_note,
+    actual_start_at: wo.actual_start_at ? new Date(wo.actual_start_at).toISOString() : undefined,
+    completed_at: wo.completed_at ? new Date(wo.completed_at).toISOString() : undefined,
+    cmms_wo_id: wo.cmms_wo_id,
   };
 }
 
@@ -190,6 +213,14 @@ export function fromGraphQLWorkOrder(gql: GraphQLWorkOrder): IWorkOrder {
     created_at: updatedAt,
     updated_at: updatedAt,
     is_deleted: gql.deleted,
+
+    lifecycle_phase: gql.lifecycle_phase,
+    symptom_note: gql.symptom_note,
+    cause_note: gql.cause_note,
+    action_note: gql.action_note,
+    actual_start_at: gql.actual_start_at ? new Date(gql.actual_start_at).getTime() : undefined,
+    completed_at: gql.completed_at ? new Date(gql.completed_at).getTime() : undefined,
+    cmms_wo_id: gql.cmms_wo_id,
   };
 }
 

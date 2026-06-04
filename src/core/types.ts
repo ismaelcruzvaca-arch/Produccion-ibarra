@@ -104,6 +104,15 @@ export interface IWorkOrder extends IBaseDocument {
   assigned_to?: string;
   scheduled_date?: number; // epoch ms
   completed_date?: number; // epoch ms
+
+  // wo-lifecycle-outbox: campos recibidos desde cmms-ibero
+  lifecycle_phase?: string;       // WAPPR | APPROVED | INPRG | COMP | CLOSED | CANCELLED | REJECTED
+  symptom_note?: string;          // síntoma reportado por el mecánico
+  cause_note?: string;            // causa probable
+  action_note?: string;           // acción realizada
+  actual_start_at?: number;       // epoch ms — cuándo arrancó la intervención
+  completed_at?: number;           // epoch ms — cuándo finalizó la intervención
+  cmms_wo_id?: string;            // ID de la WO en cmms-ibero (para mapping cross-project)
 }
 
 export type RxWorkOrder = RxDocument<IWorkOrder>;
@@ -306,30 +315,23 @@ export interface IToasterLog {
   shift_id: string;
   operator_id: string;
   batch_number: string;
-  // Temperature readings
   temp_superior: number;
   temp_media: number;
   temp_inferior: number;
-  // Process parameters
   rpm: number;
   vapor_pressure: number;
-  // Humidity
   cacao_crudo_humidity: number;
   cacao_tostado_humidity: number;
-  // Production tracking
   pesadas: number;
   silo: string;
   lotes: string;
-  // Dead time
   tiempo_muerto_min: number;
   tiempo_muerto_cause: string;
-  // Inventories — initial
   inv_ini_cascarilla: number;
   inv_ini_polvillo: number;
   inv_ini_granilla: number;
   inv_ini_cacao_crudo: number;
   inv_ini_azucar: number;
-  // Inventories — final
   inv_fin_cascarilla: number;
   inv_fin_polvillo: number;
   inv_fin_granilla: number;
@@ -362,22 +364,18 @@ export interface IMixingBatch {
   batch_sequence: number;
   mezcladora: string;
   agitador: string;
-  // Ingredients per batch
   azucar_kg: number;
   licor_kg: number;
   cocoa_kg: number;
   grasa_vegetal_kg: number;
   lecitina_kg: number;
   reproceso_kg: number;
-  // Process
   viscosity_cps: number;
   discharge_temp: number;
-  // Calculated totals (auto-sum per spec MF-5)
   mezcladas: number;
   molidas: number;
   reproceso_total: number;
   desperdicio: number;
-  // Inventories
   inv_ini_azucar: number;
   inv_ini_licor: number;
   inv_ini_cocoa: number;
@@ -418,7 +416,6 @@ export interface IExtractorCheck {
   machine_id: string;
   shift_id: string;
   operator_id: string;
-  // 8 extractors as on/off toggles
   extractor_1_on: boolean;
   extractor_2_on: boolean;
   extractor_3_on: boolean;
@@ -427,7 +424,6 @@ export interface IExtractorCheck {
   extractor_6_on: boolean;
   extractor_7_on: boolean;
   extractor_8_on: boolean;
-  // Cleaning
   cedazo_tt_last_cleaning: number; // epoch ms
 }
 
@@ -453,68 +449,55 @@ export interface IVitaminKit {
   machine_id: string;
   shift_id: string;
   operator_id: string;
-  // Product info
   orden: string;
   kit: string;
   semi_terminado: string;
-  // Ingredients with lotes (flexible payload)
   ingredients: Array<{
     name: string;
     lote: string;
     quantity_kg: number;
   }>;
-  // Verifications
-  verif_produccion: boolean; // Verified by Production
-  verif_calidad: boolean;    // Verified by Quality
-  // Weight
+  verif_produccion: boolean;
+  verif_calidad: boolean;
   peso_bascula_kg: number;
   peso_fisico_kg: number;
 }
 
 export type RxVitaminKit = RxDocument<IVitaminKit>;
 
-// ─── Quality Inspection ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// Phase 3: New Collections — Quality, Shifts, Operators
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type DispositionType = 'liberado' | 'rechazado' | 'reproceso';
+export type ShiftType = 'matutino' | 'vespertino' | 'nocturno';
+export type DataSourceType = 'vision' | 'manual' | 'hybrid';
+
+// ─── Quality Inspections ─────────────────────────────────────────────────────────
 
 /**
- * Quality Inspection — captures quality control data at production stations.
+ * Quality Inspection — atomic QC check event aligned with IT-AC-09.
  *
- * Fields per spec QC-1 through QC-12:
- * - product_id: the product being inspected
- * - inspection_type: visual, weight, temp, metal_detector (QC-6)
- * - value: the measured value
- * - unit: measurement unit
- * - passed: pass/fail status (QC-10)
- * - defect_id: optional reference to quality_defects catalog (QC-9)
- * - defect_label: denormalized defect label for offline display
- * - defect_severity: denormalized defect severity level
- * - notes: optional inspector notes
- * - line_id, machine_id, shift_session_id: context (QC-4 — uses active shift_session.id)
- * - operator_id: who performed the inspection
- * - standard_min/standard_max: cached weight standards from product_weight_standards (QC-3)
- * - standard_warning: true when standard was missing (QC-8)
+ * Modelo basado en disposición (liberado/rechazado/reproceso) según
+ * el formato F-AC-46 (Reporte de Desviación). Los defectos y pesos
+ * se registran como hijos 1:N en defect_logs y weight_logs.
  *
+ * - data_source: vision (cámaras GEMA-Vision), manual (analista), hybrid
+ * - device_id: equipo de inspección para trazabilidad IoT
+ * - created_at/updated_at: trazabilidad completa
  */
 export interface IQualityInspection {
   id: string;
-  created_at: number;   // epoch ms
-  updated_at: number;   // epoch ms (replication checkpoint)
+  created_at: number;   // epoch ms — cuándo se creó la inspección
+  updated_at: number;   // epoch ms — última modificación
   is_deleted: boolean;
-  line_id: string;
   machine_id: string;
-  shift_session_id: string;  // active shift_session.id, NOT catalog shift
-  operator_id: string;
-  product_id: string;
-  inspection_type: 'visual' | 'weight' | 'temp' | 'metal_detector';
-  value: number;
-  unit: string;
-  passed: boolean;
-  defect_id?: string;
-  defect_label?: string;
-  defect_severity?: string;
+  inspector_id: string;
+  shift_type: ShiftType;
+  disposition: DispositionType;
   notes?: string;
-  standard_min?: number;
-  standard_max?: number;
-  standard_warning?: boolean;
+  data_source: DataSourceType;
+  device_id: string;
 }
 
 export type RxQualityInspection = RxDocument<IQualityInspection>;
@@ -522,15 +505,9 @@ export type RxQualityInspection = RxDocument<IQualityInspection>;
 // ─── Defect Log ─────────────────────────────────────────────────────────────────
 
 /**
- * Defect Log — records a specific defect found during quality inspection.
- *
- * Fields:
- * - inspection_id: reference to the quality inspection
- * - defect_id: reference to quality_defects catalog
- * - defect_label: denormalized defect label
- * - defect_severity: critical, major, minor
- * - quantity: number of units affected
- * - notes: additional context
+ * Defect Log — individual defect entry linked to a quality inspection (IT-AC-09).
+ * Severity classification: critical (inocuidad), major, minor.
+ * defect_type is free-text (no catalog dependency).
  */
 export interface IDefectLog {
   id: string;
@@ -538,11 +515,10 @@ export interface IDefectLog {
   updated_at: number;   // epoch ms (replication checkpoint)
   is_deleted: boolean;
   inspection_id: string;
-  defect_id: string;
-  defect_label: string;
-  defect_severity: 'critical' | 'major' | 'minor';
-  quantity: number;
-  notes?: string;
+  severity: 'critical' | 'major' | 'minor';
+  defect_type: string;
+  defect_count: number;
+  device_id: string;
 }
 
 export type RxDefectLog = RxDocument<IDefectLog>;
@@ -550,16 +526,8 @@ export type RxDefectLog = RxDocument<IDefectLog>;
 // ─── Weight Log ─────────────────────────────────────────────────────────────────
 
 /**
- * Weight Log — captures weight measurements during quality inspection.
- *
- * Fields:
- * - inspection_id: reference to the quality inspection
- * - product_id: the product being weighed
- * - weight_kg: measured weight
- * - standard_min_kg: minimum weight from product_weight_standards
- * - standard_max_kg: maximum weight from product_weight_standards
- * - passed: whether weight is within standards
- * - warning: true if standard was missing (QC-8)
+ * Weight Log — individual weight measurement linked to a quality inspection.
+ * Validated against product_weight_standards (IT-AC-09, tabla de pesos).
  */
 export interface IWeightLog {
   id: string;
@@ -567,12 +535,165 @@ export interface IWeightLog {
   updated_at: number;   // epoch ms (replication checkpoint)
   is_deleted: boolean;
   inspection_id: string;
-  product_id: string;
-  weight_kg: number;
-  standard_min_kg?: number;
-  standard_max_kg?: number;
-  passed: boolean;
-  warning?: boolean;
+  measured_weight: number;
+  device_id: string;
 }
 
 export type RxWeightLog = RxDocument<IWeightLog>;
+
+// ─── Shift Sessions ──────────────────────────────────────────────────────────────
+
+/**
+ * Shift Session — tracks the lifecycle of a production shift.
+ *
+ * Fields match Hasura production schema:
+ * - shift_type (matutino/vespertino/nocturno) instead of shift_id FK
+ * - started_at/ended_at for shift boundaries
+ * - planned_boxes + product_code from Epicor (migration 013)
+ */
+export interface IShiftSession {
+  id: string;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms (replication checkpoint)
+  is_deleted: boolean;
+  machine_id: string;
+  operator_id: string;
+  shift_type: ShiftType;
+  status: 'active' | 'closed';
+  started_at: number;
+  ended_at?: number;
+  planned_boxes?: number;
+  product_code?: string;
+  device_id: string;
+}
+
+export type RxShiftSession = RxDocument<IShiftSession>;
+
+// ─── Operators ───────────────────────────────────────────────────────────────────
+
+/**
+ * Operator — reference table for production operators.
+ * id IS the Epicor payroll code (natural key).
+ */
+export interface IOperator {
+  id: string;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms (replication checkpoint)
+  is_deleted: boolean;
+  full_name: string;
+  is_active: boolean;
+  device_id: string;
+}
+
+export type RxOperator = RxDocument<IOperator>;
+
+// ─── Product Weight Standards ───────────────────────────────────────────────────
+
+/**
+ * Product Weight Standard — offline cache for weight validation (IT-AC-09).
+ * Primary key is `sku` (natural key from Epicor).
+ */
+export interface IProductWeightStandard {
+  sku: string;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms (replication checkpoint)
+  is_deleted: boolean;
+  name: string;
+  lower_limit: number;
+  upper_limit: number;
+  requires_tare: boolean;
+  device_id: string;
+}
+
+export type RxProductWeightStandard = RxDocument<IProductWeightStandard>;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Downtime Conciliation — Phase: downtime-conciliation
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type ConciliationStatus = 'pending' | 'reconciled' | 'disputed';
+
+/**
+ * Downtime Conciliation — bridges Production downtime events with Maintenance action.
+ *
+ * When an operator flags a paro with an MTTO reason, a conciliation record is created.
+ * The supervisor reviews at shift-end, diagnoses root cause, and triggers OT via cmms-ibero.
+ */
+export interface IDowntimeConciliation {
+  id: string;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms (replication checkpoint)
+  is_deleted: boolean;
+  oee_event_id: string;          // FK → oee_events.id (downtime_start event)
+  shift_session_id?: string;     // FK → shift_sessions.id
+  machine_id: string;            // denormalized for query speed
+  reason_code: string;           // original operator reason from oee_event
+  duration_min?: number;         // computed from downtime_start → downtime_end
+
+  // Production diagnosis (supervisor)
+  diagnosed_code?: string;       // supervisor's root cause code
+  diagnosed_by?: string;         // supervisor user ID
+  diagnosed_at?: number;         // epoch ms
+
+  // Maintenance diagnosis (mechanic)
+  conciliated: boolean;          // whether maintenance has participated
+  conciliated_code?: string;     // final cause code
+  conciliated_macro?: string;    // final macro category (MTTO, PROD, OTROS)
+  conciliated_by_prod?: string;  // production sign-off
+  conciliated_by_mtto?: string;  // maintenance sign-off
+  conciliated_at?: number;       // epoch ms
+
+  conciliation_notes?: string;
+  status: ConciliationStatus;
+
+  // OT tracking
+  ot_sent: boolean;              // whether oee-trigger was called
+  ot_response?: string;          // response from oee-trigger (WO id or error)
+  ot_sent_at?: number;
+
+  is_mtto: boolean;              // whether the original reason is MTTO category
+  device_id: string;
+}
+
+export type RxDowntimeConciliation = RxDocument<IDowntimeConciliation>;
+
+/**
+ * Plant Config — key-value configuration for plant-level parameters.
+ *
+ * First key: micro_stop_threshold_min (integer, minutes).
+ */
+export interface IPlantConfig {
+  key: string;         // e.g., 'micro_stop_threshold_min'
+  created_at: number;  // epoch ms
+  updated_at: number;  // epoch ms (replication checkpoint)
+  is_deleted: boolean;
+  value: string;       // stored as string, parsed by consumer (e.g., '5')
+  description?: string;
+  device_id: string;
+}
+
+export type RxPlantConfig = RxDocument<IPlantConfig>;
+
+/**
+ * Shift Summary — cached aggregates for shift-end reporting.
+ * Materialized at shift-end. Non-authoritative — always derivable from oee_events.
+ */
+export interface IShiftSummary {
+  id: string;
+  created_at: number;   // epoch ms
+  updated_at: number;   // epoch ms (replication checkpoint)
+  is_deleted: boolean;
+  shift_session_id: string;      // FK → shift_sessions.id
+  total_planned_min: number;
+  total_downtime_min: number;
+  total_micro_stop_min: number;
+  total_mtto_min: number;
+  total_prod_min: number;
+  total_boxes: number;
+  total_rejects: number;
+  performance_pct?: number;       // e.g., 85.50
+  has_pending_conciliation: boolean;
+  device_id: string;
+}
+
+export type RxShiftSummary = RxDocument<IShiftSummary>;

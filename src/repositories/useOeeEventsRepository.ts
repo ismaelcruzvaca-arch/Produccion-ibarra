@@ -30,7 +30,7 @@ import { getDeviceId } from '../sync/deviceId';
 import { useCatalogStore } from '../ui/store/catalogStore';
 import { useAuthStore } from '../auth/useAuthStore';
 
-export type CreateEventPayload = Omit<IOeeEvent, 'id' | 'created_at' | 'updated_at' | 'is_deleted' | 'device_id' | 'line_id' | 'machine_id' | 'shift_id'> & Partial<Pick<IOeeEvent, 'line_id' | 'machine_id' | 'shift_id'>> & { device_id?: string };
+export type CreateEventPayload = Omit<IOeeEvent, 'id' | 'updated_at' | 'is_deleted' | 'device_id' | 'line_id' | 'machine_id' | 'shift_id'> & Partial<Pick<IOeeEvent, 'line_id' | 'machine_id' | 'shift_id'>> & { device_id?: string };
 
 export interface OeeEventsRepository {
   /** Emits the current list of non-deleted OEE events on every change. */
@@ -92,7 +92,7 @@ export interface OeeEventsRepository {
 export function useOeeEventsRepository(): OeeEventsRepository {
   const db = useDatabase();
   const { selectedLine, selectedMachine, selectedShift } = useCatalogStore();
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.user) as { id?: string } | null;
 
   const docs$: Observable<RxDocument<IOeeEvent>[]> = useMemo(
     () =>
@@ -105,19 +105,26 @@ export function useOeeEventsRepository(): OeeEventsRepository {
   const createEvent = useCallback(
     async (event: CreateEventPayload) => {
       const deviceId = event.device_id ?? await getDeviceId();
-      const now = nowMs();
+      const evt = event as unknown as Partial<IOeeEvent>;
       const newDoc: IOeeEvent = {
         id: generateUuid(),
         created_at: now,
         updated_at: now,
         is_deleted: false,
         device_id: deviceId,
-        ...event,
-        line_id: event.line_id ?? selectedLine ?? '',
-        machine_id: event.machine_id ?? selectedMachine ?? '',
-        shift_id: event.shift_id ?? selectedShift ?? '',
-        operator_id: event.operator_id ?? user?.id,
-      };
+        line_id: evt.line_id ?? selectedLine ?? '',
+        machine_id: evt.machine_id ?? selectedMachine ?? '',
+        shift_id: evt.shift_id ?? selectedShift ?? '',
+        operator_id: evt.operator_id ?? user?.id ?? null,
+        event_type: evt.event_type ?? 'box_count',
+        timestamp: evt.timestamp ?? nowMs(),
+        reason_code: evt.reason_code,
+        quantity: evt.quantity,
+        planned_boxes: evt.planned_boxes,
+        notes: evt.notes,
+        is_retroactive: evt.is_retroactive,
+        related_event_id: evt.related_event_id,
+      } as IOeeEvent;
       const result = await db.collections.oee_events.insert(newDoc);
       return result as RxDocument<IOeeEvent>;
     },

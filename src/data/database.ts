@@ -34,6 +34,12 @@ import {
   qualityInspectionSchema,
   defectLogSchema,
   weightLogSchema,
+  shiftSessionSchema,
+  operatorSchema,
+  productWeightStandardSchema,
+  downtimeConciliationSchema,
+  plantConfigSchema,
+  shiftSummarySchema,
 } from './schemas';
 import { MIGRATIONS } from './migrations';
 import type {
@@ -51,6 +57,12 @@ import type {
   IQualityInspection,
   IDefectLog,
   IWeightLog,
+  IShiftSession,
+  IOperator,
+  IProductWeightStandard,
+  IDowntimeConciliation,
+  IPlantConfig,
+  IShiftSummary,
 } from '../core/types';
 
 // ─── Database Collections Type ──────────────────────────────────────────────────
@@ -71,6 +83,12 @@ export type ChocolateIbarraDatabase = RxDatabase<{
   quality_inspections: RxCollection<IQualityInspection>;
   defect_logs: RxCollection<IDefectLog>;
   weight_logs: RxCollection<IWeightLog>;
+  shift_sessions: RxCollection<IShiftSession>;
+  operators: RxCollection<IOperator>;
+  product_weight_standards: RxCollection<IProductWeightStandard>;
+  downtime_conciliation: RxCollection<IDowntimeConciliation>;
+  plant_config: RxCollection<IPlantConfig>;
+  shift_summary: RxCollection<IShiftSummary>;
 }>;
 
 // ─── Database Singleton ────────────────────────────────────────────────────────
@@ -109,6 +127,7 @@ export async function getDatabase(): Promise<ChocolateIbarraDatabase> {
     }).then(async (db) => {
       // Register all collections with their schemas and migration strategies
       await db.addCollections({
+        // Colecciones de producción existentes (v1 con created_at + updated_at)
         assets: { schema: assetSchema, migrationStrategies: MIGRATIONS.assetSchema },
         asset_types: { schema: assetTypeSchema, migrationStrategies: MIGRATIONS.assetTypeSchema },
         work_orders: { schema: workOrderSchema, migrationStrategies: MIGRATIONS.workOrderSchema },
@@ -123,6 +142,13 @@ export async function getDatabase(): Promise<ChocolateIbarraDatabase> {
         quality_inspections: { schema: qualityInspectionSchema, migrationStrategies: MIGRATIONS.qualityInspectionSchema },
         defect_logs: { schema: defectLogSchema, migrationStrategies: MIGRATIONS.defectLogSchema },
         weight_logs: { schema: weightLogSchema, migrationStrategies: MIGRATIONS.weightLogSchema },
+        // Colecciones nuevas del remoto (shift management, operators)
+        shift_sessions: { schema: shiftSessionSchema, migrationStrategies: MIGRATIONS.shiftSessionSchema },
+        operators: { schema: operatorSchema, migrationStrategies: MIGRATIONS.operatorSchema },
+        product_weight_standards: { schema: productWeightStandardSchema, migrationStrategies: MIGRATIONS.productWeightStandardSchema },
+        downtime_conciliation: { schema: downtimeConciliationSchema, migrationStrategies: MIGRATIONS.downtimeConciliationSchema },
+        plant_config: { schema: plantConfigSchema, migrationStrategies: MIGRATIONS.plantConfigSchema },
+        shift_summary: { schema: shiftSummarySchema, migrationStrategies: MIGRATIONS.shiftSummarySchema },
       });
       return db as ChocolateIbarraDatabase;
     });

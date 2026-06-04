@@ -1,0 +1,286 @@
+{
+  "type": "bulk",
+  "args": [
+    {
+      "type": "pg_track_table",
+      "args": {
+        "source": "default",
+        "table": {
+          "schema": "public",
+          "name": "operators"
+        }
+      }
+    },
+    {
+      "type": "pg_track_table",
+      "args": {
+        "source": "default",
+        "table": {
+          "schema": "public",
+          "name": "shift_sessions"
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operators" },
+        "role": "operator",
+        "permission": {
+          "columns": ["id", "full_name", "is_active"],
+          "filter": { "is_active": { "_eq": true } },
+          "allow_aggregations": false
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operators" },
+        "role": "supervisor",
+        "permission": {
+          "columns": ["id", "full_name", "is_active", "created_at", "updated_at"],
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operators" },
+        "role": "admin",
+        "permission": {
+          "columns": ["id", "full_name", "is_active", "created_at", "updated_at"],
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operators" },
+        "role": "supervisor",
+        "permission": {
+          "columns": ["id", "full_name", "is_active"],
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operators" },
+        "role": "admin",
+        "permission": {
+          "columns": ["id", "full_name", "is_active"],
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operators" },
+        "role": "supervisor",
+        "permission": {
+          "columns": ["full_name", "is_active"],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operators" },
+        "role": "admin",
+        "permission": {
+          "columns": ["full_name", "is_active"],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operators" },
+        "role": "supervisor",
+        "permission": {
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "operators" },
+        "role": "admin",
+        "permission": {
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shift_sessions" },
+        "role": "operator",
+        "permission": {
+          "columns": ["id", "machine_id", "operator_id", "shift_type", "status", "started_at", "ended_at", "planned_boxes", "product_code"],
+          "filter": {
+            "_or": [
+              { "operator_id": { "_eq": "X-Hasura-User-Id" } },
+              { "status": { "_eq": "active" } }
+            ]
+          },
+          "allow_aggregations": false
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shift_sessions" },
+        "role": "supervisor",
+        "permission": {
+          "columns": ["id", "machine_id", "operator_id", "shift_type", "status", "started_at", "ended_at", "planned_boxes", "product_code"],
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_select_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shift_sessions" },
+        "role": "admin",
+        "permission": {
+          "columns": ["id", "machine_id", "operator_id", "shift_type", "status", "started_at", "ended_at", "planned_boxes", "product_code"],
+          "filter": {},
+          "allow_aggregations": true
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shift_sessions" },
+        "role": "operator",
+        "permission": {
+          "columns": ["machine_id", "operator_id", "shift_type", "planned_boxes", "product_code"],
+          "check": {
+            "operator_id": { "_eq": "X-Hasura-User-Id" }
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shift_sessions" },
+        "role": "supervisor",
+        "permission": {
+          "columns": ["machine_id", "operator_id", "shift_type", "planned_boxes", "product_code"],
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_insert_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shift_sessions" },
+        "role": "admin",
+        "permission": {
+          "columns": ["machine_id", "operator_id", "shift_type", "planned_boxes", "product_code"],
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shift_sessions" },
+        "role": "operator",
+        "permission": {
+          "columns": ["status", "ended_at"],
+          "filter": {
+            "_and": [
+              { "operator_id": { "_eq": "X-Hasura-User-Id" } },
+              { "status": { "_eq": "active" } }
+            ]
+          },
+          "check": {
+            "status": { "_eq": "closed" }
+          }
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shift_sessions" },
+        "role": "supervisor",
+        "permission": {
+          "columns": ["status", "ended_at", "planned_boxes", "product_code"],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_update_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shift_sessions" },
+        "role": "admin",
+        "permission": {
+          "columns": ["status", "ended_at", "planned_boxes", "product_code"],
+          "filter": {},
+          "check": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shift_sessions" },
+        "role": "supervisor",
+        "permission": {
+          "filter": {}
+        }
+      }
+    },
+    {
+      "type": "pg_create_delete_permission",
+      "args": {
+        "source": "default",
+        "table": { "schema": "public", "name": "shift_sessions" },
+        "role": "admin",
+        "permission": {
+          "filter": {}
+        }
+      }
+    }
+  ]
+}

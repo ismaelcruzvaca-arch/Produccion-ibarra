@@ -76,6 +76,7 @@ export const MIGRATIONS: Record<string, MigrationStrategies> = {
 
   // ── Work Order Schema v0→v1 ───────────────────────────────────────────────
   // Replace `client_updated_at` with `created_at` + `updated_at`
+  // v1→v2: Add lifecycle fields from wo-lifecycle-outbox
   workOrderSchema: {
     1: (oldDoc: any) => {
       const ts = oldDoc.client_updated_at ?? now();
@@ -84,6 +85,18 @@ export const MIGRATIONS: Record<string, MigrationStrategies> = {
         client_updated_at: undefined,
         created_at: ts,
         updated_at: ts,
+      };
+    },
+    2: (oldDoc: any) => {
+      return {
+        ...oldDoc,
+        lifecycle_phase: undefined,
+        symptom_note: undefined,
+        cause_note: undefined,
+        action_note: undefined,
+        actual_start_at: undefined,
+        completed_at: undefined,
+        cmms_wo_id: undefined,
       };
     },
   },
@@ -202,6 +215,66 @@ export const MIGRATIONS: Record<string, MigrationStrategies> = {
       return {
         ...oldDoc,
         created_at: oldDoc.created_at ?? oldDoc.updated_at ?? now(),
+      };
+    },
+  },
+
+  // ── Shift Session Schema v0→v1 ──────────────────────────────────────────
+  shiftSessionSchema: {
+    1: (oldDoc: any) => {
+      return {
+        ...oldDoc,
+        created_at: oldDoc.created_at ?? now(),
+      };
+    },
+  },
+
+  // ── Operator Schema v0→v1 ───────────────────────────────────────────────
+  operatorSchema: {
+    1: (oldDoc: any) => {
+      return {
+        ...oldDoc,
+        created_at: oldDoc.created_at ?? now(),
+      };
+    },
+  },
+
+  // ── Product Weight Standard Schema v0→v1 ────────────────────────────────
+  productWeightStandardSchema: {
+    1: (oldDoc: any) => {
+      return {
+        ...oldDoc,
+        created_at: oldDoc.created_at ?? now(),
+      };
+    },
+  },
+
+  // ── Downtime Conciliation Schema v0→v1 ──────────────────────────────────
+  downtimeConciliationSchema: {
+    1: (oldDoc: any) => {
+      return {
+        ...oldDoc,
+        created_at: oldDoc.created_at ?? now(),
+      };
+    },
+  },
+
+  // ── Plant Config Schema v0→v1 ───────────────────────────────────────────
+  plantConfigSchema: {
+    1: (oldDoc: any) => {
+      return {
+        ...oldDoc,
+        created_at: oldDoc.created_at ?? now(),
+      };
+    },
+  },
+
+  // ── Shift Summary Schema v0→v1 ──────────────────────────────────────────
+  shiftSummarySchema: {
+    1: (oldDoc: any) => {
+      return {
+        ...oldDoc,
+        created_at: oldDoc.created_at ?? now(),
       };
     },
   },

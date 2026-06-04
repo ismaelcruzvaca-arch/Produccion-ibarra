@@ -1,286 +1,106 @@
 /**
- * Quality Inspections Repository Hook — encapsulates CRUD operations on the quality_inspections,
- * defect_logs, and weight_logs collections.
+ * Quality Inspections Repository Hook — CRUD operations on the quality_inspections collection.
  *
  * Pattern: Repository + Hook (Anti-Corruption Layer)
  * Why:
- * - UI components must NEVER interact with RxDB directly.
- * - The repository wraps quality RxDB collections and exposes a clean API:
- *     createInspection(), updateInspection(), remove(), findById(), findByShiftSession(),
- *     findAll(), docs$
- * - Also exposes defect_logs and weight_logs sub-repositories.
+ * - UI components must NOT interact with RxDB directly.
+ * - Wraps RxDB collection and exposes a clean API.
  *
- * Soft delete:
- * - remove(id) sets is_deleted=true and updated_at=nowMs().
- *
- * Spec compliance:
- * - QC-1: findByShiftSession() returns inspections for active shift, timestamp DESC
- * - QC-4: Uses shift_session.id (not catalog shift)
- * - QC-3: Stores cached standards (standard_min/standard_max) on the inspection
- * - QC-8: Sets standard_warning when standard missing
- * - QC-9: Defect selector reads from quality_defects
- * - QC-10: Pass/fail chip per inspection card via passed field
+ * Fields match Hasura: inspector_id, disposition, shift_type, data_source.
+ * Uses `updated_at` (not `client_updated_at`) matching the newer data contract.
  */
+
 import { useCallback, useMemo } from 'react';
 import type { Observable } from 'rxjs';
 import type { RxDocument } from 'rxdb';
 
 import { generateUuid } from '../utils/uuid';
 import { nowMs } from '../utils/timestamp';
-import type { IQualityInspection, IDefectLog, IWeightLog } from '../core/types';
+import type { IQualityInspection } from '../core/types';
 import { useDatabase } from '../data/DatabaseContext';
+import { getDeviceId } from '../sync/deviceId';
 
-// ─── Payload Types ──────────────────────────────────────────────────────────────
-
-/** Payload for creating a quality inspection — omits auto-generated fields. */
-export type CreateInspectionPayload = Omit<
-  IQualityInspection,
-  'id' | 'created_at' | 'updated_at' | 'is_deleted'
->;
-
-/** Payload for creating a defect log — omits auto-generated fields. */
-export type CreateDefectLogPayload = Omit<IDefectLog, 'id' | 'created_at' | 'updated_at' | 'is_deleted'>;
-
-/** Payload for creating a weight log — omits auto-generated fields. */
-export type CreateWeightLogPayload = Omit<IWeightLog, 'id' | 'created_at' | 'updated_at' | 'is_deleted'>;
-
-// ─── Repository Interface ───────────────────────────────────────────────────────
+export type CreateQualityInspectionPayload = Omit<
+  IQualityInspection, 'id' | 'updated_at' | 'is_deleted' | 'device_id'
+> & { device_id?: string };
 
 export interface QualityInspectionsRepository {
-  /** Emits non-deleted inspections on every change. */
-  inspections$: Observable<RxDocument<IQualityInspection>[]>;
+  /** Emits all non-deleted inspections on change */
+  docs$: Observable<RxDocument<IQualityInspection>[]>;
 
-  /** Creates a new quality inspection. */
-  createInspection: (
-    payload: CreateInspectionPayload
-  ) => Promise<RxDocument<IQualityInspection>>;
-
-  /** Updates an existing inspection. */
-  updateInspection: (
-    id: string,
-    patch: Partial<Omit<IQualityInspection, 'id'>>
-  ) => Promise<RxDocument<IQualityInspection> | null>;
-
-  /** Soft-deletes an inspection. */
-  removeInspection: (id: string) => Promise<void>;
-
-  /** Finds a single inspection by UUID. */
-  findInspectionById: (id: string) => Promise<RxDocument<IQualityInspection> | null>;
-
-  /** Finds inspections for a shift session, ordered by updated_at DESC. */
-  findByShiftSession: (
-    shiftSessionId: string
-  ) => Promise<RxDocument<IQualityInspection>[]>;
-
-  /** Returns all non-deleted inspections. */
-  findAllInspections: () => Promise<RxDocument<IQualityInspection>[]>;
-
-  // ─── Defect Logs ────────────────────────────────────────────────────────────
-
-  /** Creates a defect log associated with an inspection. */
-  createDefectLog: (
-    payload: CreateDefectLogPayload
-  ) => Promise<RxDocument<IDefectLog>>;
-
-  /** Finds defect logs by inspection ID. */
-  findDefectLogsByInspection: (
-    inspectionId: string
-  ) => Promise<RxDocument<IDefectLog>[]>;
-
-  // ─── Weight Logs ────────────────────────────────────────────────────────────
-
-  /** Creates a weight log associated with an inspection. */
-  createWeightLog: (
-    payload: CreateWeightLogPayload
-  ) => Promise<RxDocument<IWeightLog>>;
-
-  /** Finds weight logs by inspection ID. */
-  findWeightLogsByInspection: (
-    inspectionId: string
-  ) => Promise<RxDocument<IWeightLog>[]>;
+  create: (payload: CreateQualityInspectionPayload) => Promise<RxDocument<IQualityInspection>>;
+  update: (id: string, patch: Partial<Omit<IQualityInspection, 'id'>>) => Promise<RxDocument<IQualityInspection> | null>;
+  remove: (id: string) => Promise<void>;
+  findById: (id: string) => Promise<RxDocument<IQualityInspection> | null>;
+  findByMachine: (machineId: string) => Promise<RxDocument<IQualityInspection>[]>;
 }
-
-// ─── Hook ───────────────────────────────────────────────────────────────────────
 
 export function useQualityInspectionsRepository(): QualityInspectionsRepository {
   const db = useDatabase();
 
-  const inspections$: Observable<RxDocument<IQualityInspection>[]> = useMemo(
+  const docs$: Observable<RxDocument<IQualityInspection>[]> = useMemo(
     () =>
       db.collections.quality_inspections
         .find({ selector: { is_deleted: { $eq: false } } })
         .$,
-    [db]
+    [db],
   );
 
-  // ─── Inspections ───────────────────────────────────────────────────────────
-
-  const createInspection = useCallback(
-    async (payload: CreateInspectionPayload) => {
-      const now = nowMs();
+  const create = useCallback(
+    async (payload: CreateQualityInspectionPayload) => {
+      const deviceId = payload.device_id ?? await getDeviceId();
       const newDoc: IQualityInspection = {
         id: generateUuid(),
-        created_at: now,
-        updated_at: now,
+        updated_at: nowMs(),
         is_deleted: false,
+        device_id: deviceId,
         ...payload,
       };
       const result = await db.collections.quality_inspections.insert(newDoc);
       return result as RxDocument<IQualityInspection>;
     },
-    [db]
+    [db],
   );
 
-  const updateInspection = useCallback(
+  const update = useCallback(
     async (id: string, patch: Partial<Omit<IQualityInspection, 'id'>>) => {
       const doc = await db.collections.quality_inspections.findOne(id).exec();
       if (!doc) return null;
-
-      await doc.patch({
-        ...patch,
-        updated_at: nowMs(),
-      });
+      await doc.patch({ ...patch, updated_at: nowMs() });
       return doc as RxDocument<IQualityInspection>;
     },
-    [db]
+    [db],
   );
 
-  const removeInspection = useCallback(
+  const remove = useCallback(
     async (id: string) => {
       const doc = await db.collections.quality_inspections.findOne(id).exec();
       if (!doc) return;
-
-      await doc.patch({
-        is_deleted: true,
-        updated_at: nowMs(),
-      });
+      await doc.patch({ is_deleted: true, updated_at: nowMs() });
     },
-    [db]
+    [db],
   );
 
-  const findInspectionById = useCallback(
+  const findById = useCallback(
     async (id: string) => {
       const doc = await db.collections.quality_inspections.findOne(id).exec();
       return doc as RxDocument<IQualityInspection> | null;
     },
-    [db]
+    [db],
   );
 
-  const findByShiftSession = useCallback(
-    async (shiftSessionId: string) => {
+  const findByMachine = useCallback(
+    async (machineId: string) => {
       const docs = await db.collections.quality_inspections
-        .find({
-          selector: {
-            shift_session_id: { $eq: shiftSessionId },
-            is_deleted: { $eq: false },
-          },
-          sort: [{ updated_at: 'desc' }],
-        })
+        .find({ selector: { machine_id: { $eq: machineId }, is_deleted: { $eq: false } } })
         .exec();
       return docs as RxDocument<IQualityInspection>[];
     },
-    [db]
-  );
-
-  const findAllInspections = useCallback(async () => {
-    const docs = await db.collections.quality_inspections
-      .find({ selector: { is_deleted: { $eq: false } } })
-      .exec();
-    return docs as RxDocument<IQualityInspection>[];
-  }, [db]);
-
-  // ─── Defect Logs ───────────────────────────────────────────────────────────
-
-  const createDefectLog = useCallback(
-    async (payload: CreateDefectLogPayload) => {
-      const now = nowMs();
-      const newDoc: IDefectLog = {
-        id: generateUuid(),
-        created_at: now,
-        updated_at: now,
-        is_deleted: false,
-        ...payload,
-      };
-      const result = await db.collections.defect_logs.insert(newDoc);
-      return result as RxDocument<IDefectLog>;
-    },
-    [db]
-  );
-
-  const findDefectLogsByInspection = useCallback(
-    async (inspectionId: string) => {
-      const docs = await db.collections.defect_logs
-        .find({
-          selector: {
-            inspection_id: { $eq: inspectionId },
-            is_deleted: { $eq: false },
-          },
-        })
-        .exec();
-      return docs as RxDocument<IDefectLog>[];
-    },
-    [db]
-  );
-
-  // ─── Weight Logs ───────────────────────────────────────────────────────────
-
-  const createWeightLog = useCallback(
-    async (payload: CreateWeightLogPayload) => {
-      const now = nowMs();
-      const newDoc: IWeightLog = {
-        id: generateUuid(),
-        created_at: now,
-        updated_at: now,
-        is_deleted: false,
-        ...payload,
-      };
-      const result = await db.collections.weight_logs.insert(newDoc);
-      return result as RxDocument<IWeightLog>;
-    },
-    [db]
-  );
-
-  const findWeightLogsByInspection = useCallback(
-    async (inspectionId: string) => {
-      const docs = await db.collections.weight_logs
-        .find({
-          selector: {
-            inspection_id: { $eq: inspectionId },
-            is_deleted: { $eq: false },
-          },
-        })
-        .exec();
-      return docs as RxDocument<IWeightLog>[];
-    },
-    [db]
+    [db],
   );
 
   return useMemo(
-    () => ({
-      inspections$,
-      createInspection,
-      updateInspection,
-      removeInspection,
-      findInspectionById,
-      findByShiftSession,
-      findAllInspections,
-      createDefectLog,
-      findDefectLogsByInspection,
-      createWeightLog,
-      findWeightLogsByInspection,
-    }),
-    [
-      inspections$,
-      createInspection,
-      updateInspection,
-      removeInspection,
-      findInspectionById,
-      findByShiftSession,
-      findAllInspections,
-      createDefectLog,
-      findDefectLogsByInspection,
-      createWeightLog,
-      findWeightLogsByInspection,
-    ]
+    () => ({ docs$, create, update, remove, findById, findByMachine }),
+    [docs$, create, update, remove, findById, findByMachine],
   );
 }

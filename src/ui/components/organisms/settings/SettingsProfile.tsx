@@ -1,131 +1,172 @@
 /**
- * SettingsProfile — user profile section for the settings screen.
+ * SettingsProfile — User profile section with role badge, line assignment, sync status, and sign out.
  *
- * Displays the user's full name, role badge (color-coded), assigned line name,
- * sync status indicator (SyncMonitor), and a logout button.
+ * Pattern: Atomic Design — Organism (SS-1)
+ * Why:
+ * - One organism per settings section (AD-2).
+ * - Consumes authStore for user identity and catalogStore for line name resolution.
+ * - Uses List.Accordion wrapper for consistent expandable section across settings.
  *
- * Pattern: Surface-based card layout matching other setting sections.
+ * Props:
+ * - onSignOut: callback triggered after user confirms sign out
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, Button, Surface, Chip } from 'react-native-paper';
-
+import { List, Text, Chip, Button, Divider } from 'react-native-paper';
 import { useAuthStore } from '../../../../auth/useAuthStore';
 import { useCatalogStore } from '../../../store/catalogStore';
-import { SyncMonitor } from '../../SyncMonitor';
+import { SyncIndicator } from '../../molecules/SyncIndicator';
+import { ConfirmModal } from '../../atoms/ConfirmModal';
+import { colors, spacing, typography, borderRadius } from '../../../theme/tokens';
 
-const ROLE_COLORS: Record<string, { bg: string; text: string }> = {
-  admin: { bg: '#E3F2FD', text: '#1565C0' },
-  supervisor: { bg: '#FFF3E0', text: '#E65100' },
-  operator: { bg: '#E8F5E9', text: '#2E7D32' },
+interface SettingsProfileProps {
+  onSignOut: () => void;
+}
+
+const ROLE_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
+  operator: { label: 'Operador', color: colors.textOnPrimary, bgColor: '#1976D2' },
+  supervisor: { label: 'Supervisor', color: '#000000', bgColor: '#F9A825' },
+  admin: { label: 'Administrador', color: colors.textOnPrimary, bgColor: '#D32F2F' },
 };
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'Admin',
-  supervisor: 'Supervisor',
-  operator: 'Operador',
-};
+export function SettingsProfile({ onSignOut }: SettingsProfileProps) {
+  const [expanded, setExpanded] = useState(true);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
-export function SettingsProfile() {
-  const { fullName, role, signOut } = useAuthStore();
-  const selectedLine = useCatalogStore((s) => s.selectedLine);
+  const fullName = useAuthStore((s) => s.fullName);
+  const role = useAuthStore((s) => s.role);
+  const selectedLineId = useAuthStore((s) => s.selectedLine);
+
   const getLineById = useCatalogStore((s) => s.getLineById);
-  const [loggingOut, setLoggingOut] = useState(false);
+  const selectedLine = selectedLineId ? getLineById(selectedLineId) : null;
 
-  const roleColor = ROLE_COLORS[role ?? 'operator'] ?? ROLE_COLORS.operator;
-  const roleLabel = ROLE_LABELS[role ?? 'operator'] ?? role ?? 'Desconocido';
-  const lineName = selectedLine ? getLineById(selectedLine)?.name : null;
-
-  const handleLogout = useCallback(async () => {
-    setLoggingOut(true);
-    try {
-      await signOut();
-    } catch {
-      // signOut already handles errors silently
-    } finally {
-      setLoggingOut(false);
-    }
-  }, [signOut]);
+  const roleConfig = ROLE_CONFIG[role ?? ''] ?? ROLE_CONFIG.operator;
 
   return (
-    <Surface style={styles.container} elevation={1}>
-      {/* Name */}
-      <Text variant="titleLarge" style={styles.name}>
-        {fullName ?? 'Usuario'}
-      </Text>
-
-      {/* Role badge */}
-      <View style={styles.badgeRow}>
-        <Chip
-          compact
-          style={[styles.roleBadge, { backgroundColor: roleColor.bg }]}
-          textStyle={[styles.roleBadgeText, { color: roleColor.text }]}
-        >
-          {roleLabel}
-        </Chip>
-      </View>
-
-      {/* Assigned line */}
-      {lineName && (
-        <Text variant="bodyMedium" style={styles.lineInfo}>
-          Línea: {lineName}
-        </Text>
-      )}
-
-      {/* Sync monitor */}
-      <View style={styles.syncRow}>
-        <SyncMonitor />
-      </View>
-
-      {/* Logout button */}
-      <Button
-        mode="outlined"
-        icon="logout"
-        onPress={handleLogout}
-        loading={loggingOut}
-        disabled={loggingOut}
-        textColor="#C62828"
-        style={styles.logoutButton}
+    <>
+      <List.Accordion
+        title="Perfil"
+        titleStyle={styles.accordionTitle}
+        left={(props) => <List.Icon {...props} icon="account-circle" color={colors.primary} />}
+        expanded={expanded}
+        onPress={() => setExpanded(!expanded)}
       >
-        Cerrar Sesión
-      </Button>
-    </Surface>
+        <View style={styles.content}>
+          {/* User name */}
+          <Text variant="titleMedium" style={styles.name}>
+            {fullName ?? 'Usuario'}
+          </Text>
+
+          {/* Role badge */}
+          <Chip
+            mode="flat"
+            style={[styles.roleChip, { backgroundColor: roleConfig.bgColor }]}
+            textStyle={[styles.roleLabel, { color: roleConfig.color }]}
+          >
+            {roleConfig.label}
+          </Chip>
+
+          <Divider style={styles.divider} />
+
+          {/* Assigned line */}
+          <View style={styles.infoRow}>
+            <Text variant="bodySmall" style={styles.infoLabel}>
+              Línea asignada
+            </Text>
+            <Text variant="bodyMedium" style={styles.infoValue}>
+              {selectedLine?.name ?? (selectedLineId ? 'Línea no encontrada' : 'Sin asignar')}
+            </Text>
+          </View>
+
+          <Divider style={styles.divider} />
+
+          {/* Connection status */}
+          <Text variant="bodySmall" style={styles.sectionLabel}>
+            Estado de conexión
+          </Text>
+          <SyncIndicator compact />
+
+          <Divider style={styles.divider} />
+
+          {/* Sign out button */}
+          <Button
+            mode="contained"
+            buttonColor={colors.error}
+            textColor={colors.textOnPrimary}
+            icon="logout"
+            style={styles.signOutButton}
+            contentStyle={styles.signOutContent}
+            onPress={() => setShowSignOutConfirm(true)}
+          >
+            Cerrar sesión
+          </Button>
+        </View>
+      </List.Accordion>
+
+      <ConfirmModal
+        visible={showSignOutConfirm}
+        title="Cerrar sesión"
+        message="¿Está seguro de que desea cerrar la sesión? Todos los datos no sincronizados se perderán."
+        icon="logout"
+        confirmLabel="Cerrar sesión"
+        cancelLabel="Cancelar"
+        confirmColor={colors.error}
+        onConfirm={() => {
+          setShowSignOutConfirm(false);
+          onSignOut();
+        }}
+        onDismiss={() => setShowSignOutConfirm(false)}
+      />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    marginBottom: 16,
+  accordionTitle: {
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
+  },
+  content: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
   name: {
-    fontWeight: '700',
-    color: '#212121',
-    marginBottom: 8,
+    color: colors.textPrimary,
+    fontWeight: typography.weights.bold,
+    marginBottom: spacing.xs,
   },
-  badgeRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
+  roleChip: {
+    alignSelf: 'flex-start',
+    marginBottom: spacing.sm,
   },
-  roleBadge: {
-    height: 26,
+  roleLabel: {
+    fontSize: typography.sizes.bodySmall,
+    fontWeight: typography.weights.semibold,
   },
-  roleBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
+  divider: {
+    marginVertical: spacing.sm,
   },
-  lineInfo: {
-    color: '#616161',
-    marginBottom: 12,
+  infoRow: {
+    flexDirection: 'column',
+    gap: spacing.xxs,
   },
-  syncRow: {
-    marginBottom: 12,
+  infoLabel: {
+    color: colors.textSecondary,
   },
-  logoutButton: {
-    borderColor: '#C62828',
-    borderRadius: 6,
+  infoValue: {
+    color: colors.textPrimary,
+    fontWeight: typography.weights.medium,
+  },
+  sectionLabel: {
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  signOutButton: {
+    borderRadius: borderRadius.sm,
+    marginTop: spacing.xs,
+  },
+  signOutContent: {
+    minHeight: 48,
   },
 });

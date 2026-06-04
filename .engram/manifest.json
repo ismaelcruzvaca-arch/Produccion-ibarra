@@ -16,6 +16,14 @@
       "sessions": 5,
       "memories": 13,
       "prompts": 12
+    },
+    {
+      "id": "c9e672d0",
+      "created_by": "ismael.cruz",
+      "created_at": "2026-06-04T00:06:38Z",
+      "sessions": 16,
+      "memories": 271,
+      "prompts": 284
     }
   ]
 }

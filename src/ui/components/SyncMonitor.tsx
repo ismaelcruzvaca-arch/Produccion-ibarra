@@ -1,8 +1,10 @@
 /**
- * SyncMonitor — reactive visual indicator of RxDB GraphQL replication status.
+ * SyncMonitor — Reactive visual indicator of RxDB GraphQL replication status.
  *
- * Subscribes to RxDB replication observables (active$, error$) and reflects
- * sync state in the UI using react-native-paper icons.
+ * Pattern: Thin Presentational Component
+ * Why:
+ * - Replication subscription logic extracted to useReplicationStatus hook.
+ * - This component only renders UI based on the hook's return values.
  *
  * States:
  * - idle    → cloud-check (green)     — all caught up
@@ -11,95 +13,26 @@
  * - offline → wifi-off (gray)         — no network detected
  */
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Surface, IconButton } from 'react-native-paper';
-import { useReplication } from '../../data/DatabaseContext';
-import { useUIStore } from '../store/useUIStore';
-import type { SyncStatus } from '../store/useUIStore';
+import { useReplicationStatus } from '../hooks/useReplicationStatus';
+import { colors, spacing, typography, borderRadius } from '../theme/tokens';
 
 export function SyncMonitor() {
-  const replication = useReplication();
-  const {
-    isOnline,
-    isSyncing,
-    syncStatus,
-    lastSyncTimestamp,
-    syncError,
-    setIsSyncing,
-    setSyncStatus,
-    setLastSyncTimestamp,
-    setSyncError,
-  } = useUIStore();
+  const { isSyncing, syncStatus, lastSyncTime, syncError } = useReplicationStatus();
 
-  const prevStatusRef = useRef<SyncStatus>('idle');
-
-  useEffect(() => {
-    if (!replication) return;
-
-    const { oeeEvents, signatures, qualityInspections, defectLogs, weightLogs } = replication;
-    const subs: Array<() => void> = [];
-
-    // Helpers to subscribe to any replication state
-    const allReplications = [
-      oeeEvents, signatures, qualityInspections, defectLogs, weightLogs,
-    ];
-
-    // ── Subscribe to active$ (is replication currently running?) ──
-    const handleActive = (active: boolean) => {
-      setIsSyncing(active);
-      if (active) {
-        setSyncStatus('syncing');
-        setSyncError(null);
-      } else {
-        // If we were syncing and now stopped without error → idle
-        if (prevStatusRef.current === 'syncing') {
-          setSyncStatus('idle');
-          setLastSyncTimestamp(new Date());
-        }
-      }
-      prevStatusRef.current = active ? 'syncing' : syncStatus;
-    };
-
-    for (const rep of allReplications) {
-      if (rep) {
-        const subActive = rep.active$.subscribe(handleActive);
-        subs.push(() => subActive.unsubscribe());
-      }
-    }
-
-    // ── Subscribe to error$ (did the last sync fail?) ──
-    const handleError = (err: Error | undefined) => {
-      if (err) {
-        setSyncStatus('error');
-        setSyncError(err.message);
-      }
-    };
-
-    for (const rep of allReplications) {
-      if (rep) {
-        const subError = rep.error$.subscribe(handleError);
-        subs.push(() => subError.unsubscribe());
-      }
-    }
-
-    return () => {
-      subs.forEach((unsub) => unsub());
-    };
-  }, [replication, setIsSyncing, setSyncStatus, setLastSyncTimestamp, setSyncError, syncStatus]);
-
-  // ── Render helpers ──
   const getIcon = (): { name: string; color: string } => {
     switch (syncStatus) {
       case 'syncing':
-        return { name: 'cloud-sync', color: '#FF9800' }; // amber
+        return { name: 'cloud-sync', color: colors.caution };
       case 'error':
-        return { name: 'cloud-off-outline', color: '#F44336' }; // red
+        return { name: 'cloud-off-outline', color: colors.offline };
       case 'offline':
-        return { name: 'wifi-off', color: '#9E9E9E' }; // gray
+        return { name: 'wifi-off', color: colors.secondary };
       case 'idle':
       default:
-        return { name: 'cloud-check', color: '#4CAF50' }; // green
+        return { name: 'cloud-check', color: colors.online };
     }
   };
 
@@ -122,6 +55,8 @@ export function SyncMonitor() {
 
   const timestampText = lastSyncTimestamp
     ? `Última sinc: ${lastSyncTimestamp.toLocaleTimeString()}`
+  const timestampText = lastSyncTime
+    ? `Última sinc: ${lastSyncTime.toLocaleTimeString()}`
     : 'Última sinc: —';
 
   return (
@@ -158,32 +93,32 @@ export function SyncMonitor() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.white,
     marginTop: 'auto',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: spacing.xxs,
   },
   icon: {
     margin: 0,
-    marginRight: 4,
+    marginRight: spacing.xxs,
   },
   text: {
     flex: 1,
-    fontWeight: '600',
+    fontWeight: typography.weights.semibold,
   },
   syncingIndicator: {
-    color: '#FF9800',
+    color: colors.caution,
     fontSize: 10,
-    marginLeft: 8,
+    marginLeft: spacing.xs,
   },
   timestamp: {
-    color: '#9E9E9E',
-    fontSize: 11,
+    color: colors.textSecondary,
+    fontSize: typography.sizes.sm,
     marginLeft: 32,
   },
   dlqBadge: {

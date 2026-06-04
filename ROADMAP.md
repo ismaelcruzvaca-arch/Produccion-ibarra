@@ -1,93 +1,93 @@
 # Roadmap — Chocolate Ibarra Producción
 
-> Documento vivo. Última actualización: 2026-05-11.
+> Documento vivo. Última actualización: 2026-06-03.
 
 ## Visión
-Transformar la captura de datos de producción en una experiencia offline-first, robusta y observable, desplegable con un solo `git push` y monitoreada en tiempo real.
+App de producción para el piso de planta que reemplaza los formatos de papel, captura OEE con firmas digitales ISO 22000, y se integra con el ecosistema (CMMS Ibero, futuro Epicor) — offline-first, sin costo por máquina.
+
+## Arquitectura Actual
+
+```
+Frontend:  Expo Web (PWA) → Vercel (GitHub Actions deploy)
+Backend:   Nhost (Hasura GraphQL + Auth + Functions) → auto-deploy desde GitHub
+DB:        PostgreSQL (Nhost) + RxDB local (IndexedDB)
+IoT:       Gateway Raspberry Pi 5 (cloud_sync → producción directa)
+CMMS:      cmms-ibero (edge function oee-trigger, pendiente cableado)
+ERP:       Epicor (pendiente API)
+```
+
+## Lo que YA tenemos (Junio 2026)
+
+### Core Producción
+- [x] OEE: shift start/end, paros con causa, conteos, rechazos
+- [x] Formularios digitales: Tostador (F-PD-16), Mezclado (F-PD-17), Extractor (F-PD-18), Vitaminas (F-PD-06)
+- [x] Firma digital ISO 22000 en todos los formularios
+- [x] Sync bidireccional de formularios a Hasura (recién implementado)
+- [x] Stop reasons con CRUD admin
+- [x] Products, lines, machines, shifts CRUD admin
+
+### Calidad
+- [x] Inspecciones de calidad (pass/fail, defectos, peso)
+- [x] Sync calidad a Hasura
+
+### Admin / Settings
+- [x] Panel de administración completo (Profile, PowerBI, Catálogos, System)
+- [x] User management (crear operadores con dummy emails, roles admin/supervisor/operator)
+- [x] Catálogos: stop_reasons, lines, machines, products, shifts
+
+### Integraciones
+- [x] CMMS Ibero: edge function sync-plant-metadata + oee-trigger (pendiente cablear)
+- [x] Nhost Functions: sync-role-metadata + admin-manage-user + sync-plant-metadata
+- [x] Hasura RLS: todas las tablas con permisos por rol
+- [x] RxDB sync: 9 colecciones sincronizadas (OEE, firmas, calidad, formularios)
+
+### Infraestructura
+- [x] Offline-first (RxDB + IndexedDB)
+- [x] CI/CD: GitHub Actions → E2E Playwright → Vercel deploy
+- [x] Nhost auto-deploy (migrations + functions desde GitHub)
+- [x] Sentry error tracking
+- [x] Replicación resiliente (backoff + circuit breaker + DLQ)
+- [x] RxDB migration schema plugin (fixeado)
+- [x] Catalog store con caché + invalidación
 
 ---
 
-## Fase 1: Estabilidad de Despliegue (Pilar 1) 🔧
-**Estado**: En progreso | **Objetivo**: Cero despliegues a ciegas
+## Lo pendiente
 
-- [x] Fix de URLs hardcodeadas en `sync.ts` → variables de entorno `EXPO_PUBLIC_NHOST_SUBDOMAIN`
-- [x] Guarda de entorno web en `DatabaseContext.tsx` para evitar crash del módulo `ws`
-- [x] Scripts de build/serve estandarizados (`build:web`, `serve:web`, `clean:cache`)
-- [x] `.env.example` como contrato de variables requeridas
-- [x] Servidor SPA con Bun (`serve-dist.mjs`) para validación local idéntica a Vercel
-- [x] Sentry Error Boundary global instalado y listo para activar con DSN
-- [ ] Inyección de `EXPO_PUBLIC_NHOST_SUBDOMAIN` en Vercel desde GitHub Actions
-- [ ] Primer deploy 100% exitoso en Vercel con datos de Nhost visibles
+### Sprint A: "Conciliación de Paros" (próximo)
+- [ ] Pantalla de conciliación al fin de turno (operador revisa paros)
+- [ ] Clasificación automática de micro-paros vs paros con causa
+- [ ] Integración con CMMS para disparar OT correctiva
+- [ ] Threshold de micro-paros configurable
+- [ ] ~Esto ya estaba diseñado, se perdió en branch local~
 
-**Definition of Done**: La app carga en Vercel, autentica con Nhost y muestra datos reales sin errores de consola críticos.
+### Sprint B: "Conexión con Epicor" (cuando IT dé la API)
+- [ ] Recepción de órdenes de producción desde Epicor
+- [ ] Post-back de cierre de turno (producción real, consumo materiales)
+- [ ] Envío de lotes para trazabilidad en Epicor
 
----
+### Sprint C: "Dashboard + Reportes"
+- [ ] Dashboard modo TV para piso de planta
+- [ ] Vista OEE por línea/turno con tendencias
+- [ ] KPIs: MTBF, MTTR, scrap rate
+- [ ] Reportes automáticos exportables
+- [ ] Dashboard PowerBI (link existente en settings)
 
-## Fase 2: Captura OEE (Pilar 2) 📊
-**Estado**: Implementado v1 | **Objetivo**: Captura offline-first de métricas de producción
+### Sprint D: "Alertas y Andon"
+- [ ] Alertas por umbral (OEE bajo, paro prolongado)
+- [ ] Notificaciones WhatsApp/SMS/email
+- [ ] Health check endpoint
 
-- [x] Esquema RxDB `reports` con campos flexibles `data: object`
-- [x] Repositorio reactivo `useReportsRepository` con CRUD + soft delete
-- [x] Formulario de captura optimizado para tablet industrial (touch targets ≥48dp)
-- [x] Sync GraphQL bidireccional (push/pull) con Nhost
-- [ ] Validaciones de negocio (máximos, mínimos, campos obligatorios)
-- [ ] Soporte para múltiples turnos y líneas de producción
-- [ ] Cálculo automático de OEE (Disponibilidad × Rendimiento × Calidad)
-
-**Definition of Done**: Un operador puede capturar un reporte completo en tablet, guardar offline y verlo reflejado en Nhost al recuperar conectividad.
-
----
-
-## Fase 3: Dashboard Ejecutivo (Pilar 3) 📈
-**Estado**: Planeado | **Objetivo**: Visibilidad en tiempo real para toma de decisiones
-
-- [ ] Vista consolidada de OEE por línea, turno y rango de fechas
-- [ ] Gráficos de tendencia (react-native-chart-kit o Recharts Web)
-- [ ] KPIs críticos: MTBF, MTTR, Scrap Rate, Throughput
-- [ ] Filtros dinámicos por fecha, supervisor y tipo de paro
-- [ ] Modo "TV" (pantalla grande sin interacción) para área de producción
-
-**Definition of Done**: El supervisor puede ver en una tablet o TV el estado de la planta en los últimos 24h sin necesidad de refrescar manualmente.
-
----
-
-## Fase 4: Monitoreo y Alertas (Pilar 4) 🚨
-**Estado**: Parcial (Sentry instalado) | **Objetivo**: Observabilidad completa del sistema y la producción
-
-- [x] Sentry para errores de frontend (crash reports, stack traces)
-- [ ] Métricas de rendimiento (Web Vitals, tiempo de carga)
-- [ ] Alertas por umbral de producción (ej: OEE < 60% por > 30 min)
-- [ ] Alertas de sincronización fallida (RxDB → Nhost)
-- [ ] Log centralizado de operaciones críticas (quién, qué, cuándo)
-- [ ] Health check endpoint para monitoreo externo
-
-**Definition of Done**: El equipo de IT recibe una alerta en < 5 min si la app deja de sincronizar o si la producción cae bajo umbral crítico.
-
----
-
-## Fase 5: Integraciones (Pilar 5) 🔌
-**Estado**: Planeado | **Objetivo**: Conectar el ecosistema productivo
-
-- [ ] Webhook para ERP (SAP / Odoo / custom) al cerrar turno
-- [ ] Exportación de reportes a Excel/PDF para auditorías
-- [ ] Integración con sensores IoT (opcional, vía API intermedia)
-- [ ] Single Sign-On (SSO) con Azure AD / Google Workspace
-- [ ] API pública (GraphQL) para consumo de datos por BI externo
-
-**Definition of Done**: Al cerrar turno, los datos fluyen automáticamente al ERP y generan el reporte PDF para el supervisor sin intervención manual.
+### Sprint E: "IoT Gateway" (cuando llegue el hardware)
+- [ ] Monitoreo de sensores en tiempo real
+- [ ] Detección automática de paros
+- [ ] Variables de proceso (temp, vibración, etc.)
 
 ---
 
 ## Notas de Arquitectura
 
-- **Offline-first obligatorio**: Todas las fases deben funcionar sin conexión y sincronizar cuando ésta regrese.
-- **CI/CD es requisito, no opcional**: Ninguna fase se considera "Done" hasta que su código pase por GitHub Actions y se despliegue exitosamente en Vercel.
-- **Mobile + Web**: El target principal es tablet Android (Chrome PWA), pero el código debe ser compatible con iOS y web desktop.
-
----
-
-## Historial de Cambios
-
-| Fecha | Cambio | Autor |
-|-------|--------|-------|
-| 2026-05-11 | Creación inicial del roadmap con 5 pilares | Open Code |
+- **Offline-first obligatorio**: Todo debe funcionar sin conexión y sincronizar cuando regrese.
+- **Deploy**: GitHub Actions corre E2E → si pasa, deploy a Vercel. Nhost auto-deploy desde el mismo push.
+- **No hay costo por máquina/mes**: Solo infraestructura (Nhost + Vercel).
+- **Competencia con Pulsar**: No competimos en automatic data capture (hardware). Competimos en costo + integración CMMS/Epicor + industria específica chocolate + ISO 22000.

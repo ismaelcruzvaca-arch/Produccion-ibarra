@@ -51,6 +51,8 @@ export interface AuthState {
 
   // Operator profile (populated after login via fetchOperatorProfile)
   operatorId: string | null;
+  fullName: string | null;
+  role: string | null;
   assignedLines: string[];
   selectedLine: string | null;
   role: string | null;  // 'operator' | 'supervisor' | 'admin' | null
@@ -95,6 +97,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: true,
   error: null,
   operatorId: null,
+  fullName: null,
+  role: null,
   assignedLines: [],
   selectedLine: null,
   role: null,
@@ -169,6 +173,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isLoading: false,
       error: null,
       operatorId: null,
+      fullName: null,
+      role: null,
       assignedLines: [],
       selectedLine: null,
       role: null,
@@ -254,6 +260,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       set({
         operatorId: profile?.id ?? userId,
+        fullName: profile?.full_name ?? null,
+        role: profile?.role ?? null,
         assignedLines: lineIds,
         role: profile?.role ?? 'operator',
       });
@@ -266,6 +274,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Permite que la UI continúe hacia loadCatalogs() sin bloquearse.
       set({
         operatorId: userId,
+        fullName: null,
+        role: null,
         assignedLines: [],
         role: 'operator',
         error: 'Modo sin conexión — perfiles no disponibles',

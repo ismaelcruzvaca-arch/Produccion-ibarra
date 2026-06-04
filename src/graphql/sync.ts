@@ -27,31 +27,6 @@ import {
   fromGraphQLOeeEvent,
   toGraphQLSignature,
   fromGraphQLSignature,
-  toGraphQLQualityInspection,
-  fromGraphQLQualityInspection,
-  toGraphQLDefectLog,
-  fromGraphQLDefectLog,
-  toGraphQLWeightLog,
-  fromGraphQLWeightLog,
-  toGraphQLToasterLog,
-  fromGraphQLToasterLog,
-  toGraphQLMixingBatch,
-  fromGraphQLMixingBatch,
-  toGraphQLExtractorCheck,
-  fromGraphQLExtractorCheck,
-  toGraphQLVitaminKit,
-  fromGraphQLVitaminKit,
-  type GraphQLOeeEvent,
-  type GraphQLSignature,
-  type GraphQLQualityInspection,
-  type GraphQLDefectLog,
-  type GraphQLWeightLog,
-  type GraphQLToasterLog,
-  type GraphQLMixingBatch,
-  type GraphQLExtractorCheck,
-  type GraphQLVitaminKit,
-} from './dto';
-import type { IOeeEvent, ISignature, IQualityInspection, IDefectLog, IWeightLog, IToasterLog, IMixingBatch, IExtractorCheck, IVitaminKit } from '../core/types';
 import type { ChocolateIbarraDatabase } from '../data/database';
 import { createResilientReplication, runDLQDiagnosis, type ResilientState } from '../sync/resilientReplication';
 
@@ -82,6 +57,212 @@ export function getHeaders(): Record<string, string> {
     headers['Authorization'] = `Bearer ${token}`;
   }
   return headers;
+}
+
+// ─── Pull Query Builder (Assets) ───────────────────────────────────────────────
+
+/**
+ * Pull handler for assets — fetches records updated after the checkpoint.
+ *
+ * @param checkpoint - The last synced client_updated_at value (null for initial sync)
+ * @returns Query object for replicateGraphQL's queryBuilder
+ *
+ * Checkpoint strategy:
+ * - Initial sync (checkpoint=null): query all records (client_updated_at > 0)
+ * - Subsequent syncs: query records where client_updated_at > last checkpoint
+ * - Results ordered by client_updated_at ascending to avoid missing updates
+ */
+function pullQueryBuilderAssets(checkpoint: GraphQLAsset | undefined, _limit: number) {
+  return {
+    query: `
+      query PullAssets($lastCheckpoint: bigint!) {
+        assets(
+          where: { client_updated_at: { _gt: $lastCheckpoint } },
+          order_by: { client_updated_at: asc }
+        ) {
+          id
+          name
+          type_id
+          status
+          location
+          serial_number
+          manufacturer
+          model_number
+          in_service_date
+          warranty_expiration
+          client_updated_at
+          deleted
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.client_updated_at ? parseInt(checkpoint.client_updated_at, 10) : 0 },
+  };
+}
+
+// ─── Push Mutation Builder (Assets Upsert) ────────────────────────────────────
+
+/**
+ * Push handler for assets — sends changed documents to server via upsert mutation.
+ *
+ * Uses Hasura's insert ... on_conflict to handle both inserts and updates.
+ * Constraint name: assets_pkey (Hasura standard naming: <table>_pkey)
+ *
+ * The update_columns array specifies which fields to update on conflict.
+ * All mutable fields are included; id and client_updated_at are always updated
+ * (client_updated_at drives LWW conflict resolution).
+ */
+function pushMutationBuilderAssets(docs: any[]) {
+  const objects = docs.map(toGraphQLAsset);
+  return {
+    query: `
+      mutation UpsertAssets($objects: [assets_insert_input!]!) {
+        insert_assets(
+          objects: $objects,
+          on_conflict: {
+            constraint: assets_pkey,
+            update_columns: [
+              name,
+              type_id,
+              status,
+              location,
+              serial_number,
+              manufacturer,
+              model_number,
+              in_service_date,
+              warranty_expiration,
+              client_updated_at,
+              deleted
+            ]
+          }
+        ) {
+          affected_rows
+        }
+      }
+    `,
+    variables: { objects },
+  };
+}
+
+// ─── Pull Query Builder (Work Orders) ─────────────────────────────────────────
+
+function pullQueryBuilderWorkOrders(checkpoint: GraphQLWorkOrder | undefined, _limit: number) {
+  return {
+    query: `
+      query PullWorkOrders($lastCheckpoint: bigint!) {
+        work_orders(
+          where: { client_updated_at: { _gt: $lastCheckpoint } },
+          order_by: { client_updated_at: asc }
+        ) {
+          id
+          equipment_id
+          description
+          status
+          priority
+          assigned_to
+          scheduled_date
+          completed_date
+          client_updated_at
+          deleted
+          lifecycle_phase
+          symptom_note
+          cause_note
+          action_note
+          actual_start_at
+          completed_at
+          cmms_wo_id
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.client_updated_at ? parseInt(checkpoint.client_updated_at, 10) : 0 },
+  };
+}
+
+// ─── Push Mutation Builder (Work Orders Upsert) ────────────────────────────────
+
+function pushMutationBuilderWorkOrders(docs: any[]) {
+  const objects = docs.map(toGraphQLWorkOrder);
+  return {
+    query: `
+      mutation UpsertWorkOrders($objects: [work_orders_insert_input!]!) {
+        insert_work_orders(
+          objects: $objects,
+          on_conflict: {
+            constraint: work_orders_pkey,
+            update_columns: [
+              equipment_id,
+              description,
+              status,
+              priority,
+              assigned_to,
+              scheduled_date,
+              completed_date,
+              client_updated_at,
+              deleted,
+              lifecycle_phase,
+              symptom_note,
+              cause_note,
+              action_note,
+              actual_start_at,
+              completed_at,
+              cmms_wo_id
+            ]
+          }
+        ) {
+          affected_rows
+        }
+      }
+    `,
+    variables: { objects },
+  };
+}
+
+// ─── Pull Query Builder (Reports) ──────────────────────────────────────────────
+
+function pullQueryBuilderReports(checkpoint: GraphQLReport | undefined, _limit: number) {
+  return {
+    query: `
+      query PullReports($lastCheckpoint: bigint!) {
+        reports(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          updated_at
+          deleted
+          template_id
+          data
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ? parseInt(checkpoint.updated_at, 10) : 0 },
+  };
+}
+
+// ─── Push Mutation Builder (Reports Upsert) ─────────────────────────────────────
+
+function pushMutationBuilderReports(docs: any[]) {
+  const objects = docs.map(toGraphQLReport);
+  return {
+    query: `
+      mutation UpsertReports($objects: [reports_insert_input!]!) {
+        insert_reports(
+          objects: $objects,
+          on_conflict: {
+            constraint: reports_pkey,
+            update_columns: [
+              updated_at,
+              deleted,
+              template_id,
+              data
+            ]
+          }
+        ) {
+          affected_rows
+        }
+      }
+    `,
+    variables: { objects },
+  };
 }
 
 // ─── Pull Query Builder (OEE Events) ───────────────────────────────────────────

@@ -1,101 +1,154 @@
 /**
- * SettingsSystem — system information section for the settings screen.
+ * SettingsSystem — System information section.
  *
- * Displays app version (from expo-constants), Nhost connection status,
- * and last sync timestamp from useUIStore.
+ * Pattern: Atomic Design — Organism (SS-4)
+ * Why:
+ * - One organism per settings section (AD-2).
+ * - Shows app version, Nhost subdomain, environment, and sync status.
+ * - Uses List.Accordion wrapper for consistent expandable section.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Text, Surface } from 'react-native-paper';
+import { List, Text, Divider } from 'react-native-paper';
 import Constants from 'expo-constants';
+import { useUIStore, selectSyncStatus } from '../../../store/useUIStore';
+import { colors, spacing, typography } from '../../../theme/tokens';
 
-import { useUIStore } from '../../../store/useUIStore';
-import { nhost } from '../../../../graphql/nhostClient';
+const NHOST_SUBDOMAIN = process.env.EXPO_PUBLIC_NHOST_SUBDOMAIN ?? 'No configurado';
+const APP_VERSION = Constants.expoConfig?.version ?? '0.0.0';
+
+function getEnvironment(): string {
+  if (__DEV__) return 'Local (desarrollo)';
+  return 'Producción';
+}
 
 export function SettingsSystem() {
-  const { isOnline, lastSyncTimestamp } = useUIStore();
+  const [expanded, setExpanded] = useState(false);
+  const { lastSyncTimestamp, pendingCount, syncStatus } = useUIStore(selectSyncStatus);
 
-  // App version from expo-constants
-  const appVersion = Constants.expoConfig?.version ?? Constants.manifest?.version ?? '—';
+  const syncStatusLabel = () => {
+    switch (syncStatus) {
+      case 'idle':
+        return 'Sincronizado';
+      case 'syncing':
+        return 'Sincronizando...';
+      case 'error':
+        return 'Error de sincronización';
+      case 'offline':
+        return 'Sin conexión';
+      default:
+        return 'Desconocido';
+    }
+  };
 
-  // Nhost status: is auth available?
-  const nhostSession = nhost.getUserSession();
-  const nhostConnected = !!(nhostSession?.accessToken);
-
-  const statusLabel = isOnline
-    ? nhostConnected
-      ? 'Conectado'
-      : 'No autenticado'
-    : 'Desconectado';
-
-  const statusColor = isOnline && nhostConnected ? '#2E7D32' : '#C62828';
-
-  const syncTimeText = lastSyncTimestamp
+  const lastSyncLabel = lastSyncTimestamp
     ? lastSyncTimestamp.toLocaleString()
     : '—';
 
   return (
-    <Surface style={styles.container} elevation={1}>
-      <Text variant="titleMedium" style={styles.title}>Sistema</Text>
+    <List.Accordion
+      title="Sistema"
+      titleStyle={styles.accordionTitle}
+      left={(props) => <List.Icon {...props} icon="cog" color={colors.primary} />}
+      expanded={expanded}
+      onPress={() => setExpanded(!expanded)}
+    >
+      <View style={styles.content}>
+        {/* App version */}
+        <View style={styles.infoRow}>
+          <Text variant="bodySmall" style={styles.infoLabel}>
+            Versión de la app
+          </Text>
+          <Text variant="bodyMedium" style={styles.infoValue}>
+            {APP_VERSION}
+          </Text>
+        </View>
 
-      {/* App version */}
-      <View style={styles.row}>
-        <Text variant="bodyMedium" style={styles.label}>Versión App</Text>
-        <Text variant="bodyMedium" style={styles.value}>{appVersion}</Text>
-      </View>
+        <Divider style={styles.divider} />
 
-      {/* Nhost status */}
-      <View style={styles.row}>
-        <Text variant="bodyMedium" style={styles.label}>Nhost</Text>
-        <Text variant="bodyMedium" style={[styles.value, { color: statusColor }]}>
-          {statusLabel}
-        </Text>
-      </View>
+        {/* Nhost subdomain */}
+        <View style={styles.infoRow}>
+          <Text variant="bodySmall" style={styles.infoLabel}>
+            Subdominio Nhost
+          </Text>
+          <Text variant="bodyMedium" style={styles.infoValue}>
+            {NHOST_SUBDOMAIN}
+          </Text>
+        </View>
 
-      {/* Last sync */}
-      <View style={styles.row}>
-        <Text variant="bodyMedium" style={styles.label}>Última Sinc.</Text>
-        <Text variant="bodyMedium" style={styles.value}>{syncTimeText}</Text>
-      </View>
+        <Divider style={styles.divider} />
 
-      {/* RxDB database name / scheme info */}
-      <View style={styles.row}>
-        <Text variant="bodyMedium" style={styles.label}>Base de Datos</Text>
-        <Text variant="bodyMedium" style={styles.value}>chocolate-ibarra</Text>
+        {/* Environment */}
+        <View style={styles.infoRow}>
+          <Text variant="bodySmall" style={styles.infoLabel}>
+            Entorno
+          </Text>
+          <Text variant="bodyMedium" style={styles.infoValue}>
+            {getEnvironment()}
+          </Text>
+        </View>
+
+        <Divider style={styles.divider} />
+
+        {/* Sync status */}
+        <View style={styles.infoRow}>
+          <Text variant="bodySmall" style={styles.infoLabel}>
+            Estado de sincronización
+          </Text>
+          <Text variant="bodyMedium" style={styles.infoValue}>
+            {syncStatusLabel()}
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text variant="bodySmall" style={styles.infoLabel}>
+            Última sincronización
+          </Text>
+          <Text variant="bodyMedium" style={styles.infoValue}>
+            {lastSyncLabel}
+          </Text>
+        </View>
+
+        {pendingCount > 0 && (
+          <>
+            <Divider style={styles.divider} />
+            <View style={styles.infoRow}>
+              <Text variant="bodySmall" style={[styles.infoLabel, { color: colors.caution }]}>
+                Pendientes por sincronizar
+              </Text>
+              <Text variant="bodyMedium" style={[styles.infoValue, { color: colors.caution }]}>
+                {pendingCount}
+              </Text>
+            </View>
+          </>
+        )}
       </View>
-    </Surface>
+    </List.Accordion>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    marginBottom: 16,
+  accordionTitle: {
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
   },
-  title: {
-    fontWeight: '700',
-    color: '#212121',
-    marginBottom: 12,
+  content: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 6,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#EEEEEE',
+  divider: {
+    marginVertical: spacing.sm,
   },
-  label: {
-    color: '#616161',
-    flex: 1,
+  infoRow: {
+    flexDirection: 'column',
+    gap: spacing.xxs,
   },
-  value: {
-    color: '#212121',
-    fontWeight: '500',
-    textAlign: 'right',
-    flex: 1,
+  infoLabel: {
+    color: colors.textSecondary,
+  },
+  infoValue: {
+    color: colors.textPrimary,
+    fontWeight: typography.weights.medium,
   },
 });
