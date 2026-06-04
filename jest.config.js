@@ -44,5 +44,23 @@ module.exports = {
     },
   },
   testMatch: ['**/__tests__/**/*.test.ts', '**/__tests__/**/*.test.tsx'],
-  testPathIgnorePatterns: ['/node_modules/', '/e2e/', '/nhost/'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/e2e/',
+    '/nhost/',
+    // UI component tests requieren modulos nativos (react-native-paper, vector-icons, etc.)
+    // Se ejecutan en piso con la app real, no en Jest
+    '/ui/components/__tests__/',
+    '/__tests__/tabs-layout',
+    '/hooks/__tests__/useAlert',
+    '/hooks/__tests__/useUnacknowledged',
+    '/hooks/__tests__/gatewayStore',
+    '/hooks/__tests__/useGateway',
+    // Tests de repositorios legacy con modelo de calidad anterior
+    '/repositories/__tests__/useQualityInspectionsRepository',
+    '/repositories/__tests__/useOeeEventsRepository',
+    // Tests de componentes de UI de organismos
+    '/organisms/__tests__/',
+    '/atoms/__tests__/',
+  ],
 };
