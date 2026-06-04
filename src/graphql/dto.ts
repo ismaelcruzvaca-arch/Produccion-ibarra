@@ -401,15 +401,13 @@ export function fromGraphQLSignature(gql: GraphQLSignature): ISignature {
  */
 export interface GraphQLQualityInspection {
   id: string;
-  line_id: string;
-  operator_id?: string;
-  shift_id?: string;
-  product_code?: string;
-  result: string; // 'pass' | 'fail'
+  machine_id: string;
+  inspector_id: string;
+  shift_type: string;
+  disposition: string;
   notes?: string;
-  created_at: string; // BIGINT as string
-  updated_at: string; // BIGINT as string
-  is_deleted: boolean;
+  data_source: string;
+  updated_at: string; // TIMESTAMPTZ → ISO 8601 string from Hasura
 }
 
 /**
@@ -417,18 +415,16 @@ export interface GraphQLQualityInspection {
  * Local fields not in backend (machine_id, inspection_type, value, unit,
  * defect_*, standard_*) are omitted from the push payload.
  */
-export function toGraphQLQualityInspection(insp: IQualityInspection): Record<string, unknown> {
+export function toGraphQLQualityInspection(qi: IQualityInspection): Record<string, unknown> {
   return {
-    id: insp.id,
-    line_id: insp.line_id,
-    operator_id: insp.operator_id,
-    shift_id: insp.shift_session_id,
-    product_code: insp.product_id,
-    result: insp.passed ? 'pass' : 'fail',
-    notes: insp.notes,
-    created_at: insp.created_at.toString(),
-    updated_at: insp.updated_at.toString(),
-    is_deleted: insp.is_deleted,
+    id: qi.id,
+    machine_id: qi.machine_id,
+    inspector_id: qi.inspector_id,
+    shift_type: qi.shift_type,
+    disposition: qi.disposition,
+    notes: qi.notes,
+    data_source: qi.data_source,
+    updated_at: new Date(qi.updated_at).toISOString(),
   };
 }
 
@@ -439,25 +435,15 @@ export function toGraphQLQualityInspection(insp: IQualityInspection): Record<str
 export function fromGraphQLQualityInspection(gql: GraphQLQualityInspection): IQualityInspection {
   return {
     id: gql.id,
-    line_id: gql.line_id,
-    machine_id: '', // not tracked in backend yet
-    shift_session_id: gql.shift_id ?? '',
-    operator_id: gql.operator_id ?? '',
-    product_id: gql.product_code ?? '',
-    inspection_type: 'visual', // default — not in backend schema
-    value: 0, // default — not in backend schema
-    unit: '', // default — not in backend schema
-    passed: gql.result === 'pass',
-    defect_id: undefined,
-    defect_label: undefined,
-    defect_severity: undefined,
+    machine_id: gql.machine_id,
+    inspector_id: gql.inspector_id,
+    shift_type: gql.shift_type as IQualityInspection['shift_type'],
+    disposition: gql.disposition as IQualityInspection['disposition'],
     notes: gql.notes,
-    standard_min: undefined,
-    standard_max: undefined,
-    standard_warning: undefined,
-    created_at: parseInt(gql.created_at, 10),
-    updated_at: parseInt(gql.updated_at, 10),
-    is_deleted: gql.is_deleted,
+    data_source: gql.data_source as IQualityInspection['data_source'],
+    updated_at: new Date(gql.updated_at).getTime(),
+    device_id: '',
+    is_deleted: false,
   };
 }
 
