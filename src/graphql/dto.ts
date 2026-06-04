@@ -455,51 +455,33 @@ export function fromGraphQLQualityInspection(gql: GraphQLQualityInspection): IQu
 export interface GraphQLDefectLog {
   id: string;
   inspection_id: string;
-  defect_type?: string;
-  defect_code?: string;
-  quantity: number;
-  severity: string; // 'low' | 'medium' | 'high' | 'critical'
-  notes?: string;
-  registered_at: string; // BIGINT as string
-  updated_at: string; // BIGINT as string
-  is_deleted: boolean;
+  severity: string;
+  defect_type: string;
+  defect_count: number;
+  updated_at: string; // TIMESTAMPTZ → ISO 8601
 }
 
-/**
- * Maps a local RxDB defect log to GraphQL input format.
- * Local defect_id → backend defect_type, defect_label → defect_code.
- */
-export function toGraphQLDefectLog(dlog: IDefectLog): Record<string, unknown> {
+export function toGraphQLDefectLog(dl: IDefectLog): Record<string, unknown> {
   return {
-    id: dlog.id,
-    inspection_id: dlog.inspection_id,
-    defect_type: dlog.defect_id,
-    defect_code: dlog.defect_label,
-    quantity: dlog.quantity,
-    severity: dlog.defect_severity,
-    notes: dlog.notes,
-    registered_at: dlog.created_at.toString(),
-    updated_at: dlog.updated_at.toString(),
-    is_deleted: dlog.is_deleted,
+    id: dl.id,
+    inspection_id: dl.inspection_id,
+    severity: dl.severity,
+    defect_type: dl.defect_type,
+    defect_count: dl.defect_count,
+    updated_at: new Date(dl.updated_at).toISOString(),
   };
 }
 
-/**
- * Maps a GraphQL defect log response to local RxDB format.
- * Backend defect_type → local defect_id, defect_code → defect_label.
- */
 export function fromGraphQLDefectLog(gql: GraphQLDefectLog): IDefectLog {
   return {
     id: gql.id,
     inspection_id: gql.inspection_id,
-    defect_id: gql.defect_type ?? '',
-    defect_label: gql.defect_code ?? '',
-    defect_severity: gql.severity as IDefectLog['defect_severity'],
-    quantity: gql.quantity,
-    notes: gql.notes,
-    created_at: parseInt(gql.registered_at, 10),
-    updated_at: parseInt(gql.updated_at, 10),
-    is_deleted: gql.is_deleted,
+    severity: gql.severity as IDefectLog['severity'],
+    defect_type: gql.defect_type,
+    defect_count: gql.defect_count,
+    updated_at: new Date(gql.updated_at).getTime(),
+    device_id: '',
+    is_deleted: false,
   };
 }
 

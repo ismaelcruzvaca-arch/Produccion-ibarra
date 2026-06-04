@@ -484,82 +484,68 @@ describe('Signature DTO', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 6. QUALITY INSPECTION — asymmetric fields, boolean→result
+// 6. QUALITY INSPECTION — disposition, data_source, shift_type (IT-AC-09)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe('QualityInspection DTO', () => {
-  const EPOCH_MS = 1717086400000;
-
   const mockGraphQL: GraphQLQualityInspection = {
     id: 'qi-uuid-1',
-    line_id: 'L1',
-    operator_id: 'op-1',
-    shift_id: 'shift-1',
-    product_code: 'PROD-001',
-    result: 'pass',
+    machine_id: 'M1',
+    inspector_id: 'op-1',
+    shift_type: 'matutino',
+    disposition: 'liberado',
     notes: 'Todo en orden',
-    created_at: EPOCH_MS.toString(),
-    updated_at: EPOCH_MS.toString(),
-    is_deleted: false,
+    data_source: 'manual',
+    updated_at: '2023-11-14T22:53:20.000Z',
   };
 
-  it('toGraphQLQualityInspection maps asymmetric fields', () => {
+  it('toGraphQLQualityInspection maps fields', () => {
     const payload = toGraphQLQualityInspection(mockRxDoc);
 
-    expect(payload.shift_id).toBe('shift-1');     // shift_session_id → shift_id
-    expect(payload.product_code).toBe('PROD-001');// product_id → product_code
-    expect(payload.result).toBe('pass');           // passed: true → result: 'pass'
-    expect(payload.operator_id).toBe('op-1');
-    expect(payload.is_deleted).toBe(false);
+    expect(payload.machine_id).toBe('M1');
+    expect(payload.inspector_id).toBe('op-1');
+    expect(payload.shift_type).toBe('matutino');
+    expect(payload.disposition).toBe('liberado');
+    expect(payload.data_source).toBe('manual');
+    // RxDB-only fields MUST NOT be in GraphQL payload
+    expect(payload.device_id).toBeUndefined();
+    expect(payload.is_deleted).toBeUndefined();
   });
 
-  it('toGraphQLQualityInspection maps boolean→result: pass/fail', () => {
-    const passDoc = { ...mockRxDoc, passed: true };
-    const failDoc = { ...mockRxDoc, passed: false };
-
-    expect(toGraphQLQualityInspection(passDoc).result).toBe('pass');
-    expect(toGraphQLQualityInspection(failDoc).result).toBe('fail');
-  });
-
-  it('fromGraphQLQualityInspection maps result→boolean and asymmetric fields', () => {
+  it('fromGraphQLQualityInspection maps fields correctly', () => {
     const result = fromGraphQLQualityInspection(mockGraphQL);
 
     expect(result.id).toBe('qi-uuid-1');
-    expect(result.line_id).toBe('L1');
-    expect(result.shift_session_id).toBe('shift-1'); // shift_id → shift_session_id
-    expect(result.product_id).toBe('PROD-001');       // product_code → product_id
-    expect(result.passed).toBe(true);                  // result: 'pass' → passed: true
-    expect(result.operator_id).toBe('op-1');
-    expect(result.is_deleted).toBe(false);
+    expect(result.machine_id).toBe('M1');
+    expect(result.inspector_id).toBe('op-1');
+    expect(result.shift_type).toBe('matutino');
+    expect(result.disposition).toBe('liberado');
+    expect(result.data_source).toBe('manual');
   });
 
   it('fromGraphQLQualityInspection applies defaults for RxDB-only fields', () => {
     const result = fromGraphQLQualityInspection(mockGraphQL);
 
-    expect(result.machine_id).toBe('');     // default
-    expect(result.inspection_type).toBe('visual');  // default
-    expect(result.value).toBe(0);            // default
-    expect(result.unit).toBe('');            // default
+    expect(result.device_id).toBe('');  // default
+    expect(result.is_deleted).toBe(false);  // default
   });
 
-  it('fromGraphQLQualityInspection maps result: "fail" → passed: false', () => {
-    const gqlFail: GraphQLQualityInspection = { ...mockGraphQL, result: 'fail' };
-    const result = fromGraphQLQualityInspection(gqlFail);
+  it('fromGraphQLQualityInspection maps disposition types', () => {
+    const gqlRechazado: GraphQLQualityInspection = { ...mockGraphQL, disposition: 'rechazado' };
+    const result = fromGraphQLQualityInspection(gqlRechazado);
 
-    expect(result.passed).toBe(false);
+    expect(result.disposition).toBe('rechazado');
   });
 
-  it('fromGraphQLQualityInspection handles undefined shift_id/product_code', () => {
+  it('fromGraphQLQualityInspection handles undefined optional fields', () => {
     const gql: GraphQLQualityInspection = {
       ...mockGraphQL,
-      shift_id: undefined,
-      product_code: undefined,
+      notes: undefined,
     };
 
     const result = fromGraphQLQualityInspection(gql);
 
-    expect(result.shift_session_id).toBe('');
-    expect(result.product_id).toBe('');
+    expect(result.notes).toBeUndefined();
   });
 
   // ─── Round-trip ──────────────────────────────────────────────────────────────
@@ -571,9 +557,9 @@ describe('QualityInspection DTO', () => {
     const result = fromGraphQLQualityInspection(gql);
 
     expect(result.id).toBe(original.id);
-    expect(result.line_id).toBe(original.line_id);
-    expect(result.operator_id).toBe(original.operator_id);
-    expect(result.passed).toBe(original.passed);
+    expect(result.machine_id).toBe(original.machine_id);
+    expect(result.inspector_id).toBe(original.inspector_id);
+    expect(result.disposition).toBe(original.disposition);
     expect(result.notes).toBe(original.notes);
     expect(result.is_deleted).toBe(original.is_deleted);
   });
@@ -585,24 +571,14 @@ const DTO_EPOCH_MS = 1717086400000;
 
 const mockRxDoc = {
   id: 'qi-uuid-1',
-  line_id: 'L1',
-  machine_id: 'MC-001',
-  shift_session_id: 'shift-1',
-  operator_id: 'op-1',
-  product_id: 'PROD-001',
-  inspection_type: 'visual',
-  value: 85,
-  unit: 'mm',
-  passed: true,
-  defect_id: undefined,
-  defect_label: undefined,
-  defect_severity: undefined,
+  machine_id: 'M1',
+  inspector_id: 'op-1',
+  shift_type: 'matutino',
+  disposition: 'liberado',
   notes: 'Todo en orden',
-  standard_min: undefined,
-  standard_max: undefined,
-  standard_warning: undefined,
-  created_at: DTO_EPOCH_MS,
+  data_source: 'manual',
   updated_at: DTO_EPOCH_MS,
+  device_id: '',
   is_deleted: false,
 } as unknown as IQualityInspection;
 
