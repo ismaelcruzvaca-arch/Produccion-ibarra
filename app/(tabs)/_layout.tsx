@@ -41,7 +41,7 @@ export default function TabLayout() {
             fontSize: 12,
           },
         }}
-      />
+      >
       <Tabs.Screen
         name="oee"
         options={{
@@ -93,5 +93,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </AlertSnackbarProvider>
   );
 }

@@ -55,8 +55,6 @@ export function SyncMonitor() {
 
   const timestampText = lastSyncTimestamp
     ? `Última sinc: ${lastSyncTimestamp.toLocaleTimeString()}`
-  const timestampText = lastSyncTime
-    ? `Última sinc: ${lastSyncTime.toLocaleTimeString()}`
     : 'Última sinc: —';
 
   return (

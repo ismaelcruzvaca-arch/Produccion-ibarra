@@ -1470,25 +1470,26 @@ function pushMutationBuilderQualityInspections(docs: any[]) {
 
 function pullQueryBuilderDefectLogs(checkpoint: GraphQLDefectLog | undefined, _limit: number) {
   return {
-      query PullShiftSessions($lastCheckpoint: timestamptz!) {
-        shift_sessions(
+    query: `
+      query PullDefectLogs($lastCheckpoint: bigint!) {
+        defect_logs(
           where: { updated_at: { _gt: $lastCheckpoint } },
           order_by: { updated_at: asc }
         ) {
           id
-          machine_id
-          operator_id
-          shift_type
-          status
-          started_at
-          ended_at
-          planned_boxes
-          product_code
+          inspection_id
+          defect_type
+          defect_code
+          quantity
+          severity
+          notes
+          registered_at
           updated_at
+          is_deleted
         }
       }
     `,
-    variables: { lastCheckpoint: checkpoint?.updated_at ?? '1970-01-01T00:00:00Z' },
+    variables: { lastCheckpoint: checkpoint?.updated_at ? parseInt(checkpoint.updated_at, 10) : 0 },
   };
 }
 
@@ -1671,3 +1672,10 @@ function pushMutationBuilderShiftSummary(docs: any[]) {
               total_boxes, total_rejects, performance_pct,
               has_pending_conciliation, updated_at
             ]
+          }
+        ) { affected_rows }
+      }
+    `,
+    variables: { objects },
+  };
+}
