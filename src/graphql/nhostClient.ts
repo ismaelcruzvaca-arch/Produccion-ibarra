@@ -35,33 +35,58 @@ export const nhost = createNhostClient({
 
 // ─── Network error capture ──────────────────────────────────────────────────────
 
+/**
+ * Normalized GraphQL request body for the Nhost SDK.
+ * The SDK v4.7.0 expects `{ query, variables }` — NOT `(queryString, variables)`.
+ * See: https://github.com/nhost/nhost/issues for the `return a(e, t)` bug in string path.
+ */
+interface NormalizedGQLRequest {
+  query: string;
+  variables?: Record<string, unknown>;
+}
+
 const originalRequest = nhost.graphql.request.bind(nhost.graphql);
 
 /**
  * Wraps nhost.graphql.request to capture network/GraphQL errors to Sentry.
- * Only activates in production builds with a configured DSN.
+ *
+ * CRITICAL FIX: The wrapper normalizes ALL calling conventions to the SDK's
+ * first overload `request({ query, variables }, options?)`. This works around
+ * a bug in @nhost/nhost-js v4.7.0 where passing `(queryString, variables)` as
+ * two separate arguments sends the query string as the ENTIRE HTTP body
+ * instead of `{"query": "..."}`, causing Hasura to return:
+ *   "expected Object, but encountered String"
  *
  * Spec: observability R4 — network errors to Nhost/Hasura API SHOULD be captured.
  */
-nhost.graphql.request = function requestWithSentry<T>(
-  query: string,
-  variables?: Record<string, unknown>,
+nhost.graphql.request = function requestWithSentry<TData, TVars = Record<string, unknown>>(
+  queryOrRequest: string | NormalizedGQLRequest,
+  variablesOrOptions?: TVars | RequestInit,
+  options?: RequestInit,
 ) {
-  return originalRequest(query, variables).then(
-    (response) => {
-      const err = (response as any)?.error;
-      if (err) {
-        captureException(
-          err instanceof Error ? err : new Error(err.message ?? 'GraphQL request failed'),
-          { query: query.slice(0, 200), hasError: true },
-        );
-      }
-      return response;
-    },
+  // ── Normalize arguments to { query, variables, operationName } ────────
+  let gqlRequest: NormalizedGQLRequest;
+
+  if (typeof queryOrRequest === 'string') {
+    // Called as (queryString, variables) — the pattern used across our codebase
+    gqlRequest = {
+      query: queryOrRequest,
+      variables: variablesOrOptions as Record<string, unknown> | undefined,
+    };
+  } else {
+    // Already a { query, variables } object
+    gqlRequest = queryOrRequest;
+  }
+
+  return (originalRequest as any)(gqlRequest, options).then(
+    (response: unknown) => response,
     (error: unknown) => {
       captureException(
-        error instanceof Error ? error : new Error('Network request failed'),
-        { query: query.slice(0, 200), fatal: true },
+        error instanceof Error ? error : new Error('GraphQL request failed'),
+        {
+          query: gqlRequest.query.slice(0, 200),
+          fatal: true,
+        },
       );
       throw error;
     },
