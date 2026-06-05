@@ -30,7 +30,7 @@ export function useReplicationStatus() {
   useEffect(() => {
     if (!replication) return;
 
-    const { assets, workOrders, oeeEvents } = replication;
+    const { oeeEvents } = replication;
     const subs: Array<() => void> = [];
 
     const handleActive = (active: boolean) => {
@@ -44,26 +44,16 @@ export function useReplicationStatus() {
       prevStatusRef.current = active ? 'syncing' : syncStatus;
     };
 
-    const subAssetsActive = assets.active$.subscribe(handleActive);
-    const subWorkOrdersActive = workOrders.active$.subscribe(handleActive);
-    subs.push(() => subAssetsActive.unsubscribe(), () => subWorkOrdersActive.unsubscribe());
-
-    if (oeeEvents) {
-      const subOeeActive = oeeEvents.active$.subscribe(handleActive);
-      subs.push(() => subOeeActive.unsubscribe());
-    }
-
     const handleError = (err: Error | undefined) => {
       if (err) {
         syncFailed(err.message);
       }
     };
 
-    const subAssetsError = assets.error$.subscribe(handleError);
-    const subWorkOrdersError = workOrders.error$.subscribe(handleError);
-    subs.push(() => subAssetsError.unsubscribe(), () => subWorkOrdersError.unsubscribe());
-
     if (oeeEvents) {
+      const subOeeActive = oeeEvents.active$.subscribe(handleActive);
+      subs.push(() => subOeeActive.unsubscribe());
+
       const subOeeError = oeeEvents.error$.subscribe(handleError);
       subs.push(() => subOeeError.unsubscribe());
     }

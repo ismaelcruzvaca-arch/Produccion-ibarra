@@ -36,7 +36,7 @@ describe('assetSchema migrations', () => {
 
     it('renames deleted: true → is_deleted: true', () => {
       const oldDoc = { id: 'a1', name: 'Asset 1', deleted: true };
-      const result = migrate(oldDoc);
+      const result = migrate(oldDoc, {} as any);
 
       expect(result.is_deleted).toBe(true);
       expect(result.deleted).toBeUndefined();
@@ -45,7 +45,7 @@ describe('assetSchema migrations', () => {
 
     it('renames deleted: false → is_deleted: false', () => {
       const oldDoc = { id: 'a1', deleted: false };
-      const result = migrate(oldDoc);
+      const result = migrate(oldDoc, {} as any);
 
       expect(result.is_deleted).toBe(false);
       expect(result.deleted).toBeUndefined();
@@ -53,27 +53,27 @@ describe('assetSchema migrations', () => {
 
     it('handles doc without deleted field → is_deleted defaults to false', () => {
       const oldDoc = { id: 'a1' };
-      const result = migrate(oldDoc);
+      const result = migrate(oldDoc, {} as any);
 
       expect(result.is_deleted).toBe(false);
     });
 
     it('prefers is_deleted when both deleted and is_deleted exist', () => {
       const oldDoc = { id: 'a1', deleted: true, is_deleted: false };
-      const result = migrate(oldDoc);
+      const result = migrate(oldDoc, {} as any);
 
       expect(result.is_deleted).toBe(false); // is_deleted wins over deleted
     });
 
     it('falls back to client_updated_at or now()', () => {
-      const result = migrate({ id: 'a1', deleted: false });
+      const result = migrate({ id: 'a1', deleted: false }, {} as any);
 
       expect(result.client_updated_at).toBe(FROZEN_NOW);
     });
 
     it('preserves existing client_updated_at when present', () => {
       const oldDoc = { id: 'a1', deleted: false, client_updated_at: 12345 };
-      const result = migrate(oldDoc);
+      const result = migrate(oldDoc, {} as any);
 
       expect(result.client_updated_at).toBe(12345);
     });
@@ -84,7 +84,7 @@ describe('assetSchema migrations', () => {
 
     it('creates created_at and updated_at from client_updated_at', () => {
       const oldDoc = { id: 'a1', name: 'Asset 1', is_deleted: false, client_updated_at: 12345 };
-      const result = migrate(oldDoc);
+      const result = migrate(oldDoc, {} as any);
 
       expect(result.created_at).toBe(12345);
       expect(result.updated_at).toBe(12345);
@@ -94,7 +94,7 @@ describe('assetSchema migrations', () => {
 
     it('falls back to now() when client_updated_at is missing', () => {
       const oldDoc = { id: 'a1', is_deleted: false };
-      const result = migrate(oldDoc);
+      const result = migrate(oldDoc, {} as any);
 
       expect(result.created_at).toBe(FROZEN_NOW);
       expect(result.updated_at).toBe(FROZEN_NOW);
@@ -102,7 +102,7 @@ describe('assetSchema migrations', () => {
 
     it('uses client_updated_at when it is 0 (0 is a valid epoch ms)', () => {
       const oldDoc = { id: 'a1', client_updated_at: 0 };
-      const result = migrate(oldDoc);
+      const result = migrate(oldDoc, {} as any);
 
       // 0 is NOT null/undefined, so ?? operator keeps it
       expect(result.created_at).toBe(0);
@@ -111,7 +111,7 @@ describe('assetSchema migrations', () => {
 
     it('preserves all other fields', () => {
       const oldDoc = { id: 'a1', name: 'Asset 1', type_id: 'T1', status: 'active', client_updated_at: 12345 };
-      const result = migrate(oldDoc);
+      const result = migrate(oldDoc, {} as any);
 
       expect(result.id).toBe('a1');
       expect(result.name).toBe('Asset 1');
@@ -130,7 +130,7 @@ describe('assetTypeSchema v0→v1', () => {
 
   it('creates created_at + updated_at from client_updated_at', () => {
     const oldDoc = { id: 'at1', code: 'HVAC', client_updated_at: 12345 };
-    const result = migrate(oldDoc);
+    const result = migrate(oldDoc, {} as any);
 
     expect(result.created_at).toBe(12345);
     expect(result.updated_at).toBe(12345);
@@ -138,7 +138,7 @@ describe('assetTypeSchema v0→v1', () => {
   });
 
   it('falls back to now()', () => {
-    const result = migrate({ id: 'at1', code: 'ELEC' });
+    const result = migrate({ id: 'at1', code: 'ELEC' }, {} as any);
 
     expect(result.created_at).toBe(FROZEN_NOW);
   });
@@ -153,7 +153,7 @@ describe('workOrderSchema v1→v2 (lifecycle fields)', () => {
 
   it('adds all 7 lifecycle fields as undefined', () => {
     const oldDoc = { id: 'wo1', equipment_id: 'MC-001', description: 'Repair' };
-    const result = migrate(oldDoc);
+    const result = migrate(oldDoc, {} as any);
 
     expect(result.lifecycle_phase).toBeUndefined();
     expect(result.symptom_note).toBeUndefined();
@@ -167,7 +167,7 @@ describe('workOrderSchema v1→v2 (lifecycle fields)', () => {
 
   it('preserves existing fields', () => {
     const oldDoc = { id: 'wo1', equipment_id: 'MC-001', description: 'Repair', status: 'pending' };
-    const result = migrate(oldDoc);
+    const result = migrate(oldDoc, {} as any);
 
     expect(result.id).toBe('wo1');
     expect(result.equipment_id).toBe('MC-001');
@@ -185,7 +185,7 @@ describe('downtimeConciliationSchema v1→v2', () => {
 
   it('adds all RCA/verdict/CA fields as undefined', () => {
     const oldDoc = { id: 'dc1', oee_event_id: 'oee1', reason_code: 'FC' };
-    const result = migrate(oldDoc);
+    const result = migrate(oldDoc, {} as any);
 
     expect(result.involved_departments).toBeUndefined();
     expect(result.verdicts).toBeUndefined();
@@ -204,7 +204,7 @@ describe('downtimeConciliationSchema v1→v2', () => {
 
   it('preserves existing fields', () => {
     const oldDoc = { id: 'dc1', oee_event_id: 'oee1', reason_code: 'FC', duration_min: 15, status: 'pending' };
-    const result = migrate(oldDoc);
+    const result = migrate(oldDoc, {} as any);
 
     expect(result.id).toBe('dc1');
     expect(result.oee_event_id).toBe('oee1');
@@ -223,7 +223,7 @@ describe('shiftSummarySchema v1→v2', () => {
 
   it('adds classified_stops as undefined', () => {
     const oldDoc = { id: 'ss1', shift_session_id: 'shift1', total_boxes: 500 };
-    const result = migrate(oldDoc);
+    const result = migrate(oldDoc, {} as any);
 
     expect(result.classified_stops).toBeUndefined();
     expect(result.id).toBe('ss1');
@@ -239,7 +239,7 @@ describe('shiftSummarySchema v1→v2', () => {
       total_boxes: 500,
       has_pending_conciliation: true,
     };
-    const result = migrate(oldDoc);
+    const result = migrate(oldDoc, {} as any);
 
     expect(result.total_planned_min).toBe(480);
     expect(result.total_downtime_min).toBe(45);
@@ -269,7 +269,7 @@ describe('v0→v1 created_at from updated_at fallback', () => {
     '%s v0→v1: uses updated_at when available',
     (_name, migrate) => {
       const oldDoc = { id: 'doc1', updated_at: 12345 };
-      const result = migrate(oldDoc);
+      const result = migrate(oldDoc, {} as any);
 
       expect(result.created_at).toBe(12345);
     },
@@ -279,7 +279,7 @@ describe('v0→v1 created_at from updated_at fallback', () => {
     '%s v0→v1: falls back to now() when no updated_at',
     (_name, migrate) => {
       const oldDoc = { id: 'doc1' };
-      const result = migrate(oldDoc);
+      const result = migrate(oldDoc, {} as any);
 
       expect(result.created_at).toBe(FROZEN_NOW);
     },
@@ -289,7 +289,7 @@ describe('v0→v1 created_at from updated_at fallback', () => {
     '%s v0→v1: prefers existing created_at over fallback',
     (_name, migrate) => {
       const oldDoc = { id: 'doc1', created_at: 99999, updated_at: 12345 };
-      const result = migrate(oldDoc);
+      const result = migrate(oldDoc, {} as any);
 
       expect(result.created_at).toBe(99999); // existing created_at is preserved
     },
@@ -299,7 +299,7 @@ describe('v0→v1 created_at from updated_at fallback', () => {
     '%s v0→v1: preserves all other fields',
     (_name, migrate) => {
       const oldDoc = { id: 'doc1', name: 'Test', value: 42, updated_at: 12345 };
-      const result = migrate(oldDoc);
+      const result = migrate(oldDoc, {} as any);
 
       expect(result.id).toBe('doc1');
       expect(result.name).toBe('Test');
@@ -327,7 +327,7 @@ describe('v0→v1 created_at without updated_at fallback', () => {
     '%s v0→v1: falls back to now() when no created_at',
     (_name, migrate) => {
       const oldDoc = { id: 'doc1' };
-      const result = migrate(oldDoc);
+      const result = migrate(oldDoc, {} as any);
 
       expect(result.created_at).toBe(FROZEN_NOW);
     },
@@ -337,7 +337,7 @@ describe('v0→v1 created_at without updated_at fallback', () => {
     '%s v0→v1: preserves existing created_at',
     (_name, migrate) => {
       const oldDoc = { id: 'doc1', created_at: 99999 };
-      const result = migrate(oldDoc);
+      const result = migrate(oldDoc, {} as any);
 
       expect(result.created_at).toBe(99999);
     },
@@ -353,7 +353,7 @@ describe('syncErrorSchema v0→v1', () => {
 
   it('creates created_at from fecha fallback', () => {
     const oldDoc = { id: 'se1', id_evento: 'evt1', payload_original: {}, mensaje_error: 'error', fecha: 12345 };
-    const result = migrate(oldDoc);
+    const result = migrate(oldDoc, {} as any);
 
     expect(result.created_at).toBe(12345);
     expect(result.updated_at).toBe(12345);
@@ -361,14 +361,14 @@ describe('syncErrorSchema v0→v1', () => {
 
   it('creates is_deleted defaults to false', () => {
     const oldDoc = { id: 'se1', id_evento: 'evt1', payload_original: {}, mensaje_error: 'error', fecha: 12345 };
-    const result = migrate(oldDoc);
+    const result = migrate(oldDoc, {} as any);
 
     expect(result.is_deleted).toBe(false);
   });
 
   it('falls back to now() when fecha is missing', () => {
     const oldDoc = { id: 'se1', id_evento: 'evt1', payload_original: {}, mensaje_error: 'error' };
-    const result = migrate(oldDoc);
+    const result = migrate(oldDoc, {} as any);
 
     expect(result.created_at).toBe(FROZEN_NOW);
     expect(result.updated_at).toBe(FROZEN_NOW);
@@ -376,14 +376,14 @@ describe('syncErrorSchema v0→v1', () => {
 
   it('preserves existing is_deleted when present', () => {
     const oldDoc = { id: 'se1', id_evento: 'evt1', payload_original: {}, mensaje_error: 'error', fecha: 12345, is_deleted: true };
-    const result = migrate(oldDoc);
+    const result = migrate(oldDoc, {} as any);
 
     expect(result.is_deleted).toBe(true);
   });
 
   it('preserves all other fields', () => {
     const oldDoc = { id: 'se1', id_evento: 'evt1', payload_original: { line_id: 'L1' }, mensaje_error: 'Timeout', fecha: 12345 };
-    const result = migrate(oldDoc);
+    const result = migrate(oldDoc, {} as any);
 
     expect(result.id).toBe('se1');
     expect(result.id_evento).toBe('evt1');
@@ -399,7 +399,7 @@ describe('syncErrorSchema v0→v1', () => {
 describe('edge cases', () => {
   // MIG-EDGE-01: empty oldDoc
   it('handles empty oldDoc — deleted → is_deleted with defaults', () => {
-    const result = MIGRATIONS.assetSchema[1]({});
+    const result = MIGRATIONS.assetSchema[1]({}, {} as any);
 
     expect(result.is_deleted).toBe(false);
     expect(result.deleted).toBeUndefined();
@@ -408,16 +408,16 @@ describe('edge cases', () => {
 
   // MIG-EDGE-02: explicit is_deleted: false
   it('handles explicit is_deleted: false in v0→v1', () => {
-    const result = MIGRATIONS.assetSchema[1]({ is_deleted: false });
+    const result = MIGRATIONS.assetSchema[1]({ is_deleted: false }, {} as any);
 
     expect(result.is_deleted).toBe(false);
   });
 
   // MIG-EDGE-03: frozen now() consistency
   it('produces consistent timestamps within same migration batch', () => {
-    const doc1 = MIGRATIONS.assetSchema[1]({});
-    const doc2 = MIGRATIONS.assetSchema[1]({});
-    const doc3 = MIGRATIONS.workOrderSchema[1]({});
+    const doc1 = MIGRATIONS.assetSchema[1]({}, {} as any);
+    const doc2 = MIGRATIONS.assetSchema[1]({}, {} as any);
+    const doc3 = MIGRATIONS.workOrderSchema[1]({}, {} as any);
 
     // All migrations that fall back to now() should get the same timestamp
     expect(doc1.client_updated_at).toBe(FROZEN_NOW);

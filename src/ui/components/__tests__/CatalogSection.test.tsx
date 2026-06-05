@@ -6,7 +6,8 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 
 import { PaperProvider } from 'react-native-paper';
-import { CatalogSection, type CatalogTableConfig } from '../organisms/settings/CatalogSection';
+import { CatalogSection } from '../organisms/settings/CatalogSection';
+import type { CatalogTableConfig } from '../organisms/settings/CatalogDialog';
 
 // ─── Standard mocks ─────────────────────────────────────────────────────────────
 

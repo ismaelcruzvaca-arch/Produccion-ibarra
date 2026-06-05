@@ -65,7 +65,7 @@ beforeEach(() => {
 function renderProfile() {
   return render(
     <PaperProvider>
-      <SettingsProfile />
+      <SettingsProfile onSignOut={jest.fn()} />
     </PaperProvider>,
   );
 }

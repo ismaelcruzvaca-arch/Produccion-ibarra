@@ -111,7 +111,7 @@ export interface QualityCaptureOrchestration {
   /** Prepares the final inspection payload for repository. */
   getInspectionPayload: () => Omit<
     IQualityInspection,
-    'id' | 'created_at' | 'updated_at' | 'is_deleted'
+    'id' | 'created_at' | 'updated_at' | 'is_deleted' | 'device_id' | 'inspector_id' | 'shift_type' | 'disposition' | 'data_source'
   >;
 
   /** Returns whether the current step supports defect entry. */
@@ -209,7 +209,7 @@ export function useQualityCaptureOrchestration(): QualityCaptureOrchestration {
 
   const getInspectionPayload = useCallback((): Omit<
     IQualityInspection,
-    'id' | 'created_at' | 'updated_at' | 'is_deleted'
+    'id' | 'created_at' | 'updated_at' | 'is_deleted' | 'device_id' | 'inspector_id' | 'shift_type' | 'disposition' | 'data_source'
   > => {
     if (!state.productId || !state.inspectionType || state.value === null) {
       throw new Error('Cannot create inspection payload: incomplete capture state');

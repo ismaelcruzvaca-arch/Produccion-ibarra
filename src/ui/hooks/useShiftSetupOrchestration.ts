@@ -86,6 +86,7 @@ export function useShiftSetupOrchestration() {
       }
 
       await shiftSessionsRepo.create({
+        created_at: nowMs(),
         machine_id: selectedMachine!,
         operator_id: operatorId!,
         shift_type: shiftType,

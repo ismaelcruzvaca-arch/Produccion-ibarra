@@ -9,7 +9,14 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 
 import { PaperProvider } from 'react-native-paper';
-import { DefectSelector, type DefectOption } from '../molecules/DefectSelector';
+import { DefectSelector } from '../molecules/DefectSelector';
+
+// DefectOption is not exported from the deprecated DefectSelector — define locally
+interface DefectOption {
+  id: string;
+  label: string;
+  severity: string;
+}
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -37,6 +44,7 @@ const SAMPLE_DEFECTS: DefectOption[] = [
 
 function renderSelector(overrides: Record<string, any> = {}) {
   const props = {
+    visible: true,
     defects: SAMPLE_DEFECTS,
     selectedDefectId: null,
     onSelect: jest.fn(),

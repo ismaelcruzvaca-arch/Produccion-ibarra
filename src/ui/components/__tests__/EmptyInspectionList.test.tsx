@@ -28,6 +28,7 @@ jest.mock('react-native-safe-area-context', () =>
 
 function renderEmptyList(overrides: Record<string, any> = {}) {
   const props = {
+    onCreatePress: jest.fn(),
     ...overrides,
   };
 

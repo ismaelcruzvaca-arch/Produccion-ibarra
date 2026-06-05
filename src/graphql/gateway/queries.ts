@@ -140,11 +140,6 @@ export const GET_ENGINE_HEALTH = `
 
 // ─── Response Shapes (internal) ────────────────────────────────────────────────
 
-interface QueryResponse<T> {
-  data?: T | null;
-  error?: { message: string } | null;
-}
-
 interface AlertRulesData {
   alert_rules: GatewayAlertRule[];
 }
@@ -179,14 +174,10 @@ const GATEWAY_TIMEOUT_MS = 10_000;
 export async function fetchAlertRules(plantId: string): Promise<GatewayAlertRule[]> {
   try {
     const res = await withTimeout(
-      nhost.graphql.request<QueryResponse<AlertRulesData>>(GET_ALERT_RULES, { plantId }),
+      nhost.graphql.request<AlertRulesData>(GET_ALERT_RULES, { plantId }),
       GATEWAY_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[gateway] fetchAlertRules GraphQL error:', res.error.message);
-      return [];
-    }
-    return res.data?.alert_rules ?? [];
+    return res.body?.data?.alert_rules ?? [];
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[gateway] fetchAlertRules failed:', message);
@@ -201,14 +192,10 @@ export async function fetchAlertRules(plantId: string): Promise<GatewayAlertRule
 export async function fetchNodes(plantId: string): Promise<GatewayNode[]> {
   try {
     const res = await withTimeout(
-      nhost.graphql.request<QueryResponse<NodesData>>(GET_NODES, { plantId }),
+      nhost.graphql.request<NodesData>(GET_NODES, { plantId }),
       GATEWAY_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[gateway] fetchNodes GraphQL error:', res.error.message);
-      return [];
-    }
-    return res.data?.nodes ?? [];
+    return res.body?.data?.nodes ?? [];
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[gateway] fetchNodes failed:', message);
@@ -227,14 +214,10 @@ export async function fetchTelemetryByNode(
 ): Promise<GatewayTelemetry[]> {
   try {
     const res = await withTimeout(
-      nhost.graphql.request<QueryResponse<TelemetryData>>(GET_TELEMETRY, { nodeId, limit }),
+      nhost.graphql.request<TelemetryData>(GET_TELEMETRY, { nodeId, limit }),
       GATEWAY_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[gateway] fetchTelemetryByNode GraphQL error:', res.error.message);
-      return [];
-    }
-    return res.data?.norvi_telemetry ?? [];
+    return res.body?.data?.norvi_telemetry ?? [];
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[gateway] fetchTelemetryByNode failed:', message);
@@ -252,14 +235,10 @@ export async function fetchAlertEvents(
 ): Promise<GatewayAlertEvent[]> {
   try {
     const res = await withTimeout(
-      nhost.graphql.request<QueryResponse<AlertEventsData>>(GET_ALERT_EVENTS, { plantId, limit }),
+      nhost.graphql.request<AlertEventsData>(GET_ALERT_EVENTS, { plantId, limit }),
       GATEWAY_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[gateway] fetchAlertEvents GraphQL error:', res.error.message);
-      return [];
-    }
-    return res.data?.alert_events ?? [];
+    return res.body?.data?.alert_events ?? [];
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[gateway] fetchAlertEvents failed:', message);
@@ -274,14 +253,10 @@ export async function fetchAlertEvents(
 export async function fetchEngineHealth(): Promise<GatewayEngineHealth | null> {
   try {
     const res = await withTimeout(
-      nhost.graphql.request<QueryResponse<EngineHealthData>>(GET_ENGINE_HEALTH),
+      nhost.graphql.request<EngineHealthData>(GET_ENGINE_HEALTH),
       GATEWAY_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[gateway] fetchEngineHealth GraphQL error:', res.error.message);
-      return null;
-    }
-    const records = res.data?.alert_engine_health ?? [];
+    const records = res.body?.data?.alert_engine_health ?? [];
     return records.length > 0 ? records[0] : null;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';

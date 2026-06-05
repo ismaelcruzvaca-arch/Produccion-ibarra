@@ -153,7 +153,7 @@ export function ShiftCloseScreen({ shiftSessionId }: ShiftCloseScreenProps) {
             {/* Other department indicator */}
             {isOtherDept && item.classification === 'unplanned' && (
               <View style={styles.conciliationBadge}>
-                <List.Icon icon="handshake" size={14} color={colors.caution} />
+                <List.Icon icon="handshake" color={colors.caution} />
                 <Text variant="bodySmall" style={styles.conciliationBadgeText}>
                   Irá a conciliación con {departmentLabel(item.involvedDepartments)}
                 </Text>
@@ -163,7 +163,7 @@ export function ShiftCloseScreen({ shiftSessionId }: ShiftCloseScreenProps) {
             {/* RCA indicator */}
             {item.requiresRca && (
               <View style={styles.rcaBadge}>
-                <List.Icon icon="alert-decagram" size={14} color={colors.error} />
+                <List.Icon icon="alert-decagram" color={colors.error} />
                 <Text variant="bodySmall" style={styles.rcaBadgeText}>
                   Requiere análisis RCA
                   {item.durationMin >= 30 ? ' (duración)' : ' (recurrencia)'}

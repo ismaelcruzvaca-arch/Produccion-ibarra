@@ -432,6 +432,7 @@ export function useShiftClose() {
           explained_missing_boxes: cs.explained_missing_boxes,
           notes: cs.notes,
         })),
+        created_at: nowMs(),
       };
 
       if (existingSummary) {
@@ -477,6 +478,7 @@ export function useShiftClose() {
           // Legacy fields — keep defaults
           conciliated: false,
           device_id: undefined,
+          created_at: nowMs(),
         };
 
         await conciliationRepo.create(concilPayload as any);

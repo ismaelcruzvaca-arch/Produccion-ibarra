@@ -36,12 +36,17 @@ const PASSING_INSPECTION: IQualityInspection = {
   line_id: 'line-1',
   machine_id: 'machine-1',
   shift_session_id: 'shift-1',
+  inspector_id: 'inspector-1',
+  shift_type: 'matutino',
+  disposition: 'liberado',
+  data_source: 'manual',
   operator_id: 'op-1',
   product_id: 'prod-1',
   inspection_type: 'visual',
   value: 1,
   unit: 'units',
   passed: true,
+  device_id: 'device-1',
 };
 
 const FAILING_INSPECTION: IQualityInspection = {
@@ -49,6 +54,8 @@ const FAILING_INSPECTION: IQualityInspection = {
   id: 'insp-2',
   passed: false,
   defect_id: 'defect-1',
+  defect_label: 'Deformación',
+  defect_severity: 'critical',
   notes: 'Found packaging issue',
 };
 

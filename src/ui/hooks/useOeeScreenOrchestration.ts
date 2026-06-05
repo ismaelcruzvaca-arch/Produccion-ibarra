@@ -143,6 +143,7 @@ export function useOeeScreenOrchestration() {
       started_at: nowMs(),
       planned_boxes: 480,
       status: 'active',
+      created_at: nowMs(),
     });
 
     await repository.createEvent({
@@ -239,6 +240,7 @@ export function useOeeScreenOrchestration() {
         total_rejects: oeeMetrics.totalRechazos,
         performance_pct: Math.round(oeeMetrics.rendimiento * 100) / 100,
         has_pending_conciliation: hasPending,
+        created_at: nowMs(),
       });
     } catch (err) {
       // Non-blocking — shift_summary is a cached aggregate, failure shouldn't block shift close
@@ -351,6 +353,10 @@ export function useOeeScreenOrchestration() {
                   ot_sent: false,
                   is_mtto: true,
                   status: 'pending',
+                  created_at: nowMs(),
+                  involved_departments: [],
+                  verdicts: [],
+                  escalation_deadline: 0,
                 });
               }
             }

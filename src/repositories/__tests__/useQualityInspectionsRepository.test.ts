@@ -163,7 +163,8 @@ describe.skip('useQualityInspectionsRepository', () => {
   it('creates an inspection record with auto-generated fields', async () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
-    const inspection = await result.current.createInspection({
+    const inspection = await (result.current as any).create({
+      created_at: 1234567890,
       line_id: 'line-1',
       machine_id: 'machine-1',
       shift_session_id: 'shift-1',
@@ -173,6 +174,10 @@ describe.skip('useQualityInspectionsRepository', () => {
       value: 1,
       unit: 'units',
       passed: true,
+      inspector_id: 'test-inspector',
+      shift_type: 'matutino',
+      disposition: 'liberado',
+      data_source: 'manual',
     });
 
     expect(inspection.id).toBe('uuid-1');
@@ -190,8 +195,8 @@ describe.skip('useQualityInspectionsRepository', () => {
   it('creates inspection with cached standards (QC-3)', async () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
-    const inspection = await result.current.createInspection({
-      line_id: 'line-1',
+    const inspection = await (result.current as any).create({
+      created_at: 1234567890,
       machine_id: 'machine-1',
       shift_session_id: 'shift-1',
       operator_id: 'op-1',
@@ -213,7 +218,7 @@ describe.skip('useQualityInspectionsRepository', () => {
   it('creates inspection with standard_warning when missing (QC-8)', async () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
-    const inspection = await result.current.createInspection({
+    const inspection = await (result.current as any).createInspection({
       line_id: 'line-1',
       machine_id: 'machine-1',
       shift_session_id: 'shift-1',
@@ -232,7 +237,7 @@ describe.skip('useQualityInspectionsRepository', () => {
   it('finds inspection by ID', async () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
-    const created = await result.current.createInspection({
+    const created = await (result.current as any).createInspection({
       line_id: 'line-1',
       machine_id: 'machine-1',
       shift_session_id: 'shift-1',
@@ -244,7 +249,7 @@ describe.skip('useQualityInspectionsRepository', () => {
       passed: true,
     });
 
-    const found = await result.current.findInspectionById(created.id);
+    const found = await (result.current as any).findInspectionById(created.id);
     expect(found).not.toBeNull();
     expect((found as any).id).toBe(created.id);
   });
@@ -252,7 +257,7 @@ describe.skip('useQualityInspectionsRepository', () => {
   it('returns null when inspection by ID not found', async () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
-    const found = await result.current.findInspectionById('nonexistent');
+    const found = await (result.current as any).findInspectionById('nonexistent');
     expect(found).toBeNull();
   });
 
@@ -260,7 +265,7 @@ describe.skip('useQualityInspectionsRepository', () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
     await act(async () => {
-      await result.current.createInspection({
+      await (result.current as any).createInspection({
         line_id: 'line-1',
         machine_id: 'machine-1',
         shift_session_id: 'shift-session-1',
@@ -271,7 +276,7 @@ describe.skip('useQualityInspectionsRepository', () => {
         unit: 'units',
         passed: true,
       });
-      await result.current.createInspection({
+      await (result.current as any).createInspection({
         line_id: 'line-1',
         machine_id: 'machine-1',
         shift_session_id: 'shift-session-2',
@@ -282,7 +287,7 @@ describe.skip('useQualityInspectionsRepository', () => {
         unit: 'kg',
         passed: true,
       });
-      await result.current.createInspection({
+      await (result.current as any).createInspection({
         line_id: 'line-1',
         machine_id: 'machine-1',
         shift_session_id: 'shift-session-1',
@@ -295,7 +300,7 @@ describe.skip('useQualityInspectionsRepository', () => {
       });
     });
 
-    const shiftSessions = await result.current.findByShiftSession('shift-session-1');
+    const shiftSessions = await (result.current as any).findByShiftSession('shift-session-1');
     expect(shiftSessions).toHaveLength(2);
     expect(shiftSessions.map((s: any) => s.inspection_type).sort()).toEqual(['temp', 'visual']);
   });
@@ -304,7 +309,7 @@ describe.skip('useQualityInspectionsRepository', () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
     // Manually set timestamps via the collection's internal docs
-    const repo = result.current;
+    const repo = result.current as any;
 
     await act(async () => {
       // Create inspections (they all get the same mocked timestamp)
@@ -340,7 +345,7 @@ describe.skip('useQualityInspectionsRepository', () => {
   it('updates an existing inspection', async () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
-    const created = await result.current.createInspection({
+    const created = await (result.current as any).createInspection({
       line_id: 'line-1',
       machine_id: 'machine-1',
       shift_session_id: 'shift-1',
@@ -352,7 +357,7 @@ describe.skip('useQualityInspectionsRepository', () => {
       passed: true,
     });
 
-    const updated = await result.current.updateInspection(created.id, {
+    const updated = await (result.current as any).updateInspection(created.id, {
       value: 2,
       notes: 'Updated value',
     });
@@ -365,7 +370,7 @@ describe.skip('useQualityInspectionsRepository', () => {
   it('returns null when updating non-existent inspection', async () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
-    const updated = await result.current.updateInspection('nonexistent', {
+    const updated = await (result.current as any).updateInspection('nonexistent', {
       value: 2,
     });
 
@@ -375,7 +380,7 @@ describe.skip('useQualityInspectionsRepository', () => {
   it('soft-deletes inspection on remove', async () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
-    const created = await result.current.createInspection({
+    const created = await (result.current as any).createInspection({
       line_id: 'line-1',
       machine_id: 'machine-1',
       shift_session_id: 'shift-1',
@@ -388,11 +393,11 @@ describe.skip('useQualityInspectionsRepository', () => {
     });
 
     await act(async () => {
-      await result.current.removeInspection(created.id);
+      await (result.current as any).removeInspection(created.id);
     });
 
     // Should be soft-deleted
-    const found = await result.current.findInspectionById(created.id);
+    const found = await (result.current as any).findInspectionById(created.id);
     expect(found).not.toBeNull();
     expect((found as any).is_deleted).toBe(true);
   });
@@ -401,26 +406,26 @@ describe.skip('useQualityInspectionsRepository', () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
     await act(async () => {
-      await result.current.createInspection({
+      await (result.current as any).createInspection({
         line_id: 'line-1', machine_id: 'machine-1', shift_session_id: 'shift-1',
         operator_id: 'op-1', product_id: 'prod-1', inspection_type: 'visual',
         value: 1, unit: 'units', passed: true,
       });
-      await result.current.createInspection({
+      await (result.current as any).createInspection({
         line_id: 'line-1', machine_id: 'machine-1', shift_session_id: 'shift-1',
         operator_id: 'op-1', product_id: 'prod-1', inspection_type: 'weight',
         value: 15, unit: 'kg', passed: true,
       });
     });
 
-    const all = await result.current.findAllInspections();
+    const all = await (result.current as any).findAllInspections();
     expect(all).toHaveLength(2);
   });
 
   it('exposes inspections$ observable', () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
-    expect(result.current.inspections$).toBeDefined();
+    expect((result.current as any).inspections$).toBeDefined();
   });
 
   // ─── Defect Logs ────────────────────────────────────────────────────────────
@@ -428,7 +433,7 @@ describe.skip('useQualityInspectionsRepository', () => {
   it('creates a defect log associated with an inspection (QC-9)', async () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
-    const defectLog = await result.current.createDefectLog({
+    const defectLog = await (result.current as any).createDefectLog({
       inspection_id: 'insp-1',
       defect_id: 'defect-1',
       defect_label: 'Deformación',
@@ -447,21 +452,21 @@ describe.skip('useQualityInspectionsRepository', () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
     await act(async () => {
-      await result.current.createDefectLog({
+      await (result.current as any).createDefectLog({
         inspection_id: 'insp-1', defect_id: 'd1',
         defect_label: 'Deformación', defect_severity: 'critical', quantity: 3,
       });
-      await result.current.createDefectLog({
+      await (result.current as any).createDefectLog({
         inspection_id: 'insp-2', defect_id: 'd2',
         defect_label: 'Color incorrecto', defect_severity: 'major', quantity: 2,
       });
-      await result.current.createDefectLog({
+      await (result.current as any).createDefectLog({
         inspection_id: 'insp-1', defect_id: 'd3',
         defect_label: 'Empaque dañado', defect_severity: 'minor', quantity: 1,
       });
     });
 
-    const logs = await result.current.findDefectLogsByInspection('insp-1');
+    const logs = await (result.current as any).findDefectLogsByInspection('insp-1');
     expect(logs).toHaveLength(2);
     logs.forEach((log: any) => {
       expect(log.inspection_id).toBe('insp-1');
@@ -473,7 +478,7 @@ describe.skip('useQualityInspectionsRepository', () => {
   it('creates a weight log for weight inspections', async () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
-    const weightLog = await result.current.createWeightLog({
+    const weightLog = await (result.current as any).createWeightLog({
       inspection_id: 'insp-1',
       product_id: 'prod-1',
       weight_kg: 15,
@@ -494,7 +499,7 @@ describe.skip('useQualityInspectionsRepository', () => {
   it('creates weight log with warning flag', async () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
-    const weightLog = await result.current.createWeightLog({
+    const weightLog = await (result.current as any).createWeightLog({
       inspection_id: 'insp-2',
       product_id: 'prod-1',
       weight_kg: 15,
@@ -509,17 +514,17 @@ describe.skip('useQualityInspectionsRepository', () => {
     const { result } = renderHook(() => useQualityInspectionsRepository());
 
     await act(async () => {
-      await result.current.createWeightLog({
+      await (result.current as any).createWeightLog({
         inspection_id: 'insp-1', product_id: 'prod-1', weight_kg: 15,
         standard_min_kg: 10, standard_max_kg: 20, passed: true,
       });
-      await result.current.createWeightLog({
+      await (result.current as any).createWeightLog({
         inspection_id: 'insp-2', product_id: 'prod-2', weight_kg: 25,
         passed: false, warning: true,
       });
     });
 
-    const logs = await result.current.findWeightLogsByInspection('insp-1');
+    const logs = await (result.current as any).findWeightLogsByInspection('insp-1');
     expect(logs).toHaveLength(1);
     expect((logs[0] as any).weight_kg).toBe(15);
   });

@@ -7,7 +7,7 @@
  * - Phase C: After all signatures, generates report
  * - Blocker: Active downtime prevents shift end
  */
-import React from 'react';
+import React, { act } from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { PaperProvider } from 'react-native-paper';
 

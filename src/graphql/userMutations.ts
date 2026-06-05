@@ -34,7 +34,7 @@ const USER_MGMT_TIMEOUT_MS = 8_000;
 function getCurrentUserId(): string | null {
   const session = nhost.getUserSession();
   if (!session?.user) return null;
-  return (session.user as Record<string, unknown>).id as string ?? null;
+  return session.user.id ?? null;
 }
 
 // ─── Queries ───────────────────────────────────────────────────────────────────
@@ -90,11 +90,7 @@ export async function getAllUsers(): Promise<OperatorProfileWithAssignments[] | 
       nhost.graphql.request<GetAllUsersResponse>(GET_ALL_USERS),
       USER_MGMT_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[userMutations] getAllUsers GraphQL error:', res.error.message);
-      return null;
-    }
-    return res.data?.operator_profiles ?? null;
+    return res.body?.data?.operator_profiles ?? null;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[userMutations] getAllUsers failed:', message);
@@ -138,11 +134,7 @@ export async function insertOperatorProfile(vars: InsertOperatorProfileInput): P
       ),
       USER_MGMT_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[userMutations] insertOperatorProfile GraphQL error:', res.error.message);
-      return null;
-    }
-    return res.data?.insert_operator_profiles_one?.id ?? null;
+    return res.body?.data?.insert_operator_profiles_one?.id ?? null;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[userMutations] insertOperatorProfile failed:', message);
@@ -172,11 +164,7 @@ export async function updateOperatorProfile(
       ),
       USER_MGMT_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[userMutations] updateOperatorProfile GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.update_operator_profiles_by_pk;
+    return !!res.body?.data?.update_operator_profiles_by_pk;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[userMutations] updateOperatorProfile failed:', message);
@@ -221,11 +209,7 @@ export async function insertUserLineAssignment(vars: InsertUserLineAssignmentInp
       ),
       USER_MGMT_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[userMutations] insertUserLineAssignment GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.insert_user_line_assignments_one;
+    return !!res.body?.data?.insert_user_line_assignments_one;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[userMutations] insertUserLineAssignment failed:', message);
@@ -246,11 +230,7 @@ export async function deleteUserLineAssignment(userId: string, lineId: string): 
       ),
       USER_MGMT_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[userMutations] deleteUserLineAssignment GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.delete_user_line_assignments_by_pk;
+    return !!res.body?.data?.delete_user_line_assignments_by_pk;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[userMutations] deleteUserLineAssignment failed:', message);
@@ -297,11 +277,7 @@ export async function insertUserPlant(vars: InsertUserPlantInput): Promise<boole
       ),
       USER_MGMT_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[userMutations] insertUserPlant GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.insert_user_plants_one;
+    return !!res.body?.data?.insert_user_plants_one;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[userMutations] insertUserPlant failed:', message);
@@ -332,11 +308,7 @@ export async function updateUserPlant(
       ),
       USER_MGMT_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[userMutations] updateUserPlant GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.update_user_plants_by_pk;
+    return !!res.body?.data?.update_user_plants_by_pk;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[userMutations] updateUserPlant failed:', message);
@@ -376,15 +348,11 @@ export async function adminManageUser(payload: {
 }): Promise<AdminManageUserResult> {
   try {
     const res = await withTimeout(
-      nhost.functions.call<AdminManageUserResult>('admin-manage-user', payload),
+      nhost.functions.post<AdminManageUserResult>('admin-manage-user', payload),
       USER_MGMT_TIMEOUT_MS,
-    ) as { data?: AdminManageUserResult; error?: { message: string } };
+    );
 
-    if (res.error) {
-      return { success: false, error: res.error.message };
-    }
-
-    return res.data ?? { success: false, error: 'No response data' };
+    return res.body ?? { success: false, error: 'No response data' };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[userMutations] adminManageUser failed:', message);

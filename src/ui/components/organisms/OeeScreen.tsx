@@ -26,7 +26,6 @@ import { ConfirmEventModal } from '../ConfirmEventModal';
 import { NumpadModal } from '../NumpadModal';
 import { OEE_LIMITS } from '../../../config/oeeLimits';
 import type { IOeeEvent } from '../../../core/types';
-import type { ParoReason } from '../../../config/catalogs';
 import { PARO_BY_CODE } from '../../../config/catalogs';
 import { nowMs } from '../../../utils/timestamp';
 import { generateShiftReport } from '../../../core/shiftReportGenerator';
@@ -222,7 +221,8 @@ export default function OeeScreen() {
     setShowStopModal(true);
   }, []);
 
-  const handleSelectStopReason = useCallback((reason: ParoReason) => {
+  const handleSelectStopReason = useCallback((reasonCode: string) => {
+    const reason = PARO_BY_CODE[reasonCode] ?? { code: reasonCode, label: reasonCode, macro: 'OTROS' as const, stops_line: true, sort_order: 0 };
     setShowStopModal(false);
     setConfirmTitle('Confirmar Paro');
     setConfirmMessage(`¿Registrar paro por: ${reason.label} (${reason.code})?`);

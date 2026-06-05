@@ -33,6 +33,7 @@ export interface QualityInspectionsRepository {
   remove: (id: string) => Promise<void>;
   findById: (id: string) => Promise<RxDocument<IQualityInspection> | null>;
   findByMachine: (machineId: string) => Promise<RxDocument<IQualityInspection>[]>;
+  findByShiftSession: (shiftSessionId: string) => Promise<RxDocument<IQualityInspection>[]>;
 }
 
 export function useQualityInspectionsRepository(): QualityInspectionsRepository {
@@ -99,8 +100,18 @@ export function useQualityInspectionsRepository(): QualityInspectionsRepository 
     [db],
   );
 
+  const findByShiftSession = useCallback(
+    async (shiftSessionId: string) => {
+      const docs = await db.collections.quality_inspections
+        .find({ selector: { shift_session_id: { $eq: shiftSessionId }, is_deleted: { $eq: false } } })
+        .exec();
+      return docs as RxDocument<IQualityInspection>[];
+    },
+    [db],
+  );
+
   return useMemo(
-    () => ({ docs$, create, update, remove, findById, findByMachine }),
-    [docs$, create, update, remove, findById, findByMachine],
+    () => ({ docs$, create, update, remove, findById, findByMachine, findByShiftSession }),
+    [docs$, create, update, remove, findById, findByMachine, findByShiftSession],
   );
 }

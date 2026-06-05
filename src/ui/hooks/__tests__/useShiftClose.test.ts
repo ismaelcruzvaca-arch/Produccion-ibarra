@@ -124,9 +124,6 @@ function countReasonCodes(stops: StopPair[]): Map<string, number> {
 
 function mockEvent(overrides: Partial<IOeeEvent> & { id: string; event_type: string; timestamp: number }): IOeeEvent {
   return {
-    id: overrides.id,
-    event_type: overrides.event_type,
-    timestamp: overrides.timestamp,
     line_id: 'L1',
     machine_id: 'MC-001',
     shift_id: 'shift-1',

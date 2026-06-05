@@ -38,11 +38,15 @@ function mockEvent(overrides: Partial<IDowntimeConciliation>): IDowntimeConcilia
     ot_sent: false,
     is_mtto: true,
     status: 'pending',
+    created_at: 1000000,
     updated_at: 1000000,
     device_id: 'device-test',
     is_deleted: false,
+    involved_departments: [],
+    verdicts: [],
+    escalation_deadline: 0,
     ...overrides,
-  };
+  } as IDowntimeConciliation;
 }
 
 describe('filterByMicroStopThreshold', () => {

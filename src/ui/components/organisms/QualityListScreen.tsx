@@ -57,8 +57,6 @@ export function QualityListScreen({
     ({ item }: { item: IQualityInspection }) => (
       <QualityInspectionCard
         inspection={item}
-        defectLabel={item.defect_label}
-        defectSeverity={item.defect_severity}
         onPress={() => onInspectionPress(item)}
       />
     ),
@@ -100,10 +98,7 @@ export function QualityListScreen({
     return (
       <View style={styles.container}>
         <EmptyInspectionList
-          message="No hay inspecciones de calidad registradas para este turno"
-          ctaLabel="Nueva Inspección"
-          showCta
-          onCtaPress={onNewInspection}
+          onCreatePress={onNewInspection}
         />
       </View>
     );

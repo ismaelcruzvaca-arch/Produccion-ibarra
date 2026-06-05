@@ -17,8 +17,15 @@ import { Text, Button, SegmentedButtons, TextInput, Portal, Dialog } from 'react
 import { useQualityCaptureOrchestration } from '../../../hooks/useQualityCaptureOrchestration';
 import { InspectionTypeSelector } from '../molecules/InspectionTypeSelector';
 import { WeightInput } from '../molecules/WeightInput';
-import { DefectSelector, type DefectOption } from '../molecules/DefectSelector';
+import { DefectSelector } from '../molecules/DefectSelector';
 import type { IQualityInspection } from '../../../core/types';
+
+/** Local type for defect options used by the capture flow. */
+export interface DefectOption {
+  id: string;
+  label: string;
+  severity?: string;
+}
 
 // ─── Props ──────────────────────────────────────────────────────────────────────
 
@@ -28,7 +35,7 @@ interface QualityCaptureScreenProps {
   /** Called to dismiss/close the capture wizard. */
   onDismiss: () => void;
   /** Called when the inspection is confirmed and ready to save. */
-  onSave: (payload: Omit<IQualityInspection, 'id' | 'created_at' | 'updated_at' | 'is_deleted'>) => Promise<void>;
+  onSave: (payload: Omit<IQualityInspection, 'id' | 'created_at' | 'updated_at' | 'is_deleted' | 'device_id' | 'inspector_id' | 'shift_type' | 'disposition' | 'data_source'>) => Promise<void>;
   /** Available products for selection. */
   products: Array<{ id: string; name: string; code: string }>;
   /** Available defects from quality_defects catalog (QC-9). */
@@ -113,7 +120,7 @@ export function QualityCaptureScreen({
         return (
           <View style={styles.stepContainer}>
             <InspectionTypeSelector
-              selectedType={state.inspectionType}
+              selected={state.inspectionType}
               onSelect={selectInspectionType}
             />
           </View>
@@ -128,12 +135,25 @@ export function QualityCaptureScreen({
             </Text>
 
             {state.inspectionType === 'weight' ? (
-              <WeightInput
-                value={state.value}
-                onChangeValue={(val, min, max) => setValue(val, min, max)}
-                standardMin={standards?.min}
-                standardMax={standards?.max}
-              />
+              <View>
+                {standards && (
+                  <Text variant="bodySmall" style={styles.hint}>
+                    Rango válido: {standards.min}g – {standards.max}g
+                  </Text>
+                )}
+                <TextInput
+                  mode="outlined"
+                  label="Peso (kg)"
+                  keyboardType="decimal-pad"
+                  onChangeText={(text: string) => {
+                    const parsed = parseFloat(text.replace(/[^0-9.]/g, ''));
+                    if (!isNaN(parsed)) {
+                      setValue(parsed, standards?.min, standards?.max);
+                    }
+                  }}
+                  style={styles.input}
+                />
+              </View>
             ) : (
               <View>
                 <TextInput
@@ -146,7 +166,7 @@ export function QualityCaptureScreen({
                       : 'Valor'
                   }
                   keyboardType="decimal-pad"
-                  onChangeText={(text) => {
+                  onChangeText={(text: string) => {
                     const parsed = parseFloat(text.replace(/[^0-9.]/g, ''));
                     if (!isNaN(parsed)) {
                       setValue(parsed);
@@ -185,9 +205,10 @@ export function QualityCaptureScreen({
         return (
           <View style={styles.stepContainer}>
             <DefectSelector
-              defects={defects}
-              selectedDefectId={state.defectId}
-              onSelect={selectDefect}
+              visible
+              defects={defects as unknown[]}
+              selected={state.defectId}
+              onSelect={selectDefect as (value: string) => void}
             />
           </View>
         );

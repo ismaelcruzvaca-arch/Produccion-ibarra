@@ -69,6 +69,7 @@ describe('1. Pull Inicial — Catálogos', () => {
         id: 'OP-001',
         full_name: 'Juan Pérez',
         is_active: true,
+        created_at: 1779703200000,
         updated_at: 1779703200000,
         device_id: 'device-test-1',
         is_deleted: false,
@@ -114,6 +115,7 @@ describe('1. Pull Inicial — Catálogos', () => {
         lower_limit: 490,
         upper_limit: 510,
         requires_tare: true,
+        created_at: 1779703200000,
         updated_at: 1779703200000,
         device_id: 'device-x',
         is_deleted: false,
@@ -133,6 +135,7 @@ describe('1. Pull Inicial — Catálogos', () => {
         lower_limit: 490,
         upper_limit: 510,
         requires_tare: true,
+        created_at: 1748253600000,
         updated_at: 1748253600000,
         device_id: 'device-x',
         is_deleted: false,
@@ -155,7 +158,7 @@ describe('2. Frente B — Shift Sessions', () => {
   const mockGraphQL: GraphQLShiftSession = {
     id: '550e8400-e29b-41d4-a716-446655440000',
     machine_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    inspector_id: 'OP-001',
+    operator_id: 'OP-001',
     shift_type: 'matutino',
     status: 'active',
     started_at: '2026-05-25T06:00:00.000Z',
@@ -182,13 +185,14 @@ describe('2. Frente B — Shift Sessions', () => {
     const rxDoc: IShiftSession = {
       id: '550e8400-e29b-41d4-a716-446655440000',
       machine_id: 'a1b2c3d4',
-      inspector_id: 'OP-001',
+      operator_id: 'OP-001',
       shift_type: 'matutino',
       status: 'active',
       started_at: 1779688800000,
       ended_at: undefined,
       planned_boxes: 480,
       product_code: '102/953',
+      created_at: 1779688800000,
       updated_at: 1779688800000,
       device_id: 'device-test',
       is_deleted: false,
@@ -210,19 +214,18 @@ describe('2. Frente B — Shift Sessions', () => {
 
   it('cierre de turno: ended_at se incluye en push', () => {
     const closedSession: IShiftSession = {
-      ...({
-        id: '550e8400-e29b-41d4-a716-446655440000',
-        machine_id: 'a1b2c3d4',
-        inspector_id: 'OP-001',
-        shift_type: 'matutino',
-        status: 'closed',
-        started_at: 1748224800000,
-        planned_boxes: 480,
-        product_code: '102/953',
-        updated_at: 1748253600000,
-        device_id: 'device-test',
-        is_deleted: false,
-      } as IShiftSession),
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      machine_id: 'a1b2c3d4',
+      operator_id: 'OP-001',
+      shift_type: 'matutino',
+      status: 'closed',
+      started_at: 1748224800000,
+      planned_boxes: 480,
+      product_code: '102/953',
+      created_at: 1748253600000,
+      updated_at: 1748253600000,
+      device_id: 'device-test',
+      is_deleted: false,
       ended_at: 1748253600000,
     };
     const payload = toGraphQLShiftSession(closedSession);
@@ -276,10 +279,19 @@ describe('3. Frente A — Calidad', () => {
         disposition: 'rechazado',
         notes: 'Peso fuera de rango',
         data_source: 'manual',
-      updated_at: 1779690600000,
-      device_id: 'device-test',
-      is_deleted: false,
-    };
+        created_at: 1779690600000,
+        updated_at: 1779690600000,
+        device_id: 'device-test',
+        is_deleted: false,
+        inspection_type: 'visual',
+        passed: false,
+        value: 0,
+        unit: '',
+        product_id: '',
+        line_id: '',
+        shift_session_id: '',
+        operator_id: 'OP-001',
+      };
     const payload = toGraphQLQualityInspection(rxDoc);
       // Campos del negocio
       expect(payload.disposition).toBe('rechazado');
@@ -318,6 +330,7 @@ describe('3. Frente A — Calidad', () => {
         severity: 'major',
         defect_type: 'peso_bajo',
         defect_count: 5,
+        created_at: 1748253600000,
         updated_at: 1748253600000,
         device_id: 'device-test',
         is_deleted: false,
@@ -353,6 +366,7 @@ describe('3. Frente A — Calidad', () => {
         id: '880e8400-e29b-41d4-a716-446655440003',
         inspection_id: INSPECTION_ID,
         measured_weight: 248.50,
+        created_at: 1748253600000,
         updated_at: 1748253600000,
         device_id: 'device-test',
         is_deleted: false,
@@ -378,7 +392,7 @@ describe('4. Push — Integridad de payloads', () => {
     const pws: IProductWeightStandard = {
       sku: 'CHOC-250', name: 'Chocolate 250g',
       lower_limit: 245, upper_limit: 255, requires_tare: true,
-      updated_at: 1748253600000, device_id: 'x', is_deleted: false,
+      created_at: 1748253600000, updated_at: 1748253600000, device_id: 'x', is_deleted: false,
     };
     const pwsPayload = toGraphQLProductWeightStandard(pws);
     expect(pwsPayload.device_id).toBeUndefined();
@@ -388,8 +402,12 @@ describe('4. Push — Integridad de payloads', () => {
     const qi: IQualityInspection = {
       id: 'id-1', machine_id: 'm-1', inspector_id: 'op-1',
       shift_type: 'matutino', disposition: 'liberado',
-      data_source: 'manual', updated_at: 1748253600000,
+      data_source: 'manual', created_at: 1748253600000,
+      updated_at: 1748253600000,
       device_id: 'x', is_deleted: false,
+      inspection_type: 'visual', passed: true, value: 0, unit: '',
+      product_id: '', line_id: '', shift_session_id: '',
+      operator_id: 'op-1',
     };
     const qiPayload = toGraphQLQualityInspection(qi);
     expect(qiPayload.device_id).toBeUndefined();
@@ -399,7 +417,7 @@ describe('4. Push — Integridad de payloads', () => {
     const dl: IDefectLog = {
       id: 'id-2', inspection_id: 'id-1', severity: 'major',
       defect_type: 'peso_bajo', defect_count: 3,
-      updated_at: 1748253600000, device_id: 'x', is_deleted: false,
+      created_at: 1748253600000, updated_at: 1748253600000, device_id: 'x', is_deleted: false,
     };
     const dlPayload = toGraphQLDefectLog(dl);
     expect(dlPayload.device_id).toBeUndefined();
@@ -408,7 +426,7 @@ describe('4. Push — Integridad de payloads', () => {
     // WeightLog
     const wl: IWeightLog = {
       id: 'id-3', inspection_id: 'id-1', measured_weight: 250,
-      updated_at: 1748253600000, device_id: 'x', is_deleted: false,
+      created_at: 1748253600000, updated_at: 1748253600000, device_id: 'x', is_deleted: false,
     };
     const wlPayload = toGraphQLWeightLog(wl);
     expect(wlPayload.device_id).toBeUndefined();
@@ -419,7 +437,7 @@ describe('4. Push — Integridad de payloads', () => {
       id: 'id-4', machine_id: 'm-1', operator_id: 'op-1',
       shift_type: 'matutino', status: 'active',
       started_at: 1748224800000, planned_boxes: 480,
-      updated_at: 1748253600000, device_id: 'x', is_deleted: false,
+      created_at: 1748253600000, updated_at: 1748253600000, device_id: 'x', is_deleted: false,
     };
     const ssPayload = toGraphQLShiftSession(ss);
     expect(ssPayload.device_id).toBeUndefined();

@@ -102,7 +102,7 @@ export function useQualityCaptureOrchestration() {
   // ─── Defect log helpers ─────────────────────────────────────────────────────
   const addDefectLog = useCallback(
     (entry: { severity: IDefectLog['severity']; defect_type: string; defect_count: number }) => {
-      setDefectLogs((prev) => [...prev, entry]);
+      setDefectLogs((prev) => [...prev, { ...entry, created_at: nowMs() }]);
     },
     [],
   );
@@ -114,7 +114,7 @@ export function useQualityCaptureOrchestration() {
   // ─── Weight log helpers ─────────────────────────────────────────────────────
   const addWeightLog = useCallback(
     (entry: { measured_weight: number }) => {
-      setWeightLogs((prev) => [...prev, entry]);
+      setWeightLogs((prev) => [...prev, { ...entry, created_at: nowMs() }]);
     },
     [],
   );
@@ -166,18 +166,28 @@ export function useQualityCaptureOrchestration() {
     try {
       // 1. Create the inspection
       const inspectionDoc = await inspectionsRepo.create({
+        created_at: nowMs(),
         machine_id: selectedMachine ?? '',
         inspector_id: inspectorId,
         shift_type: shiftType,
         disposition: disposition!,
         notes: notes || undefined,
         data_source: dataSource,
+        inspection_type: '',
+        passed: false,
+        value: 0,
+        unit: '',
+        product_id: '',
+        line_id: '',
+        shift_session_id: '',
+        operator_id: '',
       });
       const inspection = inspectionDoc.toJSON() as IQualityInspection;
 
       // 2. Create child defect_logs
       for (const dl of defectLogs) {
         await defectLogsRepo.create({
+          created_at: nowMs(),
           inspection_id: inspection.id,
           severity: dl.severity,
           defect_type: dl.defect_type,
@@ -188,6 +198,7 @@ export function useQualityCaptureOrchestration() {
       // 3. Create child weight_logs
       for (const wl of weightLogs) {
         await weightLogsRepo.create({
+          created_at: nowMs(),
           inspection_id: inspection.id,
           measured_weight: wl.measured_weight,
         });

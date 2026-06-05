@@ -433,6 +433,7 @@ export function toGraphQLQualityInspection(qi: IQualityInspection): Record<strin
  * Backend returns fewer fields; local extras default to safe initial values.
  */
 export function fromGraphQLQualityInspection(gql: GraphQLQualityInspection): IQualityInspection {
+  const updatedAt = new Date(gql.updated_at).getTime();
   return {
     id: gql.id,
     machine_id: gql.machine_id,
@@ -441,9 +442,18 @@ export function fromGraphQLQualityInspection(gql: GraphQLQualityInspection): IQu
     disposition: gql.disposition as IQualityInspection['disposition'],
     notes: gql.notes,
     data_source: gql.data_source as IQualityInspection['data_source'],
-    updated_at: new Date(gql.updated_at).getTime(),
+    created_at: updatedAt,
+    updated_at: updatedAt,
     device_id: '',
     is_deleted: false,
+    inspection_type: '',
+    passed: false,
+    value: 0,
+    unit: '',
+    product_id: '',
+    line_id: '',
+    shift_session_id: '',
+    operator_id: '',
   };
 }
 
@@ -473,13 +483,15 @@ export function toGraphQLDefectLog(dl: IDefectLog): Record<string, unknown> {
 }
 
 export function fromGraphQLDefectLog(gql: GraphQLDefectLog): IDefectLog {
+  const updatedAt = new Date(gql.updated_at).getTime();
   return {
     id: gql.id,
     inspection_id: gql.inspection_id,
     severity: gql.severity as IDefectLog['severity'],
     defect_type: gql.defect_type,
     defect_count: gql.defect_count,
-    updated_at: new Date(gql.updated_at).getTime(),
+    created_at: updatedAt,
+    updated_at: updatedAt,
     device_id: '',
     is_deleted: false,
   };
@@ -919,11 +931,13 @@ export function toGraphQLWeightLog(wl: IWeightLog): Record<string, unknown> {
 }
 
 export function fromGraphQLWeightLog(gql: GraphQLWeightLog): IWeightLog {
+  const updatedAt = new Date(gql.updated_at).getTime();
   return {
     id: gql.id,
     inspection_id: gql.inspection_id,
     measured_weight: gql.measured_weight,
-    updated_at: new Date(gql.updated_at).getTime(),
+    created_at: updatedAt,
+    updated_at: updatedAt,
     device_id: '',
     is_deleted: false,
   };
@@ -960,6 +974,7 @@ export function toGraphQLShiftSession(ss: IShiftSession): Record<string, unknown
 }
 
 export function fromGraphQLShiftSession(gql: GraphQLShiftSession): IShiftSession {
+  const updatedAt = new Date(gql.updated_at).getTime();
   return {
     id: gql.id,
     machine_id: gql.machine_id,
@@ -970,7 +985,8 @@ export function fromGraphQLShiftSession(gql: GraphQLShiftSession): IShiftSession
     ended_at: gql.ended_at ? new Date(gql.ended_at).getTime() : undefined,
     planned_boxes: gql.planned_boxes,
     product_code: gql.product_code,
-    updated_at: new Date(gql.updated_at).getTime(),
+    created_at: updatedAt,
+    updated_at: updatedAt,
     device_id: '', // RxDB-only — not in Hasura
     is_deleted: false,
   };
@@ -995,11 +1011,13 @@ export function toGraphQLOperator(op: IOperator): Record<string, unknown> {
 }
 
 export function fromGraphQLOperator(gql: GraphQLOperator): IOperator {
+  const updatedAt = new Date(gql.updated_at).getTime();
   return {
     id: gql.id,
     full_name: gql.full_name,
     is_active: gql.is_active,
-    updated_at: new Date(gql.updated_at).getTime(),
+    created_at: updatedAt,
+    updated_at: updatedAt,
     device_id: '',
     is_deleted: false,
   };
@@ -1029,13 +1047,15 @@ export function toGraphQLProductWeightStandard(pws: IProductWeightStandard): Rec
 }
 
 export function fromGraphQLProductWeightStandard(gql: GraphQLProductWeightStandard): IProductWeightStandard {
+  const updatedAt = new Date(gql.updated_at).getTime();
   return {
     sku: gql.sku,
     name: gql.name,
     lower_limit: gql.lower_limit,
     upper_limit: gql.upper_limit,
     requires_tare: gql.requires_tare,
-    updated_at: new Date(gql.updated_at).getTime(),
+    created_at: updatedAt,
+    updated_at: updatedAt,
     device_id: '',
     is_deleted: false,
   };
@@ -1102,6 +1122,7 @@ export function toGraphQLDowntimeConciliation(dc: IDowntimeConciliation): Record
 }
 
 export function fromGraphQLDowntimeConciliation(gql: GraphQLDowntimeConciliation): IDowntimeConciliation {
+  const updatedAt = new Date(gql.updated_at).getTime();
   return {
     id: gql.id,
     oee_event_id: gql.oee_event_id,
@@ -1124,9 +1145,13 @@ export function fromGraphQLDowntimeConciliation(gql: GraphQLDowntimeConciliation
     ot_response: gql.ot_response,
     ot_sent_at: gql.ot_sent_at ? new Date(gql.ot_sent_at).getTime() : undefined,
     is_mtto: gql.is_mtto,
-    updated_at: new Date(gql.updated_at).getTime(),
+    created_at: updatedAt,
+    updated_at: updatedAt,
     device_id: '', // RxDB-only
     is_deleted: false, // RxDB-only
+    involved_departments: [],
+    verdicts: [],
+    escalation_deadline: 0,
   };
 }
 
@@ -1149,11 +1174,13 @@ export function toGraphQLPlantConfig(pc: IPlantConfig): Record<string, unknown> 
 }
 
 export function fromGraphQLPlantConfig(gql: GraphQLPlantConfig): IPlantConfig {
+  const updatedAt = new Date(gql.updated_at).getTime();
   return {
     key: gql.key,
     value: gql.value,
     description: gql.description,
-    updated_at: new Date(gql.updated_at).getTime(),
+    created_at: updatedAt,
+    updated_at: updatedAt,
     device_id: '',
     is_deleted: false,
   };
@@ -1194,6 +1221,7 @@ export function toGraphQLShiftSummary(ss: IShiftSummary): Record<string, unknown
 }
 
 export function fromGraphQLShiftSummary(gql: GraphQLShiftSummary): IShiftSummary {
+  const updatedAt = new Date(gql.updated_at).getTime();
   return {
     id: gql.id,
     shift_session_id: gql.shift_session_id,
@@ -1206,7 +1234,8 @@ export function fromGraphQLShiftSummary(gql: GraphQLShiftSummary): IShiftSummary
     total_rejects: gql.total_rejects,
     performance_pct: gql.performance_pct,
     has_pending_conciliation: gql.has_pending_conciliation,
-    updated_at: new Date(gql.updated_at).getTime(),
+    created_at: updatedAt,
+    updated_at: updatedAt,
     device_id: '',
     is_deleted: false,
   };

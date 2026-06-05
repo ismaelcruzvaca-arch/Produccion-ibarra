@@ -123,6 +123,7 @@ export function usePlantConfigRepository(): PlantConfigRepository {
         key,
         value,
         description,
+        created_at: nowMs(),
         updated_at: nowMs(),
         device_id: deviceId,
         is_deleted: false,

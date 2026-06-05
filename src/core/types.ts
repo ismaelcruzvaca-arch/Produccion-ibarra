@@ -498,6 +498,22 @@ export interface IQualityInspection {
   notes?: string;
   data_source: DataSourceType;
   device_id: string;
+
+  // ── Fields from the DB / Hasura schema ──────────────────────────────────────
+  inspection_type: string;      // type of inspection (visual, weight, temp, metal_detector)
+  passed: boolean;              // pass/fail result
+  value: number;                // measured value
+  unit: string;                 // unit of measurement
+  standard_min?: number;        // weight standard lower limit (weight inspections)
+  standard_max?: number;        // weight standard upper limit (weight inspections)
+  standard_warning?: boolean;   // warning flag when standard is missing
+  product_id: string;           // FK → products
+  line_id: string;              // FK → lines
+  shift_session_id: string;     // FK → shift_sessions
+  operator_id: string;          // FK → operators
+  defect_id?: string;           // FK → defect_logs (denormalized)
+  defect_label?: string;        // denormalized defect label
+  defect_severity?: string;     // denormalized defect severity
 }
 
 export type RxQualityInspection = RxDocument<IQualityInspection>;

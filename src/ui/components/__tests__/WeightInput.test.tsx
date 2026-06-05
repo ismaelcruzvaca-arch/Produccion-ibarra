@@ -29,6 +29,10 @@ jest.mock('react-native-safe-area-context', () =>
 
 function renderInput(overrides: Record<string, any> = {}) {
   const props = {
+    visible: true,
+    sku: 'test-sku',
+    onDismiss: jest.fn(),
+    onValidated: jest.fn(),
     value: null,
     onChangeValue: jest.fn(),
     ...overrides,

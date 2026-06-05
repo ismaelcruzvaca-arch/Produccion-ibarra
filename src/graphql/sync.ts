@@ -33,6 +33,47 @@ import {
   fromGraphQLDowntimeConciliation,
   fromGraphQLPlantConfig,
   fromGraphQLShiftSummary,
+  toGraphQLAsset,
+  toGraphQLWorkOrder,
+  toGraphQLReport,
+  toGraphQLWeightLog,
+  fromGraphQLWeightLog,
+  toGraphQLDefectLog,
+  fromGraphQLDefectLog,
+  toGraphQLQualityInspection,
+  fromGraphQLQualityInspection,
+  toGraphQLToasterLog,
+  fromGraphQLToasterLog,
+  toGraphQLMixingBatch,
+  fromGraphQLMixingBatch,
+  toGraphQLExtractorCheck,
+  fromGraphQLExtractorCheck,
+  toGraphQLVitaminKit,
+  fromGraphQLVitaminKit,
+  toGraphQLShiftSession,
+  toGraphQLDowntimeConciliation,
+  toGraphQLPlantConfig,
+  toGraphQLShiftSummary,
+} from './dto';
+import type {
+  GraphQLAsset,
+  GraphQLWorkOrder,
+  GraphQLReport,
+  GraphQLOeeEvent,
+  GraphQLSignature,
+  GraphQLQualityInspection,
+  GraphQLDefectLog,
+  GraphQLWeightLog,
+  GraphQLToasterLog,
+  GraphQLMixingBatch,
+  GraphQLExtractorCheck,
+  GraphQLVitaminKit,
+  GraphQLOperator,
+  GraphQLProductWeightStandard,
+  GraphQLShiftSession,
+  GraphQLDowntimeConciliation,
+  GraphQLPlantConfig,
+  GraphQLShiftSummary,
 } from './dto';
 import type { ChocolateIbarraDatabase } from '../data/database';
 import type {
@@ -42,6 +83,15 @@ import type {
   IDowntimeConciliation,
   IPlantConfig,
   IShiftSummary,
+  IOeeEvent,
+  ISignature,
+  IQualityInspection,
+  IDefectLog,
+  IWeightLog,
+  IToasterLog,
+  IMixingBatch,
+  IExtractorCheck,
+  IVitaminKit,
 } from '../core/types';
 import { createResilientReplication, runDLQDiagnosis, type ResilientState } from '../sync/resilientReplication';
 
@@ -931,7 +981,7 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
       collection: db.collections.quality_inspections,
       pull: {
         queryBuilder: pullQueryBuilderQualityInspections,
-        modifier: (doc: GraphQLQualityInspection) => ({ ...fromGraphQLQualityInspection(doc), _deleted: doc.is_deleted ?? false }),
+        modifier: (doc: GraphQLQualityInspection) => ({ ...fromGraphQLQualityInspection(doc), _deleted: false }),
       },
       push: {
         queryBuilder: pushMutationBuilderQualityInspections,
@@ -962,7 +1012,7 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
       collection: db.collections.defect_logs,
       pull: {
         queryBuilder: pullQueryBuilderDefectLogs,
-        modifier: (doc: GraphQLDefectLog) => ({ ...fromGraphQLDefectLog(doc), _deleted: doc.is_deleted ?? false }),
+        modifier: (doc: GraphQLDefectLog) => ({ ...fromGraphQLDefectLog(doc), _deleted: false }),
       },
       push: {
         queryBuilder: pushMutationBuilderDefectLogs,
@@ -993,7 +1043,7 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
       collection: db.collections.weight_logs,
       pull: {
         queryBuilder: pullQueryBuilderWeightLogs,
-        modifier: (doc: GraphQLWeightLog) => ({ ...fromGraphQLWeightLog(doc), _deleted: doc.is_deleted ?? false }),
+        modifier: (doc: GraphQLWeightLog) => ({ ...fromGraphQLWeightLog(doc), _deleted: false }),
       },
       push: {
         queryBuilder: pushMutationBuilderWeightLogs,
@@ -1147,7 +1197,7 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
       collection: db.collections.operators,
       pull: {
         queryBuilder: pullQueryBuilderOperators,
-        modifier: (doc: GraphQLOperator) => ({ ...fromGraphQLOperator(doc), _deleted: doc.is_deleted ?? false }),
+        modifier: (doc: GraphQLOperator) => ({ ...fromGraphQLOperator(doc), _deleted: false }),
       },
       live: false,
       autoStart: true,
@@ -1167,7 +1217,7 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
       collection: db.collections.product_weight_standards,
       pull: {
         queryBuilder: pullQueryBuilderProductWeightStandards,
-        modifier: (doc: GraphQLProductWeightStandard) => ({ ...fromGraphQLProductWeightStandard(doc), _deleted: doc.is_deleted ?? false }),
+        modifier: (doc: GraphQLProductWeightStandard) => ({ ...fromGraphQLProductWeightStandard(doc), _deleted: false }),
       },
       live: false,
       autoStart: true,
@@ -1187,7 +1237,7 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
       collection: db.collections.shift_sessions,
       pull: {
         queryBuilder: pullQueryBuilderShiftSessions,
-        modifier: (doc: GraphQLShiftSession) => ({ ...fromGraphQLShiftSession(doc), _deleted: doc.is_deleted ?? false }),
+        modifier: (doc: GraphQLShiftSession) => ({ ...fromGraphQLShiftSession(doc), _deleted: false }),
       },
       push: {
         queryBuilder: pushMutationBuilderShiftSessions,
@@ -1209,11 +1259,11 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
       headers: getHeaders(),
       collection: db.collections.downtime_conciliation,
       pull: {
-        queryBuilder: pullQueryBuilderDowntimeConciliations,
-        modifier: (doc: GraphQLDowntimeConciliation) => ({ ...fromGraphQLDowntimeConciliation(doc), _deleted: doc.is_deleted ?? false }),
+        queryBuilder: pullQueryBuilderDowntimeConciliation,
+        modifier: (doc: GraphQLDowntimeConciliation) => ({ ...fromGraphQLDowntimeConciliation(doc), _deleted: false }),
       },
       push: {
-        queryBuilder: pushMutationBuilderDowntimeConciliations,
+        queryBuilder: pushMutationBuilderDowntimeConciliation,
       },
       live: false,
       autoStart: true,
@@ -1232,11 +1282,11 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
       headers: getHeaders(),
       collection: db.collections.plant_config,
       pull: {
-        queryBuilder: pullQueryBuilderPlantConfigs,
-        modifier: (doc: GraphQLPlantConfig) => ({ ...fromGraphQLPlantConfig(doc), _deleted: doc.is_deleted ?? false }),
+        queryBuilder: pullQueryBuilderPlantConfig,
+        modifier: (doc: GraphQLPlantConfig) => ({ ...fromGraphQLPlantConfig(doc), _deleted: false }),
       },
       push: {
-        queryBuilder: pushMutationBuilderPlantConfigs,
+        queryBuilder: pushMutationBuilderPlantConfig,
       },
       live: false,
       autoStart: true,
@@ -1255,11 +1305,11 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
       headers: getHeaders(),
       collection: db.collections.shift_summary,
       pull: {
-        queryBuilder: pullQueryBuilderShiftSummaries,
-        modifier: (doc: GraphQLShiftSummary) => ({ ...fromGraphQLShiftSummary(doc), _deleted: doc.is_deleted ?? false }),
+        queryBuilder: pullQueryBuilderShiftSummary,
+        modifier: (doc: GraphQLShiftSummary) => ({ ...fromGraphQLShiftSummary(doc), _deleted: false }),
       },
       push: {
-        queryBuilder: pushMutationBuilderShiftSummaries,
+        queryBuilder: pushMutationBuilderShiftSummary,
       },
       live: false,
       autoStart: true,

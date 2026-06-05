@@ -34,7 +34,7 @@ const CATALOG_TIMEOUT_MS = 8_000;
 function getCurrentUserId(): string | null {
   const session = nhost.getUserSession();
   if (!session?.user) return null;
-  return (session.user as Record<string, unknown>).id as string ?? null;
+  return (session.user as unknown as Record<string, unknown>).id as string ?? null;
 }
 
 // ─── Stop Reason Mutations ──────────────────────────────────────────────────────
@@ -84,11 +84,7 @@ export async function insertStopReason(vars: InsertStopReasonInput): Promise<boo
       ),
       CATALOG_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[catalogMutations] insertStopReason GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.insert_stop_reasons_one;
+    return !!res.body?.data?.insert_stop_reasons_one;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[catalogMutations] insertStopReason failed:', message);
@@ -123,11 +119,7 @@ export async function updateStopReason(
       ),
       CATALOG_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[catalogMutations] updateStopReason GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.update_stop_reasons_by_pk;
+    return !!res.body?.data?.update_stop_reasons_by_pk;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[catalogMutations] updateStopReason failed:', message);
@@ -148,11 +140,7 @@ export async function deleteStopReason(id: string): Promise<boolean> {
       ),
       CATALOG_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[catalogMutations] deleteStopReason GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.delete_stop_reasons_by_pk;
+    return !!res.body?.data?.delete_stop_reasons_by_pk;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[catalogMutations] deleteStopReason failed:', message);
@@ -203,11 +191,7 @@ export async function insertLine(vars: InsertLineInput): Promise<boolean> {
       ),
       CATALOG_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[catalogMutations] insertLine GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.insert_lines_one;
+    return !!res.body?.data?.insert_lines_one;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[catalogMutations] insertLine failed:', message);
@@ -235,11 +219,7 @@ export async function updateLine(id: string, vars: UpdateLineInput): Promise<boo
       ),
       CATALOG_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[catalogMutations] updateLine GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.update_lines_by_pk;
+    return !!res.body?.data?.update_lines_by_pk;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[catalogMutations] updateLine failed:', message);
@@ -260,11 +240,7 @@ export async function deleteLine(id: string): Promise<boolean> {
       ),
       CATALOG_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[catalogMutations] deleteLine GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.delete_lines_by_pk;
+    return !!res.body?.data?.delete_lines_by_pk;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[catalogMutations] deleteLine failed:', message);
@@ -316,11 +292,7 @@ export async function insertMachine(vars: InsertMachineInput): Promise<boolean> 
       ),
       CATALOG_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[catalogMutations] insertMachine GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.insert_machines_one;
+    return !!res.body?.data?.insert_machines_one;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[catalogMutations] insertMachine failed:', message);
@@ -352,11 +324,7 @@ export async function updateMachine(
       ),
       CATALOG_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[catalogMutations] updateMachine GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.update_machines_by_pk;
+    return !!res.body?.data?.update_machines_by_pk;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[catalogMutations] updateMachine failed:', message);
@@ -377,11 +345,7 @@ export async function deleteMachine(id: string): Promise<boolean> {
       ),
       CATALOG_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[catalogMutations] deleteMachine GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.delete_machines_by_pk;
+    return !!res.body?.data?.delete_machines_by_pk;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[catalogMutations] deleteMachine failed:', message);
@@ -433,11 +397,7 @@ export async function insertProduct(vars: InsertProductInput): Promise<boolean> 
       ),
       CATALOG_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[catalogMutations] insertProduct GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.insert_products_one;
+    return !!res.body?.data?.insert_products_one;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[catalogMutations] insertProduct failed:', message);
@@ -469,11 +429,7 @@ export async function updateProduct(
       ),
       CATALOG_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[catalogMutations] updateProduct GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.update_products_by_pk;
+    return !!res.body?.data?.update_products_by_pk;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[catalogMutations] updateProduct failed:', message);
@@ -494,11 +450,7 @@ export async function deleteProduct(id: string): Promise<boolean> {
       ),
       CATALOG_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[catalogMutations] deleteProduct GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.delete_products_by_pk;
+    return !!res.body?.data?.delete_products_by_pk;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[catalogMutations] deleteProduct failed:', message);
@@ -550,11 +502,7 @@ export async function insertShift(vars: InsertShiftInput): Promise<boolean> {
       ),
       CATALOG_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[catalogMutations] insertShift GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.insert_shifts_one;
+    return !!res.body?.data?.insert_shifts_one;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[catalogMutations] insertShift failed:', message);
@@ -586,11 +534,7 @@ export async function updateShift(
       ),
       CATALOG_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[catalogMutations] updateShift GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.update_shifts_by_pk;
+    return !!res.body?.data?.update_shifts_by_pk;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[catalogMutations] updateShift failed:', message);
@@ -611,11 +555,7 @@ export async function deleteShift(id: string): Promise<boolean> {
       ),
       CATALOG_TIMEOUT_MS,
     );
-    if (res.error) {
-      console.warn('[catalogMutations] deleteShift GraphQL error:', res.error.message);
-      return false;
-    }
-    return !!res.data?.delete_shifts_by_pk;
+    return !!res.body?.data?.delete_shifts_by_pk;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.warn('[catalogMutations] deleteShift failed:', message);

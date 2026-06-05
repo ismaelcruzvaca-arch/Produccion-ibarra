@@ -101,6 +101,7 @@ describe('Downtime Conciliation DTO', () => {
   it('toGraphQLDowntimeConciliation → payload sin campos RxDB-only', () => {
     const rxDoc: IDowntimeConciliation = {
       id: 'dc-uuid-123',
+      created_at: new Date('2026-05-28T11:05:00.000Z').getTime(),
       oee_event_id: 'oee-uuid-456',
       shift_session_id: 'shift-uuid-789',
       machine_id: 'MC-001',
@@ -124,6 +125,9 @@ describe('Downtime Conciliation DTO', () => {
       updated_at: new Date('2026-05-28T11:05:00.000Z').getTime(),
       device_id: 'device-test-1',
       is_deleted: false,
+      involved_departments: [],
+      verdicts: [],
+      escalation_deadline: 0,
     };
 
     const payload = toGraphQLDowntimeConciliation(rxDoc);
@@ -155,6 +159,7 @@ describe('Downtime Conciliation DTO', () => {
   it('toGraphQL → fromGraphQL roundtrip preserva datos', () => {
     const original: IDowntimeConciliation = {
       id: 'dc-uuid-123',
+      created_at: 1716887100000,
       oee_event_id: 'oee-uuid-456',
       shift_session_id: 'shift-uuid-789',
       machine_id: 'MC-001',
@@ -178,6 +183,9 @@ describe('Downtime Conciliation DTO', () => {
       updated_at: 1716887100000,
       device_id: 'device-test-1',
       is_deleted: false,
+      involved_departments: [],
+      verdicts: [],
+      escalation_deadline: 0,
     };
 
     const payload = toGraphQLDowntimeConciliation(original);
@@ -267,6 +275,7 @@ describe('Plant Config DTO', () => {
       key: 'micro_stop_threshold_min',
       value: '5',
       description: 'Umbral de micro-paro en minutos',
+      created_at: new Date('2026-05-28T12:00:00.000Z').getTime(),
       updated_at: new Date('2026-05-28T12:00:00.000Z').getTime(),
       device_id: 'device-test-1',
       is_deleted: false,
@@ -287,6 +296,7 @@ describe('Plant Config DTO', () => {
       key: 'micro_stop_threshold_min',
       value: '10',
       description: 'Umbral actualizado',
+      created_at: 1716890400000,
       updated_at: 1716890400000,
       device_id: 'device-test-1',
       is_deleted: false,
@@ -355,6 +365,7 @@ describe('Shift Summary DTO', () => {
       total_rejects: 3,
       performance_pct: 87.50,
       has_pending_conciliation: true,
+      created_at: new Date('2026-05-28T12:00:00.000Z').getTime(),
       updated_at: new Date('2026-05-28T12:00:00.000Z').getTime(),
       device_id: 'device-test-1',
       is_deleted: false,
@@ -384,6 +395,7 @@ describe('Shift Summary DTO', () => {
       total_rejects: 3,
       performance_pct: 87.50,
       has_pending_conciliation: false,
+      created_at: 1716890400000,
       updated_at: 1716890400000,
       device_id: 'device-test-1',
       is_deleted: false,

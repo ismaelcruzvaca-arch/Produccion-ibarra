@@ -312,7 +312,7 @@ describe('Report DTO', () => {
     expect(payload.updated_at).toBe(EPOCH_MS.toString());
     expect(payload.deleted).toBe(false);
     expect(payload.template_id).toBe('oee-basic');
-    expect(payload.data.total_pieces).toBe(1000);
+    expect((payload.data as any).total_pieces).toBe(1000);
     expect(payload.is_deleted).toBeUndefined();
   });
 
@@ -1135,6 +1135,7 @@ describe('ShiftSession DTO', () => {
   it('toGraphQLShiftSession converts epoch ms → ISO 8601', () => {
     const doc: IShiftSession = {
       id: 'ss-uuid-1',
+      created_at: STARTED_AT_EPOCH,
       machine_id: 'MC-001',
       operator_id: 'op-1',
       shift_type: 'matutino',
@@ -1164,6 +1165,7 @@ describe('ShiftSession DTO', () => {
   it('toGraphQLShiftSession maps ended_at undefined → undefined', () => {
     const doc: IShiftSession = {
       id: 'ss-uuid-1',
+      created_at: STARTED_AT_EPOCH,
       machine_id: 'MC-001',
       operator_id: 'op-1',
       shift_type: 'matutino',
@@ -1209,6 +1211,7 @@ describe('ShiftSession DTO', () => {
   it('toGraphQL → fromGraphQL roundtrip preserves semantic fields within 1ms', () => {
     const original: IShiftSession = {
       id: 'ss-uuid-2',
+      created_at: 1716885000000,
       machine_id: 'MC-002',
       operator_id: 'op-2',
       shift_type: 'vespertino',

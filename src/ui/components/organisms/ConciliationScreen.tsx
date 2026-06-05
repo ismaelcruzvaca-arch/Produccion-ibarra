@@ -784,7 +784,7 @@ export function ConciliationScreen({ shiftSessionId, shiftId }: ConciliationScre
         {/* Escalation banner */}
         {isEscalationOverdue && selectedRecord?.escalation_deadline && (
           <View style={styles.escalationInlineBanner}>
-            <List.Icon icon="clock-alert-outline" color={colors.error} size={18} />
+            <List.Icon icon="clock-alert-outline" color={colors.error} />
             <View style={styles.escalationInlineContent}>
               <Text variant="bodySmall" style={styles.escalationInlineText}>
                 Esta conciliación superó el plazo de escalación.
@@ -1129,7 +1129,7 @@ export function ConciliationScreen({ shiftSessionId, shiftId }: ConciliationScre
       {/* Wave 5: Escalation banner */}
       {isEscalationOverdue && (
         <View style={styles.escalationBanner}>
-          <List.Icon icon="alert-decagram" color={colors.error} size={20} />
+          <List.Icon icon="alert-decagram" color={colors.error} />
           <View style={styles.escalationBannerContent}>
             <Text variant="bodySmall" style={styles.escalationBannerTitle}>
               Conciliaciones vencidas

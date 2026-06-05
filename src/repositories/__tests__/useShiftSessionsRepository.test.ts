@@ -142,6 +142,7 @@ describe('useShiftSessionsRepository', () => {
     const { result } = renderHook(() => useShiftSessionsRepository());
 
     const session = await result.current.create({
+      created_at: 1234567890,
       machine_id: 'CAVEMIL-03',
       operator_id: 'user-1',
       shift_type: 'matutino',
@@ -167,6 +168,7 @@ describe('useShiftSessionsRepository', () => {
     const { result } = renderHook(() => useShiftSessionsRepository());
 
     const session = await result.current.create({
+      created_at: 1234567890,
       machine_id: 'CAVEMIL-03',
       operator_id: 'user-1',
       shift_type: 'vespertino',
@@ -185,6 +187,7 @@ describe('useShiftSessionsRepository', () => {
     const { result } = renderHook(() => useShiftSessionsRepository());
 
     const created = await result.current.create({
+      created_at: 1234567890,
       machine_id: 'CAVEMIL-03',
       operator_id: 'user-1',
       shift_type: 'matutino',
@@ -213,6 +216,7 @@ describe('useShiftSessionsRepository', () => {
     const { result } = renderHook(() => useShiftSessionsRepository());
 
     const created = await result.current.create({
+      created_at: 1234567890,
       machine_id: 'CAVEMIL-03',
       operator_id: 'user-1',
       shift_type: 'matutino',
@@ -250,6 +254,7 @@ describe('useShiftSessionsRepository', () => {
     const { result } = renderHook(() => useShiftSessionsRepository());
 
     const created = await result.current.create({
+      created_at: 1234567890,
       machine_id: 'CAVEMIL-03',
       operator_id: 'user-1',
       shift_type: 'matutino',
@@ -284,7 +289,8 @@ describe('useShiftSessionsRepository', () => {
 
     await act(async () => {
       await result.current.create({
-        machine_id: 'CAVEMIL-03',
+        created_at: 1234567890,
+      machine_id: 'CAVEMIL-03',
         operator_id: 'user-1',
         shift_type: 'matutino',
         started_at: 1000,
@@ -311,7 +317,8 @@ describe('useShiftSessionsRepository', () => {
 
     await act(async () => {
       await result.current.create({
-        machine_id: 'CAVEMIL-03',
+        created_at: 1234567890,
+      machine_id: 'CAVEMIL-03',
         operator_id: 'user-1',
         shift_type: 'matutino',
         started_at: 1000,
@@ -331,7 +338,8 @@ describe('useShiftSessionsRepository', () => {
       // Insert two active sessions — the mock sorts by started_at desc
       // and returns the first one (most recent)
       await result.current.create({
-        machine_id: 'CAVEMIL-03',
+        created_at: 1234567890,
+      machine_id: 'CAVEMIL-03',
         operator_id: 'user-1',
         shift_type: 'matutino',
         started_at: 1000,
@@ -339,7 +347,8 @@ describe('useShiftSessionsRepository', () => {
         status: 'active',
       });
       await result.current.create({
-        machine_id: 'CAVEMIL-03',
+        created_at: 1234567890,
+      machine_id: 'CAVEMIL-03',
         operator_id: 'user-1',
         shift_type: 'vespertino',
         started_at: 2000,
@@ -362,7 +371,8 @@ describe('useShiftSessionsRepository', () => {
 
     await act(async () => {
       await result.current.create({
-        machine_id: 'CAVEMIL-03',
+        created_at: 1234567890,
+      machine_id: 'CAVEMIL-03',
         operator_id: 'user-1',
         shift_type: 'matutino',
         started_at: 1000,
@@ -370,7 +380,8 @@ describe('useShiftSessionsRepository', () => {
         status: 'active',
       });
       await result.current.create({
-        machine_id: 'CAVEMIL-04',
+        created_at: 1234567890,
+      machine_id: 'CAVEMIL-04',
         operator_id: 'user-2',
         shift_type: 'vespertino',
         started_at: 2000,
@@ -388,7 +399,8 @@ describe('useShiftSessionsRepository', () => {
 
     await act(async () => {
       await result.current.create({
-        machine_id: 'CAVEMIL-03',
+        created_at: 1234567890,
+      machine_id: 'CAVEMIL-03',
         operator_id: 'user-1',
         shift_type: 'matutino',
         started_at: 1000,
@@ -396,7 +408,8 @@ describe('useShiftSessionsRepository', () => {
         status: 'active',
       });
       await result.current.create({
-        machine_id: 'CAVEMIL-04',
+        created_at: 1234567890,
+      machine_id: 'CAVEMIL-04',
         operator_id: 'user-2',
         shift_type: 'vespertino',
         started_at: 2000,
@@ -416,7 +429,8 @@ describe('useShiftSessionsRepository', () => {
     let sessionId: string;
     await act(async () => {
       const created = await result.current.create({
-        machine_id: 'CAVEMIL-03',
+        created_at: 1234567890,
+      machine_id: 'CAVEMIL-03',
         operator_id: 'user-1',
         shift_type: 'matutino',
         started_at: 1000,

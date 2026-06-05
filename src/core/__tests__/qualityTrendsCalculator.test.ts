@@ -24,11 +24,12 @@ const weightLog = (
   id: `wl-${timestamp}`,
   inspection_id: 'insp-1',
   measured_weight,
+  created_at: timestamp,
   updated_at: timestamp,
   device_id: 'device-1',
   is_deleted: false,
   ...overrides,
-});
+} as IWeightLog);
 
 const defectLog = (
   severity: 'critical' | 'major' | 'minor',
@@ -39,11 +40,12 @@ const defectLog = (
   severity,
   defect_type: 'grieta',
   defect_count: 1,
+  created_at: 1000,
   updated_at: 1000,
   device_id: 'device-1',
   is_deleted: false,
   ...overrides,
-});
+} as IDefectLog);
 
 const inspection = (
   disposition: 'liberado' | 'rechazado' | 'reproceso',
@@ -55,11 +57,20 @@ const inspection = (
   shift_type: 'matutino',
   disposition,
   data_source: 'manual',
+  created_at: 1000,
   updated_at: 1000,
   device_id: 'device-1',
   is_deleted: false,
+  inspection_type: 'visual',
+  passed: disposition === 'liberado',
+  value: 0,
+  unit: '',
+  product_id: '',
+  line_id: '',
+  shift_session_id: '',
+  operator_id: 'inspector-1',
   ...overrides,
-});
+} as IQualityInspection);
 
 const weightStandard = (
   overrides: Partial<IProductWeightStandard> = {},
@@ -69,11 +80,12 @@ const weightStandard = (
   lower_limit: 245,
   upper_limit: 255,
   requires_tare: false,
+  created_at: 1000,
   updated_at: 1000,
   device_id: 'device-1',
   is_deleted: false,
   ...overrides,
-});
+} as IProductWeightStandard);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // aggregateWeightTrend

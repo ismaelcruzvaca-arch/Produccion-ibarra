@@ -51,10 +51,9 @@ export function SyncMonitor() {
   };
 
   const icon = getIcon();
-  const dlqCount = replication?.resilientOeeController?.getState()?.dlqCount ?? 0;
 
-  const timestampText = lastSyncTimestamp
-    ? `Última sinc: ${lastSyncTimestamp.toLocaleTimeString()}`
+  const timestampText = lastSyncTime
+    ? `Última sinc: ${lastSyncTime.toLocaleTimeString()}`
     : 'Última sinc: —';
 
   return (
@@ -73,13 +72,6 @@ export function SyncMonitor() {
           <Text variant="bodySmall" style={styles.syncingIndicator}>
             ●
           </Text>
-        )}
-        {dlqCount > 0 && (
-          <View style={styles.dlqBadge}>
-            <Text variant="bodySmall" style={styles.dlqBadgeText}>
-              {'\u26A0\uFE0F'} {dlqCount}
-            </Text>
-          </View>
         )}
       </View>
       <Text variant="bodySmall" style={styles.timestamp}>

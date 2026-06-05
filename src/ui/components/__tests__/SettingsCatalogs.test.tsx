@@ -65,7 +65,7 @@ beforeEach(() => {
 function renderCatalogs() {
   return render(
     <PaperProvider>
-      <SettingsCatalogs />
+      <SettingsCatalogs userId="test-user-id" />
     </PaperProvider>,
   );
 }
