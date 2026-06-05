@@ -1416,33 +1416,6 @@ function pushMutationBuilderQualityInspections(docs: any[]) {
   };
 }
 
-// ─── Pull Query Builder (Defect Logs) ─────────────────────────────────────────
-
-function pullQueryBuilderDefectLogs(checkpoint: GraphQLDefectLog | undefined, _limit: number) {
-  return {
-    query: `
-      query PullDefectLogs($lastCheckpoint: bigint!) {
-        defect_logs(
-          where: { updated_at: { _gt: $lastCheckpoint } },
-          order_by: { updated_at: asc }
-        ) {
-          id
-          inspection_id
-          defect_type
-          defect_code
-          quantity
-          severity
-          notes
-          registered_at
-          updated_at
-          is_deleted
-        }
-      }
-    `,
-    variables: { lastCheckpoint: checkpoint?.updated_at ? parseInt(checkpoint.updated_at, 10) : 0 },
-  };
-}
-
 // ─── Push Mutation Builder (Shift Sessions Upsert) ────────────────────────────
 
 function pushMutationBuilderShiftSessions(docs: any[]) {
