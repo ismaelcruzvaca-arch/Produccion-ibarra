@@ -15,6 +15,7 @@ import { useAuthStore } from '../../src/auth/useAuthStore';
 import { useAlertBadge } from '../../src/hooks/useAlertBadge';
 import { useAlertBadgeStore } from '../../src/store/alertBadgeStore';
 import { AlertBadge } from '../../src/ui/components/alertEngine/AlertBadge';
+import { AlertSnackbar } from '../../src/ui/components/alertEngine/AlertSnackbar';
 
 // ─── Tab Layout ───────────────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ export default function TabLayout() {
   const badgeCount = useAlertBadgeStore((s) => s.badgeCount);
 
   return (
-    <AlertSnackbarProvider>
+    <>
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -93,6 +94,7 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
-    </AlertSnackbarProvider>
+      <AlertSnackbar />
+    </>
   );
 }
