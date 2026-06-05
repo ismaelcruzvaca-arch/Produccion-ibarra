@@ -22,6 +22,7 @@
  * - extractorCheckSchema v0→v1: add `created_at`
  * - vitaminKitSchema v0→v1: add `created_at`
  * - qualityInspectionSchema v0→v1: add `created_at`
+ * - qualityInspectionSchema v1→v2: add local-only fields (spread no-op)
  * - defectLogSchema v0→v1: add `created_at`
  * - weightLogSchema v0→v1: add `created_at`
  */
@@ -195,6 +196,11 @@ export const MIGRATIONS: Record<string, MigrationStrategies> = {
       return {
         ...oldDoc,
         created_at: oldDoc.created_at ?? oldDoc.updated_at ?? now(),
+      };
+    },
+    2: (oldDoc: any) => {
+      return {
+        ...oldDoc,
       };
     },
   },

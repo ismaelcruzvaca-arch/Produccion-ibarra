@@ -350,10 +350,10 @@ export const vitaminKitSchema: RxJsonSchema<IVitaminKit> = {
  * Indexes: machine_id, shift_type para filtrado por máquina/turno.
  */
 export const qualityInspectionSchema: RxJsonSchema<IQualityInspection> = {
-  version: 1,
+  version: 2,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'machine_id', 'inspector_id', 'shift_type', 'disposition', 'data_source', 'device_id', 'inspection_type', 'passed', 'value', 'unit', 'product_id', 'line_id', 'shift_session_id', 'operator_id'],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'machine_id', 'inspector_id', 'shift_type', 'disposition', 'data_source', 'device_id'],
   properties: {
     id:               { type: 'string', maxLength: 100 },
     created_at:       { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
