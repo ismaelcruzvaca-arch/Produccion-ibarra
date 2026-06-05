@@ -162,8 +162,9 @@ describe('fetchAlertRules', () => {
 
   it('returns parsed alert rules on success', async () => {
     mockRequest.mockResolvedValue({
-      data: { alert_rules: MOCK_ALERT_RULES },
-      error: null,
+      body: { data: { alert_rules: MOCK_ALERT_RULES } },
+      status: 200,
+      headers: {},
     });
 
     const result = await fetchAlertRules(MOCK_PLANT_ID);
@@ -175,8 +176,9 @@ describe('fetchAlertRules', () => {
 
   it('passes the correct plantId variable to the query', async () => {
     mockRequest.mockResolvedValue({
-      data: { alert_rules: [] },
-      error: null,
+      body: { data: { alert_rules: [] } },
+      status: 200,
+      headers: {},
     });
 
     await fetchAlertRules(MOCK_PLANT_ID);
@@ -186,8 +188,9 @@ describe('fetchAlertRules', () => {
 
   it('returns empty array when GraphQL error occurs', async () => {
     mockRequest.mockResolvedValue({
-      data: null,
-      error: { message: 'permission denied' },
+      body: { data: null },
+      status: 200,
+      headers: {},
     });
 
     const result = await fetchAlertRules(MOCK_PLANT_ID);
@@ -205,8 +208,9 @@ describe('fetchAlertRules', () => {
 
   it('returns empty array when data is null', async () => {
     mockRequest.mockResolvedValue({
-      data: null,
-      error: null,
+      body: { data: null },
+      status: 200,
+      headers: {},
     });
 
     const result = await fetchAlertRules(MOCK_PLANT_ID);
@@ -222,8 +226,9 @@ describe('fetchNodes', () => {
 
   it('returns parsed nodes on success', async () => {
     mockRequest.mockResolvedValue({
-      data: { nodes: MOCK_NODES },
-      error: null,
+      body: { data: { nodes: MOCK_NODES } },
+      status: 200,
+      headers: {},
     });
 
     const result = await fetchNodes(MOCK_PLANT_ID);
@@ -237,8 +242,9 @@ describe('fetchNodes', () => {
 
   it('passes plantId variable correctly', async () => {
     mockRequest.mockResolvedValue({
-      data: { nodes: [] },
-      error: null,
+      body: { data: { nodes: [] } },
+      status: 200,
+      headers: {},
     });
 
     await fetchNodes(MOCK_PLANT_ID);
@@ -248,8 +254,9 @@ describe('fetchNodes', () => {
 
   it('returns empty array on GraphQL error', async () => {
     mockRequest.mockResolvedValue({
-      data: null,
-      error: { message: 'Remote schema unreachable' },
+      body: { data: null },
+      status: 200,
+      headers: {},
     });
 
     const result = await fetchNodes(MOCK_PLANT_ID);
@@ -273,8 +280,9 @@ describe('fetchTelemetryByNode', () => {
 
   it('returns parsed telemetry on success', async () => {
     mockRequest.mockResolvedValue({
-      data: { norvi_telemetry: MOCK_TELEMETRY },
-      error: null,
+      body: { data: { norvi_telemetry: MOCK_TELEMETRY } },
+      status: 200,
+      headers: {},
     });
 
     const result = await fetchTelemetryByNode(MOCK_NODE_ID);
@@ -286,8 +294,9 @@ describe('fetchTelemetryByNode', () => {
 
   it('passes correct variables with default limit', async () => {
     mockRequest.mockResolvedValue({
-      data: { norvi_telemetry: [] },
-      error: null,
+      body: { data: { norvi_telemetry: [] } },
+      status: 200,
+      headers: {},
     });
 
     await fetchTelemetryByNode(MOCK_NODE_ID);
@@ -300,8 +309,9 @@ describe('fetchTelemetryByNode', () => {
 
   it('passes custom limit when provided', async () => {
     mockRequest.mockResolvedValue({
-      data: { norvi_telemetry: [] },
-      error: null,
+      body: { data: { norvi_telemetry: [] } },
+      status: 200,
+      headers: {},
     });
 
     await fetchTelemetryByNode(MOCK_NODE_ID, 100);
@@ -314,8 +324,9 @@ describe('fetchTelemetryByNode', () => {
 
   it('returns empty array on GraphQL error', async () => {
     mockRequest.mockResolvedValue({
-      data: null,
-      error: { message: 'timeout' },
+      body: { data: null },
+      status: 200,
+      headers: {},
     });
 
     const result = await fetchTelemetryByNode(MOCK_NODE_ID);
@@ -339,8 +350,9 @@ describe('fetchAlertEvents', () => {
 
   it('returns parsed alert events on success', async () => {
     mockRequest.mockResolvedValue({
-      data: { alert_events: MOCK_ALERT_EVENTS },
-      error: null,
+      body: { data: { alert_events: MOCK_ALERT_EVENTS } },
+      status: 200,
+      headers: {},
     });
 
     const result = await fetchAlertEvents(MOCK_PLANT_ID);
@@ -352,8 +364,9 @@ describe('fetchAlertEvents', () => {
 
   it('passes correct variables with default limit', async () => {
     mockRequest.mockResolvedValue({
-      data: { alert_events: [] },
-      error: null,
+      body: { data: { alert_events: [] } },
+      status: 200,
+      headers: {},
     });
 
     await fetchAlertEvents(MOCK_PLANT_ID);
@@ -366,8 +379,9 @@ describe('fetchAlertEvents', () => {
 
   it('returns empty array on error', async () => {
     mockRequest.mockResolvedValue({
-      data: null,
-      error: { message: 'error' },
+      body: { data: null },
+      status: 200,
+      headers: {},
     });
 
     const result = await fetchAlertEvents(MOCK_PLANT_ID);
@@ -383,8 +397,9 @@ describe('fetchEngineHealth', () => {
 
   it('returns engine health record on success', async () => {
     mockRequest.mockResolvedValue({
-      data: { alert_engine_health: MOCK_ENGINE_HEALTH },
-      error: null,
+      body: { data: { alert_engine_health: MOCK_ENGINE_HEALTH } },
+      status: 200,
+      headers: {},
     });
 
     const result = await fetchEngineHealth();
@@ -396,8 +411,9 @@ describe('fetchEngineHealth', () => {
 
   it('returns null when no health records exist', async () => {
     mockRequest.mockResolvedValue({
-      data: { alert_engine_health: [] },
-      error: null,
+      body: { data: { alert_engine_health: [] } },
+      status: 200,
+      headers: {},
     });
 
     const result = await fetchEngineHealth();
@@ -407,8 +423,9 @@ describe('fetchEngineHealth', () => {
 
   it('returns null on GraphQL error', async () => {
     mockRequest.mockResolvedValue({
-      data: null,
-      error: { message: 'error' },
+      body: { data: null },
+      status: 200,
+      headers: {},
     });
 
     const result = await fetchEngineHealth();

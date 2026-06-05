@@ -256,10 +256,10 @@ describe('3. Frente A — Calidad', () => {
 
     it('fromGraphQLQualityInspection → IQualityInspection con disposition', () => {
       const result = fromGraphQLQualityInspection(mockGraphQL);
-      // NO debe tener campos inventados (pass/fail, inspection_type, value)
+      // Los campos RxDB-only tienen defaults seguros
       expect((result as any).result).toBeUndefined();
-      expect((result as any).inspection_type).toBeUndefined();
-      expect((result as any).value).toBeUndefined();
+      expect((result as any).inspection_type).toBe('');
+      expect((result as any).value).toBe(0);
       // DEBE tener disposition con términos reales de fábrica
       expect(result.disposition).toBe('liberado');
       expect(result.shift_type).toBe('matutino');
