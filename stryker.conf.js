@@ -3,7 +3,7 @@
 
 /** @type {import('@stryker-mutator/api/core').StrykerOptions} */
 module.exports = {
-  packageManager: 'bun',
+  packageManager: 'npm',
   plugins: ['@stryker-mutator/jest-runner'],
   testRunner: 'jest',
   jest: {
