@@ -26,11 +26,47 @@ import {
   getStoredSession,
   setMemoryAccessToken,
 } from '../auth/tokenStorage';
+import { captureException } from '../lib/sentry';
 
 export const nhost = createNhostClient({
   subdomain: process.env.EXPO_PUBLIC_NHOST_SUBDOMAIN ?? 'your-nhost-subdomain',
   region: process.env.EXPO_PUBLIC_NHOST_REGION ?? 'us-east-1',
 });
+
+// ─── Network error capture ──────────────────────────────────────────────────────
+
+const originalRequest = nhost.graphql.request.bind(nhost.graphql);
+
+/**
+ * Wraps nhost.graphql.request to capture network/GraphQL errors to Sentry.
+ * Only activates in production builds with a configured DSN.
+ *
+ * Spec: observability R4 — network errors to Nhost/Hasura API SHOULD be captured.
+ */
+nhost.graphql.request = function requestWithSentry<T>(
+  query: string,
+  variables?: Record<string, unknown>,
+) {
+  return originalRequest(query, variables).then(
+    (response) => {
+      const err = (response as any)?.error;
+      if (err) {
+        captureException(
+          err instanceof Error ? err : new Error(err.message ?? 'GraphQL request failed'),
+          { query: query.slice(0, 200), hasError: true },
+        );
+      }
+      return response;
+    },
+    (error: unknown) => {
+      captureException(
+        error instanceof Error ? error : new Error('Network request failed'),
+        { query: query.slice(0, 200), fatal: true },
+      );
+      throw error;
+    },
+  );
+};
 
 // ─── Restore session from secure storage on app start ──────────────────────────
 

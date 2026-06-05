@@ -5,7 +5,7 @@ import { Button, Surface } from 'react-native-paper';
 
 const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
 
-if (dsn) {
+if (!__DEV__ && dsn) {
   Sentry.init({
     dsn,
     environment: process.env.NODE_ENV || 'development',
@@ -80,6 +80,36 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 });
+
+/**
+ * Captura un error en Sentry, solo si está configurado (producción + DSN presente).
+ * Seguro de llamar desde cualquier lado — si Sentry no se inició, no hace nada.
+ */
+export function captureException(error: unknown, context?: Record<string, unknown>) {
+  if (dsn && !__DEV__) {
+    Sentry.captureException(error, { extra: context });
+  }
+}
+
+/**
+ * Dispara un error de prueba para verificar que Sentry está capturando correctamente.
+ * Llamar desde la consola del navegador tras el deploy:
+ *   import('/src/lib/sentry').then(m => m.triggerSentryTest())
+ *
+ * O desde cualquier componente con un botón oculto.
+ */
+export function triggerSentryTest() {
+  const error = new Error('[Sentry Test] Error de prueba — verificación post-deploy');
+  error.name = 'SentryTestError';
+  captureException(error, {
+    source: 'manual-test',
+    timestamp: new Date().toISOString(),
+  });
+  if (!__DEV__) {
+    // eslint-disable-next-line no-console
+    console.log('[Sentry] Error de prueba enviado. Verificá el dashboard de Sentry.');
+  }
+}
 
 export const SentryErrorBoundary = Sentry.ErrorBoundary;
 export default Sentry;
