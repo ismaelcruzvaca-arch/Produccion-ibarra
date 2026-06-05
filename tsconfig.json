@@ -7,5 +7,11 @@
       "src/*": ["src/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx"]
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": [
+    "nhost/functions",
+    "node_modules",
+    "dist",
+    ".expo"
+  ]
 }
