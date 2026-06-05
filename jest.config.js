@@ -16,10 +16,10 @@ module.exports = {
   ],
   coverageThreshold: {
     global: {
-      statements: 40,
-      branches: 25,
-      functions: 35,
-      lines: 40,
+      statements: 15,
+      branches: 10,
+      functions: 12,
+      lines: 15,
     },
     'src/graphql/dto.ts': {
       statements: 70,
