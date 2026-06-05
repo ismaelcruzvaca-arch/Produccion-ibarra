@@ -395,56 +395,6 @@ function pushMutationBuilderSignatures(docs: any[]) {
 
 // ─── Pull Query Builder (Quality Inspections) ─────────────────────────────────
 
-function pullQueryBuilderQualityInspections(checkpoint: GraphQLQualityInspection | undefined, _limit: number) {
-  return {
-    query: `
-      query PullQualityInspections($lastCheckpoint: bigint!) {
-        quality_inspections(
-          where: { updated_at: { _gt: $lastCheckpoint } },
-          order_by: { updated_at: asc }
-        ) {
-          id
-          line_id
-          operator_id
-          shift_id
-          product_code
-          result
-          notes
-          created_at
-          updated_at
-          is_deleted
-        }
-      }
-    `,
-    variables: { lastCheckpoint: checkpoint?.updated_at ? parseInt(checkpoint.updated_at, 10) : 0 },
-  };
-}
-
-// ─── Push Mutation Builder (Quality Inspections Upsert) ───────────────────────
-
-function pushMutationBuilderQualityInspections(docs: any[]) {
-  const objects = docs.map(toGraphQLQualityInspection);
-  return {
-    query: `
-      mutation UpsertQualityInspections($objects: [quality_inspections_insert_input!]!) {
-        insert_quality_inspections(
-          objects: $objects,
-          on_conflict: {
-            constraint: quality_inspections_pkey,
-            update_columns: [
-              line_id, operator_id, shift_id, product_code,
-              result, notes, is_deleted
-            ]
-          }
-        ) {
-          affected_rows
-        }
-      }
-    `,
-    variables: { objects },
-  };
-}
-
 // ─── Pull Query Builder (Defect Logs) ─────────────────────────────────────────
 
 function pullQueryBuilderDefectLogs(checkpoint: GraphQLDefectLog | undefined, _limit: number) {
