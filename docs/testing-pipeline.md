@@ -1,7 +1,8 @@
-# Pipeline de Pruebas — produccion-ibarra
+# Pipeline DevOps — produccion-ibarra
 
-> Documento de arquitectura de testing.
-> Define la jerarquía, herramientas y criterios de calidad.
+> Documento de arquitectura de pruebas y entrega continua.
+> Define la jerarquía de pruebas, el flujo CI/CD, la estrategia de ramas,
+> y el ciclo de retroalimentación con observabilidad.
 
 ---
 
@@ -112,6 +113,84 @@ PR a main
   │
   └── 6. Sentry ───────────────────── Observabilidad en producción
         └── Errores → Tests nuevos
+```
+
+---
+
+## Estrategia de Ramas (Git Flow simplificado)
+
+```
+main (producción)
+  ↑
+  └── PRs desde ramas feat/* o fix/*
+       • Cada PR ejecuta el pipeline completo
+       • Si algo falla → NO se mergea
+       • Code review obligatorio (al menos 1 approval)
+       • Commits convencionales (feat:, fix:, docs:, chore:)
+```
+
+**Reglas:**
+- `main` siempre está deployable
+- No hay `develop` ni `staging` por ahora (equipo chico, despliegue directo a Vercel)
+- Los hotfixes van directo a `main` con PR urgente
+- Cada release se taggea con versión semántica (ej: `v1.0.0`)
+
+## Estrategia de Release
+
+```
+1. PR a main → pipeline CI/CD
+2. Si pasa → merge automático
+3. Deploy automático a Vercel (URL de preview)
+4. Prueba en piso con el PCC
+5. Si todo ok → tag release (v1.x.x)
+6. Si algo falla → hotfix → repeat
+```
+
+**Versiones:**
+- Formato: `v{major}.{minor}.{patch}` (semver)
+- Major: cambios que rompen compatibilidad
+- Minor: nuevas funcionalidades
+- Patch: bug fixes
+
+## Entornos
+
+| Entorno | URL | Uso |
+|---------|-----|-----|
+| **Producción** | Vercel (produccion-ibarra.vercel.app) | Uso del PCC en planta |
+| **Preview** | Vercel (PR-specific URL) | Pruebas antes de mergear |
+
+Por ahora no hay staging separado. Cada PR genera su propia URL de preview en Vercel.
+
+## Calidad de Código (QA Gates)
+
+Además de los tests, el pipeline verifica:
+
+| Gate | Herramienta | Qué detecta |
+|------|-------------|-------------|
+| **Linter** | ESLint | Errores de sintaxis, malas prácticas |
+| **TypeScript** | `tsc --noEmit` | Errores de tipos |
+| **Formato** | Prettier | Inconsistencias de formato |
+| **Coverage** | Jest --coverage | Umbrales por archivo crítico |
+| **Mutación** | Stryker | Tests que no validan realmente |
+| **Build** | Expo export | Errores de compilación |
+| **E2E** | Playwright | Regresiones en flujos críticos |
+
+## Post-Release (Ciclo de retroalimentación)
+
+```
+Release a piso
+  │
+  ├── Sentry captura errores
+  │     └── Cada error → Issue → Test → Fix
+  │
+  ├── Logs de uso
+  │     └── ¿Qué pantallas usan más? ¿Dónde batallan?
+  │
+  ├── Feedback del PCC/supervisor
+  │     └── ¿El flujo tiene sentido? ¿Faltan códigos?
+  │
+  └── Métricas de calidad
+        └── ¿Subió el OEE? ¿Bajaron los paros?
 ```
 
 ## Próximos Pasos (priorizados)
