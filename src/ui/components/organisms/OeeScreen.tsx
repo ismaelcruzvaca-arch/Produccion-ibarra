@@ -35,7 +35,7 @@ import { useAuthStore } from '../../../auth/useAuthStore';
 import { useSignatures, DEFAULT_CHAINS } from '../../../hooks/useSignatures';
 import { SignaturePrompt } from '../molecules/SignaturePrompt';
 import { OeeSelectorBar } from '../OeeSelectorBar';
-import { useOeeValidation } from '../../../hooks/useOeeValidation';
+import { useOeeValidation } from '../../hooks/useOeeValidation';
 import { useAlertSnackbar } from '../molecules/AlertSnackbar';
 import { useUIStore } from '../../store/useUIStore';
 
