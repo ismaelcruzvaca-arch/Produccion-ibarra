@@ -10,9 +10,9 @@ module.exports = {
     config: require('./jest.config.js'),
     enableFindRelatedTests: true,
   },
-  reporters: ['progress', 'html', 'cleartext'],
+  reporters: ['progress', 'html', 'clear-text'],
   htmlReporter: {
-    baseDir: 'reports/mutation',
+    fileName: 'reports/mutation/index.html',
   },
   mutate: [
     'src/core/**/*.ts',
@@ -21,9 +21,6 @@ module.exports = {
     'src/ui/hooks/useShiftClose.ts',
   ],
   coverageAnalysis: 'perTest',
-  tsconfig: {
-    file: 'tsconfig.json',
-  },
   thresholds: {
     high: 80,
     low: 60,
