@@ -22,6 +22,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSignaturesRepository } from '../repositories/useSignaturesRepository';
 import { useAuthStore } from '../auth/useAuthStore';
+import { usePlantConfigRepository } from '../repositories/usePlantConfigRepository';
 import { nowMs } from '../utils/timestamp';
 import type { ISignature } from '../core/types';
 
@@ -56,8 +57,11 @@ export interface UseSignaturesOptions {
   documentType: string;
   /** UUID of the document being signed. */
   documentId: string;
-  /** Ordered signature chain configuration. */
-  chainConfig: SignatureChainConfig;
+  /**
+   * Ordered signature chain configuration.
+   * If not provided, resolves from plantConfig → DEFAULT_CHAINS.
+   */
+  chainConfig?: SignatureChainConfig;
 }
 
 export interface UseSignaturesReturn {
@@ -108,11 +112,36 @@ export const DEFAULT_CHAINS: Record<string, SignatureChainConfig> = {
 export function useSignatures({
   documentType,
   documentId,
-  chainConfig,
+  chainConfig: explicitChainConfig,
 }: UseSignaturesOptions): UseSignaturesReturn {
   const repository = useSignaturesRepository();
+  const plantConfig = usePlantConfigRepository();
   const { role: currentRole, fullName: currentUserName, operatorId } =
     useAuthStore();
+
+  // Resolve chainConfig: explicit → plantConfig → DEFAULT_CHAINS
+  const [effectiveConfig, setEffectiveConfig] = useState<SignatureChainConfig>(
+    explicitChainConfig ?? DEFAULT_CHAINS[documentType] ?? DEFAULT_CHAINS.oee_report
+  );
+
+  useEffect(() => {
+    if (explicitChainConfig) {
+      setEffectiveConfig(explicitChainConfig);
+      return;
+    }
+    plantConfig.getSignatureChainConfig(documentType).then((stored) => {
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as SignatureChainConfig;
+          if (parsed?.roles?.length && parsed?.labels?.length) {
+            setEffectiveConfig(parsed);
+            return;
+          }
+        } catch {}
+      }
+      setEffectiveConfig(DEFAULT_CHAINS[documentType] ?? DEFAULT_CHAINS.oee_report);
+    });
+  }, [explicitChainConfig, documentType, plantConfig]);
 
   const [existingSignatures, setExistingSignatures] = useState<ISignature[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -138,13 +167,13 @@ export function useSignatures({
 
   // Build chain status
   const status: SignatureChainStatus = (() => {
-    const steps = chainConfig.roles.map((role, index) => {
+    const steps = effectiveConfig.roles.map((role, index) => {
       const signed = existingSignatures.find(
         (s) => s.signer_role === role && s.sequence === index + 1
       );
       return {
         role,
-        label: chainConfig.labels[index] ?? role,
+        label: effectiveConfig.labels[index] ?? role,
         status: (signed ? 'signed' : 'pending') as SignatureStatus,
         signerName: signed?.signer_name,
         signedAt: signed?.signed_at,
@@ -165,7 +194,7 @@ export function useSignatures({
     }
 
     // Validate role (FS-5)
-    const currentStepIndex = chainConfig.roles.findIndex(
+    const currentStepIndex = effectiveConfig.roles.findIndex(
       (r) => r === currentRole
     );
     if (currentStepIndex === -1) {
@@ -217,7 +246,7 @@ export function useSignatures({
     currentRole,
     operatorId,
     currentUserName,
-    chainConfig,
+    effectiveConfig,
     existingSignatures,
     repository,
     documentType,

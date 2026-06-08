@@ -70,6 +70,7 @@ export function SettingsConfig() {
     getRcaRecurrenceCount, setRcaRecurrenceCount,
     getConciliationRequiredDepartments, setConciliationRequiredDepartments,
     getDepartmentReasonCodes, setDepartmentReasonCodes,
+    getSignatureChainConfig, setSignatureChainConfig,
   } = usePlantConfigRepository();
 
   // ─── Shared state ────────────────────────────────────────────────────────────
@@ -105,6 +106,14 @@ export function SettingsConfig() {
 
   const [deptReasonCodes, setDeptReasonCodes] = useState<string>('');
   const [originalDeptReasonCodes, setOriginalDeptReasonCodes] = useState<string>('');
+
+  // ─── Signature config state ───────────────────────────────────────────────
+  const [firmasExpanded, setFirmasExpanded] = useState(false);
+  const [firmasOee, setFirmasOee] = useState('');
+  const [originalFirmasOee, setOriginalFirmasOee] = useState('');
+  const [firmasCalidad, setFirmasCalidad] = useState('');
+  const [originalFirmasCalidad, setOriginalFirmasCalidad] = useState('');
+  const [firmasLoading, setFirmasLoading] = useState(true);
 
   // ─── Snackbar helpers ──────────────────────────────────────────────────────
   const showSnackbar = useCallback((message: string, isError = false) => {
@@ -152,10 +161,22 @@ export function SettingsConfig() {
       setDeptReasonCodes(strVal);
       setOriginalDeptReasonCodes(strVal);
     });
+    getSignatureChainConfig('oee_report').then((val) => {
+      const strVal = val ?? JSON.stringify({ roles: ['operator', 'programador', 'calidad'], labels: ['Firma Operador', 'Firma Programador', 'Firma Calidad'] });
+      setFirmasOee(strVal);
+      setOriginalFirmasOee(strVal);
+    });
+    getSignatureChainConfig('quality_inspection').then((val) => {
+      const strVal = val ?? JSON.stringify({ roles: ['supervisor', 'admin'], labels: ['Firma del Supervisor', 'Firma del Admin'] });
+      setFirmasCalidad(strVal);
+      setOriginalFirmasCalidad(strVal);
+    });
+    setFirmasLoading(false);
   }, [
     getMicroStopThreshold, getConciliationThresholdMin, getRcaThresholdMin,
     getEscalationHours, getRcaRecurrenceCount,
     getConciliationRequiredDepartments, getDepartmentReasonCodes,
+    getSignatureChainConfig,
   ]);
 
   // ─── Micro-stop validation ───────────────────────────────────────────────
@@ -297,6 +318,37 @@ export function SettingsConfig() {
     rcaRecurrenceCount !== originalRcaRecurrenceCount ||
     requiredDepartments !== originalRequiredDepartments ||
     deptReasonCodes !== originalDeptReasonCodes;
+
+  const hasFirmasChanges = firmasOee !== originalFirmasOee || firmasCalidad !== originalFirmasCalidad;
+
+  const handleFirmasSave = useCallback(async () => {
+    // Validate JSON
+    for (const [label, val] of [['OEE', firmasOee], ['Calidad', firmasCalidad]] as const) {
+      try {
+        const parsed = JSON.parse(val);
+        if (!parsed.roles || !parsed.labels) {
+          showSnackbar(`Firmas ${label}: debe tener "roles" y "labels"`, true);
+          return;
+        }
+      } catch {
+        showSnackbar(`Firmas ${label}: JSON inválido`, true);
+        return;
+      }
+    }
+
+    setSaving(true);
+    try {
+      await setSignatureChainConfig('oee_report', firmasOee);
+      await setSignatureChainConfig('quality_inspection', firmasCalidad);
+      setOriginalFirmasOee(firmasOee);
+      setOriginalFirmasCalidad(firmasCalidad);
+      showSnackbar('Configuración de firmas actualizada');
+    } catch (err: any) {
+      showSnackbar(err?.message ?? 'Error al guardar firmas', true);
+    } finally {
+      setSaving(false);
+    }
+  }, [firmasOee, firmasCalidad, setSignatureChainConfig, showSnackbar]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -452,6 +504,76 @@ export function SettingsConfig() {
               contentStyle={styles.saveButtonContent}
             >
               {saving ? 'Guardando...' : 'Guardar Cambios'}
+            </Button>
+          )}
+        </View>
+      </List.Accordion>
+
+      {/* ── Firmas Accordion ────────────────────────────────────────────── */}
+      <List.Accordion
+        title="Configuración de Firmas"
+        titleStyle={styles.accordionTitle}
+        left={(props) => <List.Icon {...props} icon="signature-freehand" color={colors.primary} />}
+        expanded={firmasExpanded}
+        onPress={() => setFirmasExpanded(!firmasExpanded)}
+      >
+        <View style={styles.content}>
+          <Text variant="bodySmall" style={styles.description}>
+            Cadena de firmas requeridas para cada tipo de documento. Formato JSON: {'{"roles":["role1","role2"],"labels":["Label1","Label2"]}'}
+          </Text>
+
+          <Divider style={styles.divider} />
+
+          <View style={styles.jsonFieldRow}>
+            <View style={styles.fieldLabel}>
+              <Text variant="bodyMedium" style={styles.fieldTitle}>
+                Reporte OEE (oee_report)
+              </Text>
+              <Text variant="bodySmall" style={styles.fieldHint}>
+                Roles que deben firmar al cerrar turno
+              </Text>
+            </View>
+            <TextInput
+              value={firmasOee}
+              onChangeText={setFirmasOee}
+              mode="outlined"
+              multiline
+              numberOfLines={3}
+              style={styles.jsonInput}
+              disabled={saving}
+            />
+          </View>
+
+          <View style={styles.jsonFieldRow}>
+            <View style={styles.fieldLabel}>
+              <Text variant="bodyMedium" style={styles.fieldTitle}>
+                Inspección Calidad (quality_inspection)
+              </Text>
+              <Text variant="bodySmall" style={styles.fieldHint}>
+                Roles que deben firmar en inspecciones
+              </Text>
+            </View>
+            <TextInput
+              value={firmasCalidad}
+              onChangeText={setFirmasCalidad}
+              mode="outlined"
+              multiline
+              numberOfLines={3}
+              style={styles.jsonInput}
+              disabled={saving}
+            />
+          </View>
+
+          {hasFirmasChanges && (
+            <Button
+              mode="contained"
+              onPress={handleFirmasSave}
+              loading={saving}
+              disabled={saving}
+              style={styles.saveButton}
+              contentStyle={styles.saveButtonContent}
+            >
+              {saving ? 'Guardando...' : 'Guardar Firmas'}
             </Button>
           )}
         </View>

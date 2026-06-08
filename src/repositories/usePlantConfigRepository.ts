@@ -71,6 +71,11 @@ export interface PlantConfigRepository {
   getDepartmentReasonCodes: () => Promise<Record<string, string[]>>;
   /** Set department → reason_codes mapping */
   setDepartmentReasonCodes: (codes: Record<string, string[]>) => Promise<RxDocument<IPlantConfig>>;
+
+  /** Get signature chain config for a document type, returns null if not configured */
+  getSignatureChainConfig: (documentType: string) => Promise<string | null>;
+  /** Set signature chain config for a document type (JSON: { roles: string[], labels: string[] }) */
+  setSignatureChainConfig: (documentType: string, configJson: string) => Promise<RxDocument<IPlantConfig>>;
 }
 
 export const DEFAULT_MICRO_STOP_THRESHOLD = 5;
@@ -248,6 +253,21 @@ export function usePlantConfigRepository(): PlantConfigRepository {
     [set],
   );
 
+  const getSignatureChainConfig = useCallback(async (documentType: string): Promise<string | null> => {
+    return get(`signature_chain_${documentType}`);
+  }, [get]);
+
+  const setSignatureChainConfig = useCallback(
+    async (documentType: string, configJson: string) => {
+      return set(
+        `signature_chain_${documentType}`,
+        configJson,
+        `Cadena de firmas para ${documentType} (JSON: { roles: string[], labels: string[] })`,
+      );
+    },
+    [set],
+  );
+
   const getDepartmentReasonCodes = useCallback(async (): Promise<Record<string, string[]>> => {
     const val = await get('conciliation_department_reason_codes');
     if (val === null) return JSON.parse(DEFAULT_CONCILIATION_DEPARTMENT_REASON_CODES) as Record<string, string[]>;
@@ -279,6 +299,7 @@ export function usePlantConfigRepository(): PlantConfigRepository {
       getEscalationHours, setEscalationHours,
       getRcaRecurrenceCount, setRcaRecurrenceCount,
       getDepartmentReasonCodes, setDepartmentReasonCodes,
+      getSignatureChainConfig, setSignatureChainConfig,
     }),
     [
       docs$, get, set,
@@ -289,6 +310,7 @@ export function usePlantConfigRepository(): PlantConfigRepository {
       getEscalationHours, setEscalationHours,
       getRcaRecurrenceCount, setRcaRecurrenceCount,
       getDepartmentReasonCodes, setDepartmentReasonCodes,
+      getSignatureChainConfig, setSignatureChainConfig,
     ],
   );
 }
