@@ -389,7 +389,7 @@ export const qualityInspectionSchema: RxJsonSchema<IQualityInspection> = {
  * Severidad: critical (inocuidad), major, minor. defect_type en texto libre.
  */
 export const defectLogSchema: RxJsonSchema<IDefectLog> = {
-  version: 1,
+  version: 2,
   primaryKey: 'id',
   type: 'object',
   required: ['id', 'created_at', 'updated_at', 'is_deleted', 'inspection_id', 'severity', 'defect_type', 'defect_count', 'device_id'],

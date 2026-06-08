@@ -206,11 +206,17 @@ export const MIGRATIONS: Record<string, MigrationStrategies> = {
   },
 
   // ── Defect Log Schema v0→v1 ──────────────────────────────────────────────
+  // v1→v2: Removed fields defect_id, defect_label, defect_severity, notes, quantity
   defectLogSchema: {
     1: (oldDoc: any) => {
       return {
         ...oldDoc,
         created_at: oldDoc.created_at ?? oldDoc.updated_at ?? now(),
+      };
+    },
+    2: (oldDoc: any) => {
+      return {
+        ...oldDoc,
       };
     },
   },
