@@ -64,7 +64,7 @@ export default function ShiftListScreen() {
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyTitle}>No hay turnos registrados</Text>
           <Text style={styles.emptySubtitle}>
-            Configure un nuevo turno para comenzar el registro de producción.
+            Inicie un nuevo turno para comenzar el registro de producción.
           </Text>
         </View>
         <FAB
