@@ -182,7 +182,7 @@ export default function OeeScreen() {
     if (!selectedShift || !selectedLine) return;
 
     const shiftEvents = await repository.findByShift(selectedShift);
-    const report = generateShiftReport({
+    const report = await generateShiftReport({
       events: shiftEvents.map((e) => e.toJSON() as IOeeEvent),
       shiftId: selectedShift,
       lineId: selectedLine,

@@ -17,9 +17,10 @@ import type { IQualityInspection, IDefectLog } from '../../core/types';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function mockRxDoc<T>(data: T): RxDocument<T> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mockRxDoc<T>(data: any): RxDocument<T> {
   return {
-    get: (field: keyof T) => data[field],
+    get: (field: keyof T) => (data as T)[field],
   } as unknown as RxDocument<T>;
 }
 
