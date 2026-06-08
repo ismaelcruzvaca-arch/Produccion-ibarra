@@ -90,7 +90,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <MaterialCommunityIcons name="cog" color={color} size={size} />
           ),
-          tabBarButton: isSupervisor ? undefined : () => null,
         }}
       />
     </Tabs>

@@ -195,6 +195,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           error: null,
           fullName: resolveFullName(stored.user),
         });
+        // Refresh profile (role, assignedLines) on every app open
+        get().fetchOperatorProfile();
         return;
       }
 
@@ -211,6 +213,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         error: null,
         fullName: resolveFullName(stored.user),
       });
+      // Try to refresh profile even with stale token
+      get().fetchOperatorProfile().catch(() => {});
     } catch {
       set({ isAuthenticated: false, isLoading: false, user: null });
     }
