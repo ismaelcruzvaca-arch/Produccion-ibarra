@@ -34,14 +34,14 @@ describe('generateShiftReport', () => {
     event_type: 'downtime_end', timestamp, related_event_id: relatedId, device_id: 'device-1',
   });
 
-  it('generates report with correct template_id', () => {
+  it('generates report with correct template_id', async () => {
     const start = FIXED_NOW;
     const events = [
       shiftStart(start),
       boxCount(start + 1000, 100),
       shiftEnd(start + 60 * 60 * 1000),
     ];
-    const report = generateShiftReport({
+    const report = await generateShiftReport({
       events, shiftId: 'shift-1', lineId: 'LINEA-1',
     });
     expect(report.template_id).toBe('oee-shift-summary');
@@ -49,7 +49,7 @@ describe('generateShiftReport', () => {
     expect(report.data.line_id).toBe('LINEA-1');
   });
 
-  it('calculates correct totals from events', () => {
+  it('calculates correct totals from events', async () => {
     const start = FIXED_NOW;
     const events = [
       shiftStart(start),
@@ -57,7 +57,7 @@ describe('generateShiftReport', () => {
       boxCount(start + 2000, 50),
       shiftEnd(start + 60 * 60 * 1000),
     ];
-    const report = generateShiftReport({
+    const report = await generateShiftReport({
       events, shiftId: 'shift-1', lineId: 'LINEA-1',
     });
     expect(report.data.total_pieces).toBe(150);
@@ -65,7 +65,7 @@ describe('generateShiftReport', () => {
     expect(report.data.downtime_minutes).toBe(0);
   });
 
-  it('includes downtime in report', () => {
+  it('includes downtime in report', async () => {
     const start = FIXED_NOW;
     const events = [
       shiftStart(start),
@@ -74,14 +74,14 @@ describe('generateShiftReport', () => {
       boxCount(start + 25 * 60 * 1000, 80),
       shiftEnd(start + 60 * 60 * 1000),
     ];
-    const report = generateShiftReport({
+    const report = await generateShiftReport({
       events, shiftId: 'shift-1', lineId: 'LINEA-1',
     });
     expect(report.data.downtime_minutes).toBe(15);
     expect(report.data.total_pieces).toBe(80);
   });
 
-  it('uses product PPM when ppm provided directly', () => {
+  it('uses product PPM when ppm provided directly', async () => {
     const start = FIXED_NOW;
     // 1h shift, 100 boxes at 2.5 ppm → 150 boxes planned
     const events = [
@@ -89,29 +89,29 @@ describe('generateShiftReport', () => {
       boxCount(start + 1000, 100),
       shiftEnd(start + 60 * 60 * 1000),
     ];
-    const report = generateShiftReport({
+    const report = await generateShiftReport({
       events, shiftId: 'shift-1', lineId: 'LINEA-1', ppm: 2.5,
     });
     // Core assertion: pieces are registered correctly regardless of ppm
     expect(report.data.total_pieces).toBe(100);
   });
 
-  it('falls back to DEFAULT_PPM when ppm is undefined', () => {
+  it('falls back to DEFAULT_PPM when ppm is undefined', async () => {
     const start = FIXED_NOW;
     const events = [
       shiftStart(start),
       boxCount(start + 1000, 50),
       shiftEnd(start + 60 * 60 * 1000),
     ];
-    const report = generateShiftReport({
+    const report = await generateShiftReport({
       events, shiftId: 'shift-1', lineId: 'LINEA-1',
       // ppm intentionally omitted — should use DEFAULT_PPM without error
     });
     expect(report.data.total_pieces).toBe(50);
   });
 
-  it('handles empty events gracefully', () => {
-    const report = generateShiftReport({
+  it('handles empty events gracefully', async () => {
+    const report = await generateShiftReport({
       events: [], shiftId: 'shift-1', lineId: 'LINEA-1',
     });
     expect(report.data.total_pieces).toBe(0);
@@ -119,11 +119,11 @@ describe('generateShiftReport', () => {
     expect(report.data.downtime_minutes).toBe(0);
   });
 
-  it('generates unique UUIDs for each report', () => {
-    const report1 = generateShiftReport({
+  it('generates unique UUIDs for each report', async () => {
+    const report1 = await generateShiftReport({
       events: [], shiftId: 'shift-1', lineId: 'LINEA-1',
     });
-    const report2 = generateShiftReport({
+    const report2 = await generateShiftReport({
       events: [], shiftId: 'shift-1', lineId: 'LINEA-1',
     });
     expect(report1.id).not.toBe(report2.id);

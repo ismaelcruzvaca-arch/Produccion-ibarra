@@ -16,7 +16,7 @@
  * - oeeMetrics: OeeMetrics | null — computed OEE metrics from events
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 
 import { useShiftSessionsRepository } from '../../repositories/useShiftSessionsRepository';
 import { useOeeEventsRepository } from '../../repositories/useOeeEventsRepository';
@@ -108,11 +108,16 @@ export function useShiftDetailOrchestration(sessionId: string) {
     };
   }, [sessionId, shiftSessionsRepo, oeeEventsRepo, qualityInspectionsRepo, db]);
 
-  // ─── Compute OEE metrics ────────────────────────────────────────────────────
-  const oeeMetrics: OeeMetrics | null = useMemo(() => {
-    if (oeeEvents.length === 0) return null;
-    return computeOee(oeeEvents, DEFAULT_PPM);
-  }, [oeeEvents]);
+  // ─── Compute OEE metrics (async with optional quality provider) ────────────
+  const [oeeMetrics, setOeeMetrics] = useState<OeeMetrics | null>(null);
+
+  useEffect(() => {
+    if (oeeEvents.length === 0) {
+      setOeeMetrics(null);
+      return;
+    }
+    computeOee(oeeEvents, DEFAULT_PPM, undefined, sessionId).then(setOeeMetrics);
+  }, [oeeEvents, sessionId]);
 
   return {
     session,

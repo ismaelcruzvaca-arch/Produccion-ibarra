@@ -3,7 +3,7 @@
  * Receives an array of IOeeEvent for a single shift/machine and returns OEE metrics.
  */
 
-import type { IOeeEvent } from './types';
+import type { IOeeEvent, IQualityDataProvider } from './types';
 import { PARO_BY_CODE, type ParoMacro, DEFAULT_PPM } from '../config/catalogs';
 
 export interface OeeMetrics {
@@ -25,10 +25,12 @@ export interface OeeMetrics {
   hasAnomalies: boolean;
 }
 
-export function computeOee(
+export async function computeOee(
   events: IOeeEvent[],
-  productoPpm: number
-): OeeMetrics {
+  productoPpm: number,
+  qualityProvider?: IQualityDataProvider,
+  shiftSessionId?: string,
+): Promise<OeeMetrics> {
   // 1. Sort events by timestamp ascending
   const sorted = [...events].filter(e => !e.is_deleted).sort((a, b) => a.timestamp - b.timestamp);
 
@@ -93,9 +95,11 @@ export function computeOee(
     .filter(e => e.event_type === 'box_count')
     .reduce((sum, e) => sum + (e.quantity ?? 0), 0);
 
-  const totalRechazos = sorted
-    .filter(e => e.event_type === 'reject_count')
-    .reduce((sum, e) => sum + (e.quantity ?? 0), 0);
+  const totalRechazos = qualityProvider && shiftSessionId
+    ? await qualityProvider.getRejectedQuantity(shiftSessionId)
+    : sorted
+        .filter(e => e.event_type === 'reject_count')
+        .reduce((sum, e) => sum + (e.quantity ?? 0), 0);
 
   const cajasBuenas = Math.max(0, totalCajas - totalRechazos);
 

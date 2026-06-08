@@ -18,11 +18,13 @@ export interface ShiftReportInput {
   lineId: string;
   /** Target PPM from the selected product. Falls back to DEFAULT_PPM if undefined. */
   ppm?: number;
+  /** Optional shift session ID for quality data lookup. */
+  shiftSessionId?: string;
 }
 
-export function generateShiftReport(input: ShiftReportInput): IReport {
+export async function generateShiftReport(input: ShiftReportInput): Promise<IReport> {
   const ppm = input.ppm ?? DEFAULT_PPM;
-  const metrics = computeOee(input.events, ppm);
+  const metrics = await computeOee(input.events, ppm, undefined, input.shiftSessionId);
 
   const reportData: ReportData = {
     line_id: input.lineId,

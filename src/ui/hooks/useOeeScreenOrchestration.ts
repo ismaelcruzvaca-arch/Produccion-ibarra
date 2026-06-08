@@ -189,18 +189,19 @@ export function useOeeScreenOrchestration() {
     });
 
     const shiftEvents = await repository.findByShift(selectedShift);
-    const report = generateShiftReport({
+    const report = await generateShiftReport({
       events: shiftEvents.map((e) => e.toJSON() as IOeeEvent),
       shiftId: selectedShift,
       lineId: selectedLine,
       ppm: selectedPpm,
+      shiftSessionId: activeSession?.get('id'),
     });
     await reportsRepository.createReport(report.data, report.template_id);
 
     // ── Shift Summary (R6) ─────────────────────────────────────────────────
     try {
       const events = shiftEvents.map((e) => e.toJSON() as IOeeEvent);
-      const oeeMetrics = computeOee(events, selectedPpm ?? DEFAULT_PPM);
+      const oeeMetrics = await computeOee(events, selectedPpm ?? DEFAULT_PPM, undefined, activeSession?.get('id'));
 
       // Compute micro-stop total: downtimes with duration < threshold
       const threshold = await plantConfigRepo.getMicroStopThreshold();

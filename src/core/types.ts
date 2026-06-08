@@ -773,3 +773,19 @@ export interface IShiftSummary {
 }
 
 export type RxShiftSummary = RxDocument<IShiftSummary>;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Quality-OEE Adapter — conectar-calidad-oee
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Quality Data Provider — interface for providing rejected quantity data
+ * from quality inspections to the OEE calculator.
+ *
+ * Pattern: Adapter / Dependency Inversion
+ * Why: Decouples OEE calculation from the quality data source.
+ * The concrete implementation reads from RxDB; tests use a mock.
+ */
+export interface IQualityDataProvider {
+  getRejectedQuantity(shiftSessionId: string): Promise<number>;
+}

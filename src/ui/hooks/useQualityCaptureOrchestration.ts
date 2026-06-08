@@ -28,6 +28,7 @@ import { useQualityInspectionsRepository } from '../../repositories/useQualityIn
 import { useDefectLogsRepository } from '../../repositories/useDefectLogsRepository';
 import { useWeightLogsRepository } from '../../repositories/useWeightLogsRepository';
 import { useProductWeightStandardsRepository } from '../../repositories/useProductWeightStandardsRepository';
+import { useShiftSessionsRepository } from '../../repositories/useShiftSessionsRepository';
 import { useCatalogStore } from '../store/catalogStore';
 import { useAuthStore } from '../../auth/useAuthStore';
 import { nowMs } from '../../utils/timestamp';
@@ -45,6 +46,7 @@ export function useQualityCaptureOrchestration() {
   const defectLogsRepo = useDefectLogsRepository();
   const weightLogsRepo = useWeightLogsRepository();
   const weightStandardsRepo = useProductWeightStandardsRepository();
+  const shiftSessionsRepo = useShiftSessionsRepository();
 
   const selectedMachine = useCatalogStore((s) => s.selectedMachine);
   const user = useAuthStore((s) => s.user) as { id?: string } | null;
@@ -164,7 +166,13 @@ export function useQualityCaptureOrchestration() {
 
     setSaving(true);
     try {
-      // 1. Create the inspection
+      // 1. Resolve active shift session for the selected machine
+      const activeSession = selectedMachine
+        ? await shiftSessionsRepo.findActiveByMachine(selectedMachine)
+        : null;
+      const shiftSessionId = activeSession ? activeSession.get('id') : '';
+
+      // 2. Create the inspection
       const inspectionDoc = await inspectionsRepo.create({
         created_at: nowMs(),
         machine_id: selectedMachine ?? '',
@@ -179,7 +187,7 @@ export function useQualityCaptureOrchestration() {
         unit: '',
         product_id: '',
         line_id: '',
-        shift_session_id: '',
+        shift_session_id: shiftSessionId,
         operator_id: '',
       });
       const inspection = inspectionDoc.toJSON() as IQualityInspection;
@@ -222,6 +230,7 @@ export function useQualityCaptureOrchestration() {
     isValid, validationMessage, inspectionsRepo, selectedMachine,
     inspectorId, shiftType, disposition, notes, dataSource,
     defectLogs, weightLogs, defectLogsRepo, weightLogsRepo,
+    shiftSessionsRepo,
   ]);
 
   // ─── Reset ──────────────────────────────────────────────────────────────────
