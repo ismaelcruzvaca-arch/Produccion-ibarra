@@ -412,7 +412,7 @@ export const defectLogSchema: RxJsonSchema<IDefectLog> = {
  * Validado contra product_weight_standards.
  */
 export const weightLogSchema: RxJsonSchema<IWeightLog> = {
-  version: 1,
+  version: 2,
   primaryKey: 'id',
   type: 'object',
   required: ['id', 'created_at', 'updated_at', 'is_deleted', 'inspection_id', 'measured_weight', 'device_id'],
