@@ -1,5 +1,6 @@
 import { computeOee } from '../oeeCalculator';
 import { DEFAULT_PPM } from '../../config/catalogs';
+import { QualityDataProvider } from '../../services/qualityDataProvider';
 import type { IOeeEvent } from '../../core/types';
 
 const FIXED_NOW = 1715000000000;
@@ -250,6 +251,105 @@ describe('computeOee', () => {
   // ═══════════════════════════════════════════════════════════════════════════
   // Quality Provider Integration Tests (conectar-calidad-oee)
   // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * REAL PIPELINE TEST: QualityDataProvider real + computeOee real.
+   *
+   * Simula el flujo completo:
+   *   1. Turno de 8h con 1000 cajas producidas
+   *   2. Calidad registra 2 inspecciones con rechazos (50 cajas)
+   *   3. QualityDataProvider suma defect_count = 50
+   *   4. computeOee recibe el provider y calcula calidad = (1000-50)/1000 = 95%
+   *   5. OEE final = Disponibilidad 87.5% × Rendimiento 100% × Calidad 95%
+   */
+  it('END-TO-END: QualityDataProvider real baja calidad del OEE al tener rechazos', async () => {
+    const start = FIXED_NOW;
+    const shiftSessionId = 'shift-real-e2e';
+    const PPM = 4.0; // 4 boxes/min → 1680 boxes en 420 min op
+    const EIGHT_HOURS = 480 * 60 * 1000;
+
+    // 1. OEE events: shift de 8h con 1680 cajas, 60 min de paro MTTO
+    //    Op time = 420 min → 1680 boxes → rendimientoCrudo = (1680/420)/4.0 = 100%
+    const events: IOeeEvent[] = [
+      { ...shiftStart(start), shift_id: shiftSessionId, id: 's1' },
+      { ...downtimeStart(start + 60 * 60 * 1000, 'FC', 'dt-1'), shift_id: shiftSessionId },
+      { ...downtimeEnd(start + 120 * 60 * 1000, 'dt-1'), shift_id: shiftSessionId },
+      { ...boxCount(start + EIGHT_HOURS, 1680), shift_id: shiftSessionId, id: 'b1' },
+      { ...shiftEnd(start + EIGHT_HOURS), shift_id: shiftSessionId, id: 'e1' },
+    ];
+
+    // 2. QualityDataProvider real con datos mock — 80 rechazos
+    const mockInspections = [
+      { get: (k: string) => k === 'id' ? 'insp-1' : 'rechazado' },
+      { get: (k: string) => k === 'id' ? 'insp-2' : 'reproceso' },
+      { get: (k: string) => k === 'id' ? 'insp-3' : 'liberado' },
+    ];
+    const findInspections = jest.fn().mockResolvedValue(mockInspections);
+
+    const mockDefects: Record<string, Array<{ get: (k: string) => unknown }>> = {
+      'insp-1': [{ get: (k: string) => k === 'id' ? 'def-1' : 50 }],
+      'insp-2': [
+        { get: (k: string) => k === 'id' ? 'def-2' : 20 },
+        { get: (k: string) => k === 'id' ? 'def-3' : 10 },
+      ],
+    };
+    const findDefects = jest.fn(
+      (inspectionId: string) => Promise.resolve(mockDefects[inspectionId] ?? []),
+    );
+
+    const mockRepo = {
+      findByShiftSession: findInspections,
+      findByInspection: findDefects,
+    };
+
+    const realProvider = new QualityDataProvider(mockRepo as any, mockRepo as any);
+
+    // 3. Ejecutar computeOee con el provider REAL
+    const result = await computeOee(events, PPM, realProvider, shiftSessionId);
+
+    // 4. Calidad: (1680 - 80) / 1680 * 100 = 95.24%
+    expect(result.totalCajas).toBe(1680);
+    expect(result.totalRechazos).toBe(80);
+    expect(result.cajasBuenas).toBe(1600);
+    expect(result.calidad).toBeCloseTo(95.24, 1);
+
+    // 5. Disponibilidad: (480 - 60) / 480 = 87.5%
+    expect(result.disponibilidad).toBeCloseTo(87.5, 1);
+    expect(result.tiempoParoMttoMin).toBe(60);
+
+    // 6. Rendimiento: crudo = 100% (1680/420 min / 4.0 ppm), capped = 100%
+    expect(result.rendimiento).toBe(100);
+
+    // 7. OEE = 87.5% × 100% × 95.24% = 83.33%
+    //    Nota: rendimientoCrudo se usa para OEE (no el capped)
+    expect(result.oee).toBeCloseTo(83.33, 1);
+
+    // 8. El provider fue consultado
+    expect(findInspections).toHaveBeenCalledWith(shiftSessionId);
+    expect(findDefects).toHaveBeenCalledTimes(2);
+  });
+
+  /**
+   * REAL PIPELINE TEST: Sin provider, el comportamiento es idéntico al anterior.
+   */
+  it('END-TO-END: sin provider, calidad usa reject_count de eventos (backward compat)', async () => {
+    const start = FIXED_NOW;
+
+    // Events with reject_count (old flow — sin calidad)
+    const events = [
+      shiftStart(start),
+      boxCount(start + 480 * 60 * 1000, 1000),
+      rejectCount(start + 480 * 60 * 1000, 50),  // 50 rejects from events
+      shiftEnd(start + 480 * 60 * 1000),
+    ];
+
+    const result = await computeOee(events, 2.083);
+
+    // Sin provider, usa reject_count de eventos = 50
+    expect(result.totalRechazos).toBe(50);
+    expect(result.cajasBuenas).toBe(950);
+    expect(result.calidad).toBe(95);
+  });
 
   /**
    * Test: With provider — quality comes from provider data instead of events.
