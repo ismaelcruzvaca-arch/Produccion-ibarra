@@ -248,6 +248,75 @@ describe('shiftSummarySchema v1→v2', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// QUALITY INSPECTION SCHEMA v1→v2 (no-op)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('qualityInspectionSchema v1→v2', () => {
+  const migrate = MIGRATIONS.qualityInspectionSchema[2];
+
+  it('preserves all fields (no-op spread)', () => {
+    const oldDoc = { id: 'qi1', machine_id: 'MC-001', inspector_id: 'OP1', disposition: 'liberado' };
+    const result = migrate(oldDoc, {} as any);
+
+    expect(result.id).toBe('qi1');
+    expect(result.machine_id).toBe('MC-001');
+    expect(result.inspector_id).toBe('OP1');
+    expect(result.disposition).toBe('liberado');
+  });
+
+  it('handles empty doc', () => {
+    const result = migrate({ id: 'qi1' }, {} as any);
+    expect(result.id).toBe('qi1');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DEFECT LOG SCHEMA v1→v2 (no-op)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('defectLogSchema v1→v2', () => {
+  const migrate = MIGRATIONS.defectLogSchema[2];
+
+  it('preserves all fields (no-op spread)', () => {
+    const oldDoc = { id: 'dl1', inspection_id: 'insp1', severity: 'critical', defect_type: 'Deformación', defect_count: 3 };
+    const result = migrate(oldDoc, {} as any);
+
+    expect(result.id).toBe('dl1');
+    expect(result.inspection_id).toBe('insp1');
+    expect(result.severity).toBe('critical');
+    expect(result.defect_type).toBe('Deformación');
+    expect(result.defect_count).toBe(3);
+  });
+
+  it('handles empty doc', () => {
+    const result = migrate({ id: 'dl1' }, {} as any);
+    expect(result.id).toBe('dl1');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WEIGHT LOG SCHEMA v1→v2 (no-op)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('weightLogSchema v1→v2', () => {
+  const migrate = MIGRATIONS.weightLogSchema[2];
+
+  it('preserves all fields (no-op spread)', () => {
+    const oldDoc = { id: 'wl1', inspection_id: 'insp1', measured_weight: 250 };
+    const result = migrate(oldDoc, {} as any);
+
+    expect(result.id).toBe('wl1');
+    expect(result.inspection_id).toBe('insp1');
+    expect(result.measured_weight).toBe(250);
+  });
+
+  it('handles empty doc', () => {
+    const result = migrate({ id: 'wl1' }, {} as any);
+    expect(result.id).toBe('wl1');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // v0→v1 strategies — created_at from updated_at fallback
 // ═══════════════════════════════════════════════════════════════════════════════
 
