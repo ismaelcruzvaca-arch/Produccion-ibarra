@@ -181,10 +181,15 @@ export async function fetchAlertEngineHealth(): Promise<AlertEngineHealth | null
 }
 
 /**
- * Count of unacknowledged alert events for the current plant.
+ * Count of unacknowledged alert events for the current plant,
+ * optionally scoped to a specific alert engine node (IoT sensor/gateway).
+ *
+ * When `nodeId` is provided, only events for that node are counted.
+ * This enables operator-scoped alert badges per machine (F-AC-43).
  */
 export async function fetchUnacknowledgedCount(
   plantId?: string,
+  nodeId?: string,
 ): Promise<number> {
   const pid = plantId ?? getPlantId();
   if (!pid) return 0;
@@ -192,11 +197,32 @@ export async function fetchUnacknowledgedCount(
   try {
     const result = await safeRequest<{
       alert_events_aggregate: { aggregate: { count: number } };
-    }>(ALERT_EVENTS_AGGREGATE, { plantId: pid });
+    }>(ALERT_EVENTS_AGGREGATE, { plantId: pid, nodeId: nodeId ?? null });
 
     return result.alert_events_aggregate?.aggregate?.count ?? 0;
   } catch {
     return 0;
+  }
+}
+
+/**
+ * Resolves a catalog machine name to the first matching alert engine node ID.
+ * This enables scoping alert queries to a specific machine's IoT nodes.
+ *
+ * Returns the node ID if a match is found, or undefined if no nodes match
+ * (which means the query falls back to plant-wide scope).
+ */
+export async function resolveMachineNameToNodeId(
+  machineName: string,
+): Promise<string | undefined> {
+  try {
+    const nodes = await fetchNodeCatalog();
+    const match = nodes.find(
+      (n) => n.machine.name.toLowerCase() === machineName.toLowerCase(),
+    );
+    return match?.id;
+  } catch {
+    return undefined;
   }
 }
 

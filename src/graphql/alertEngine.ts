@@ -112,13 +112,21 @@ export const ALERT_EVENTS = `
 // ─── Alert Events Aggregate (for badge count) ───────────────────────────────────
 
 /**
- * Count of unacknowledged events for the current plant.
+ * Count of unacknowledged events for the current plant, optionally scoped
+ * to a specific alert engine node (IoT sensor/gateway).
  * Used by the tab badge and snackbar logic.
+ *
+ * When $nodeId is provided, only events for that specific node are counted,
+ * enabling operator-scoped alert badges per machine (F-AC-43 scope).
  */
 export const ALERT_EVENTS_AGGREGATE = `
-  query AlertEventsAggregate($plantId: uuid!) {
+  query AlertEventsAggregate($plantId: uuid!, $nodeId: uuid) {
     alert_events_aggregate(
-      where: { plant_id: { _eq: $plantId }, acknowledged: { _eq: false } }
+      where: {
+        plant_id: { _eq: $plantId },
+        acknowledged: { _eq: false },
+        node_id: { _eq: $nodeId }
+      }
     ) {
       aggregate {
         count
