@@ -28,3 +28,4 @@ coverage/
 # Engram artifacts
 .engram/
 engram-*.json
+nul

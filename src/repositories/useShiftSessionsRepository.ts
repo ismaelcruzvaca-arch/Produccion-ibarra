@@ -35,6 +35,8 @@ export interface ShiftSessionsRepository {
   remove: (id: string) => Promise<void>;
   findById: (id: string) => Promise<RxDocument<IShiftSession> | null>;
   findActiveByMachine: (machineId: string) => Promise<RxDocument<IShiftSession> | null>;
+  /** Returns the single most recent active session across all machines (backbone context). */
+  findActive: () => Promise<RxDocument<IShiftSession> | null>;
   findByStatus: (status: 'active' | 'closed') => Promise<RxDocument<IShiftSession>[]>;
 }
 
@@ -114,6 +116,23 @@ export function useShiftSessionsRepository(): ShiftSessionsRepository {
     [db],
   );
 
+  const findActive = useCallback(
+    async () => {
+      const docs = await db.collections.shift_sessions
+        .find({
+          selector: {
+            status: { $eq: 'active' },
+            is_deleted: { $eq: false },
+          },
+          sort: [{ started_at: 'desc' }],
+          limit: 1,
+        })
+        .exec();
+      return (docs.length > 0 ? docs[0] : null) as RxDocument<IShiftSession> | null;
+    },
+    [db],
+  );
+
   const findByStatus = useCallback(
     async (status: 'active' | 'closed') => {
       const docs = await db.collections.shift_sessions
@@ -125,7 +144,7 @@ export function useShiftSessionsRepository(): ShiftSessionsRepository {
   );
 
   return useMemo(
-    () => ({ docs$, create, update, remove, findById, findActiveByMachine, findByStatus }),
-    [docs$, create, update, remove, findById, findActiveByMachine, findByStatus],
+    () => ({ docs$, create, update, remove, findById, findActiveByMachine, findActive, findByStatus }),
+    [docs$, create, update, remove, findById, findActiveByMachine, findActive, findByStatus],
   );
 }

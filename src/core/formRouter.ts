@@ -20,7 +20,7 @@
  */
 
 /** Union of all supported form types. */
-export type FormType = 'oee' | 'toaster' | 'mixing' | 'extractor' | 'vitamin';
+export type FormType = 'oee' | 'toaster' | 'mixing' | 'extractor' | 'vitamin' | 'packaging';
 
 /** Ordered lookup table: [substring, formType][]. First match wins. */
 const FORM_MAPPINGS: Array<[string, FormType]> = [
@@ -30,6 +30,10 @@ const FORM_MAPPINGS: Array<[string, FormType]> = [
   ['extractor', 'extractor'],
   ['vitamin', 'vitamin'],
   ['vitamina', 'vitamin'],
+  ['empaque', 'packaging'],
+  ['packaging', 'packaging'],
+  ['envasado', 'packaging'],
+  ['linea', 'packaging'],
 ];
 
 /**

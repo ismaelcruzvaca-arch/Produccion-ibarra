@@ -230,6 +230,9 @@ export interface ICatalogMachine {
   description?: string;
   is_active: boolean;
   is_iot_enabled?: boolean;
+  /** Source of production data: 'manual' (operator-entered) or 'telemetry' (IoT/automated).
+   *  Different machines in the same line may have different sources. */
+  source_type?: 'manual' | 'telemetry';
 }
 
 export interface ICatalogShift {
