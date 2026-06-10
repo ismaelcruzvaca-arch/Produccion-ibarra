@@ -17,7 +17,7 @@
  * - Setter functions for modal dismiss
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { RxDocument } from 'rxdb';
 
 import { useOeeEventsRepository } from '../../repositories/useOeeEventsRepository';
@@ -86,6 +86,68 @@ export function useOeeScreenOrchestration() {
   // ─── Production counter modal ───────────────────────────────────────────────
   const [showProductionModal, setShowProductionModal] = useState(false);
   const [pendingAnomalousProduction, setPendingAnomalousProduction] = useState<number | null>(null);
+
+  // ─── Cadence tracking ─────────────────────────────────────────────────────
+  const [cadenceIntervalMin, setCadenceIntervalMin] = useState(30);
+  const [cadenceElapsedMinutes, setCadenceElapsedMinutes] = useState(0);
+  const [cadenceDue, setCadenceDue] = useState(false);
+  const cadenceDismissedRef = useRef(false);
+
+  // Load cadence config on mount
+  useEffect(() => {
+    plantConfigRepo.getCadenceIntervalMin().then(setCadenceIntervalMin);
+  }, [plantConfigRepo]);
+
+  // Compute last event time from events array
+  const lastEventTime = useMemo(() => {
+    const userEventTypes = new Set(['box_count', 'downtime_start', 'downtime_end', 'reject_count']);
+    let latest = 0;
+    for (const evt of events) {
+      if (userEventTypes.has(evt.event_type) && evt.timestamp > latest) {
+        latest = evt.timestamp;
+      }
+    }
+    return latest;
+  }, [events]);
+
+  // Poll cadence every 15 seconds for manual stations
+  useEffect(() => {
+    if (!shiftStarted || machineSourceType !== 'manual' || !selectedMachine) {
+      setCadenceDue(false);
+      setCadenceElapsedMinutes(0);
+      return;
+    }
+
+    const tick = () => {
+      // Reset dismiss if a new event came in
+      if (lastEventTime > 0) {
+        const elapsed = (nowMs() - lastEventTime) / 60000;
+        setCadenceElapsedMinutes(Math.round(elapsed * 10) / 10);
+
+        if (elapsed >= cadenceIntervalMin && !cadenceDismissedRef.current) {
+          setCadenceDue(true);
+        } else {
+          setCadenceDue(false);
+        }
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 15000);
+    return () => clearInterval(interval);
+  }, [shiftStarted, machineSourceType, selectedMachine, lastEventTime, cadenceIntervalMin]);
+
+  // Reset cadence dismissed when a new event arrives
+  useEffect(() => {
+    if (lastEventTime > 0) {
+      cadenceDismissedRef.current = false;
+    }
+  }, [lastEventTime]);
+
+  const handleDismissCadence = useCallback(() => {
+    cadenceDismissedRef.current = true;
+    setCadenceDue(false);
+  }, []);
 
   // ─── Snackbar ───────────────────────────────────────────────────────────────
   const [snackbarVisible, setSnackbarVisible] = useState(false);
@@ -434,6 +496,11 @@ export function useOeeScreenOrchestration() {
     activeDowntime,
     metrics,
 
+    // Cadence state
+    cadenceDue,
+    cadenceElapsedMinutes,
+    cadenceIntervalMin,
+
     // Modal states
     showStopModal,
     showConfirmModal,
@@ -460,6 +527,7 @@ export function useOeeScreenOrchestration() {
     handleRegisterProduction,
     handleNumpadSubmit,
     handleConfirm,
+    handleDismissCadence,
 
     // Setters for dismiss
     setShowStopModal,
