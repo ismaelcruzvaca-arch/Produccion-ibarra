@@ -40,6 +40,7 @@ import { useProductWeightStandardsRepository } from '../../repositories/useProdu
 import { useShiftSessionsRepository } from '../../repositories/useShiftSessionsRepository';
 import { useSignaturesRepository } from '../../repositories/useSignaturesRepository';
 import { useCatalogStore } from '../store/catalogStore';
+import { useProductionFlow } from './useProductionFlow';
 import { useAuthStore } from '../../auth/useAuthStore';
 import { nowMs } from '../../utils/timestamp';
 import { generateUuid } from '../../utils/uuid';
@@ -60,6 +61,7 @@ export function useQualityCaptureOrchestration() {
   const signaturesRepo = useSignaturesRepository();
 
   const selectedMachine = useCatalogStore((s) => s.selectedMachine);
+  const { shiftSessionId: productionFlowShiftSessionId } = useProductionFlow();
   const user = useAuthStore((s) => s.user) as { id?: string } | null;
   const authRole = useAuthStore((s) => s.role);
   const authName = useAuthStore((s) => s.fullName);
@@ -183,11 +185,11 @@ export function useQualityCaptureOrchestration() {
 
     setSaving(true);
     try {
-      // 1. Resolve active shift session for the selected machine
-      const activeSession = selectedMachine
-        ? await shiftSessionsRepo.findActiveByMachine(selectedMachine)
-        : null;
-      const shiftSessionId = activeSession ? activeSession.get('id') : '';
+      // 1. Resolve shift session: prefer useProductionFlow (canonical), fallback to DB lookup
+      const shiftSessionId = productionFlowShiftSessionId
+        ?? (selectedMachine
+          ? (await shiftSessionsRepo.findActiveByMachine(selectedMachine))?.get('id') ?? ''
+          : '');
 
       // 2. Create the inspection
       const inspectionDoc = await inspectionsRepo.create({
@@ -295,7 +297,15 @@ export function useQualityCaptureOrchestration() {
     setPendingNcSignature(false);
   }, []);
 
+  // ─── Context exposed for UI display ─────────────────────────────────────────
+  const machineId = selectedMachine;
+  const shiftSessionId = productionFlowShiftSessionId;
+
   return {
+    // Context
+    machineId,
+    shiftSessionId,
+
     // Form state
     inspectorId,
     shiftType,

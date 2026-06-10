@@ -36,6 +36,7 @@ import { SmartNumpad } from '../../../src/ui/components/atoms/SmartNumpad';
 import { AppButton } from '../../../src/ui/components/atoms/AppButton';
 import { AppBadge } from '../../../src/ui/components/atoms/AppBadge';
 import { useAuthStore } from '../../../src/auth/useAuthStore';
+import { useCatalogStore } from '../../../src/ui/store/catalogStore';
 import { colors, spacing, typography, borderRadius } from '../../../src/ui/theme/tokens';
 import type { DispositionType, ShiftType, IDefectLog } from '../../../src/core/types';
 
@@ -56,6 +57,8 @@ export default function QualityCaptureScreen() {
   const authRole = useAuthStore((s) => s.role);
   const authName = useAuthStore((s) => s.fullName);
   const {
+    machineId,
+    shiftSessionId,
     inspectorId,
     shiftType,
     disposition,
@@ -172,6 +175,11 @@ export default function QualityCaptureScreen() {
       }
     : null;
 
+  // ─── Machine context ────────────────────────────────────────────────────────
+  const getMachineById = useCatalogStore((s) => s.getMachineById);
+  const contextMachine = machineId ? getMachineById(machineId) : null;
+  const contextMachineName = contextMachine?.name ?? machineId ?? '';
+
   // ─── Selected product name ──────────────────────────────────────────────────
   const selectedProductName = productList.find((p) => p.sku === selectedSku)?.name ?? '';
 
@@ -182,6 +190,28 @@ export default function QualityCaptureScreen() {
       testID="quality-capture-screen"
       keyboardShouldPersistTaps="handled"
     >
+      {/* Machine / Shift context */}
+      {machineId ? (
+        <View style={styles.contextCard}>
+          <View style={styles.contextRow}>
+            <Text style={styles.contextLabel}>Máquina</Text>
+            <Text style={styles.contextValue}>{contextMachineName}</Text>
+          </View>
+          <View style={styles.contextRow}>
+            <Text style={styles.contextLabel}>Turno</Text>
+            <Text style={styles.contextValue}>
+              {shiftSessionId ? 'Turno activo' : 'Sin turno activo'}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.contextCardWarning}>
+          <Text style={styles.contextWarningText}>
+            No hay máquina seleccionada. Seleccione una máquina antes de capturar.
+          </Text>
+        </View>
+      )}
+
       {/* Inspector ID display */}
       <View style={styles.field}>
         <Text style={styles.label}>Inspector</Text>
@@ -484,6 +514,44 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bgGray,
+  },
+  contextCard: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  contextCardWarning: {
+    backgroundColor: '#FFF3E0',
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: '#FFB74D',
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  contextRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  contextLabel: {
+    fontSize: typography.sizes.bodySmall,
+    fontWeight: typography.weights.semibold,
+    color: colors.textSecondary,
+  },
+  contextValue: {
+    fontSize: typography.sizes.bodyMedium,
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
+  },
+  contextWarningText: {
+    fontSize: typography.sizes.bodyMedium,
+    fontWeight: typography.weights.medium,
+    color: '#E65100',
+    textAlign: 'center',
   },
   content: {
     padding: spacing.md,
