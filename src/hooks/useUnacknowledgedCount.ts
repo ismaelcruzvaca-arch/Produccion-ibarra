@@ -6,6 +6,12 @@
  * The first poll after mount (or login) sets `lastCheckedAt` to now — no snackbar
  * storm on initial load.
  *
+ * Operator scoping (F-AC-43):
+ * - When `machineId` is provided, the hook resolves it to a gateway node and
+ *   scopes the count to only events for that node.
+ * - This ensures operators only see alerts for their current machine.
+ * - If resolution fails or no machine is provided, falls back to plant-wide count.
+ *
  * Pattern: Specialized Polling Hook
  * Why:
  * - The unacknowledged count is consumed by both the badge and snackbar.
@@ -15,7 +21,12 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
-import { fetchUnacknowledgedCount, getPlantId } from '../services/alertEngine';
+import {
+  fetchUnacknowledgedCount,
+  getPlantId,
+  resolveMachineNameToNodeId,
+} from '../services/alertEngine';
+import { useCatalogStore } from '../ui/store/catalogStore';
 
 export const POLL_INTERVAL_MS = 60_000;
 
@@ -37,16 +48,44 @@ export interface UnacknowledgedCountState {
  *
  * The first poll on mount sets `lastCheckedAt` to now without triggering any
  * snackbar — preventing an initial flood of notifications.
+ *
+ * @param machineId - Optional machine ID to scope alerts to. When provided,
+ *  the hook resolves the machine name to a gateway node ID and filters
+ *  the count to only events for that node.
  */
-export function useUnacknowledgedCount(): UnacknowledgedCountState {
+export function useUnacknowledgedCount(machineId?: string): UnacknowledgedCountState {
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const [resolvedNodeId, setResolvedNodeId] = useState<string | undefined>(undefined);
 
   const isFirstPollRef = useRef(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const machineIdRef = useRef<string | undefined>(undefined);
+
+  // Resolve machineId to node ID when machine changes
+  const getMachineById = useCatalogStore((s) => s.getMachineById);
+
+  useEffect(() => {
+    if (!machineId) {
+      setResolvedNodeId(undefined);
+      machineIdRef.current = undefined;
+      return;
+    }
+
+    // Only re-resolve if machineId changed
+    if (machineId === machineIdRef.current) return;
+    machineIdRef.current = machineId;
+
+    const machine = getMachineById(machineId);
+    if (machine?.name) {
+      resolveMachineNameToNodeId(machine.name).then((nodeId) => {
+        setResolvedNodeId(nodeId);
+      });
+    }
+  }, [machineId, getMachineById]);
 
   const poll = useCallback(async () => {
     try {
@@ -57,7 +96,7 @@ export function useUnacknowledgedCount(): UnacknowledgedCountState {
         return;
       }
 
-      const currentCount = await fetchUnacknowledgedCount(plantId);
+      const currentCount = await fetchUnacknowledgedCount(plantId, resolvedNodeId);
 
       // First poll after mount/login: set lastCheckedAt to now, don't update count
       // This prevents an initial snackbar storm of all historical events.
@@ -78,7 +117,7 @@ export function useUnacknowledgedCount(): UnacknowledgedCountState {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [resolvedNodeId]);
 
   // ── Setup: initial poll + interval ──────────────────────────────────────
 

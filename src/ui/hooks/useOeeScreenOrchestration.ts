@@ -17,7 +17,7 @@
  * - Setter functions for modal dismiss
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { RxDocument } from 'rxdb';
 
 import { useOeeEventsRepository } from '../../repositories/useOeeEventsRepository';
@@ -83,9 +83,76 @@ export function useOeeScreenOrchestration() {
   const [pendingEvent, setPendingEvent] = useState<Partial<IOeeEvent> | null>(null);
   const [showShiftBlocker, setShowShiftBlocker] = useState(false);
 
+  // ─── Telemetry stop classification ───────────────────────────────────────
+  const [showTelemetryClassify, setShowTelemetryClassify] = useState(false);
+  const [telemetryClassifyTarget, setTelemetryClassifyTarget] = useState<string | null>(null);
+  const prevActiveDowntimeRef = useRef<string | null>(null);
+
   // ─── Production counter modal ───────────────────────────────────────────────
   const [showProductionModal, setShowProductionModal] = useState(false);
   const [pendingAnomalousProduction, setPendingAnomalousProduction] = useState<number | null>(null);
+
+  // ─── Cadence tracking ─────────────────────────────────────────────────────
+  const [cadenceIntervalMin, setCadenceIntervalMin] = useState(30);
+  const [cadenceElapsedMinutes, setCadenceElapsedMinutes] = useState(0);
+  const [cadenceDue, setCadenceDue] = useState(false);
+  const cadenceDismissedRef = useRef(false);
+
+  // Load cadence config on mount
+  useEffect(() => {
+    plantConfigRepo.getCadenceIntervalMin().then(setCadenceIntervalMin);
+  }, [plantConfigRepo]);
+
+  // Compute last event time from events array
+  const lastEventTime = useMemo(() => {
+    const userEventTypes = new Set(['box_count', 'downtime_start', 'downtime_end', 'reject_count']);
+    let latest = 0;
+    for (const evt of events) {
+      if (userEventTypes.has(evt.event_type) && evt.timestamp > latest) {
+        latest = evt.timestamp;
+      }
+    }
+    return latest;
+  }, [events]);
+
+  // Poll cadence every 15 seconds for manual stations
+  useEffect(() => {
+    if (!shiftStarted || machineSourceType !== 'manual' || !selectedMachine) {
+      setCadenceDue(false);
+      setCadenceElapsedMinutes(0);
+      return;
+    }
+
+    const tick = () => {
+      // Reset dismiss if a new event came in
+      if (lastEventTime > 0) {
+        const elapsed = (nowMs() - lastEventTime) / 60000;
+        setCadenceElapsedMinutes(Math.round(elapsed * 10) / 10);
+
+        if (elapsed >= cadenceIntervalMin && !cadenceDismissedRef.current) {
+          setCadenceDue(true);
+        } else {
+          setCadenceDue(false);
+        }
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 15000);
+    return () => clearInterval(interval);
+  }, [shiftStarted, machineSourceType, selectedMachine, lastEventTime, cadenceIntervalMin]);
+
+  // Reset cadence dismissed when a new event arrives
+  useEffect(() => {
+    if (lastEventTime > 0) {
+      cadenceDismissedRef.current = false;
+    }
+  }, [lastEventTime]);
+
+  const handleDismissCadence = useCallback(() => {
+    cadenceDismissedRef.current = true;
+    setCadenceDue(false);
+  }, []);
 
   // ─── Snackbar ───────────────────────────────────────────────────────────────
   const [snackbarVisible, setSnackbarVisible] = useState(false);
@@ -120,7 +187,44 @@ export function useOeeScreenOrchestration() {
     };
   }, [shiftStarted, selectedMachine]);
 
-  // ─── OEE Calculator ────────────────────────────────────────────────────────
+  // ─── Telemetry stop classification detection ──────────────────────────────
+  useEffect(() => {
+    if (!shiftStarted || !selectedMachine || machineSourceType !== 'telemetry') {
+      setShowTelemetryClassify(false);
+      setTelemetryClassifyTarget(null);
+      prevActiveDowntimeRef.current = null;
+      return;
+    }
+
+    const currentId = activeDowntime?.get('id') ?? null;
+    const prevId = prevActiveDowntimeRef.current;
+    prevActiveDowntimeRef.current = currentId;
+
+    // Detect a NEW active downtime (not previously seen) on a telemetry machine
+    if (currentId && currentId !== prevId) {
+      const reasonCode = activeDowntime?.get('reason_code') as string | undefined;
+      // If telemetry-detected stop has no reason_code, operator must classify it
+      if (!reasonCode) {
+        setTelemetryClassifyTarget(currentId);
+        setShowTelemetryClassify(true);
+      }
+    }
+  }, [shiftStarted, selectedMachine, machineSourceType, activeDowntime]);
+
+  // ─── Telemetry classification handler ─────────────────────────────────────
+  const handleTelemetryClassify = useCallback(async (reason: ParoReason) => {
+    const targetId = telemetryClassifyTarget;
+    if (!targetId) return;
+
+    setShowTelemetryClassify(false);
+    setTelemetryClassifyTarget(null);
+
+    // Update the existing telemetry event with the operator's classification
+    await repository.update(targetId, { reason_code: reason.code });
+    setSnackbarMessage(`Paro clasificado: ${reason.label}`);
+    setSnackbarVisible(true);
+  }, [telemetryClassifyTarget, repository]);
+
   const { metrics } = useOeeCalculator(events, selectedPpm);
 
   // ─── Shift Start ───────────────────────────────────────────────────────────
@@ -434,6 +538,11 @@ export function useOeeScreenOrchestration() {
     activeDowntime,
     metrics,
 
+    // Cadence state
+    cadenceDue,
+    cadenceElapsedMinutes,
+    cadenceIntervalMin,
+
     // Modal states
     showStopModal,
     showConfirmModal,
@@ -442,6 +551,7 @@ export function useOeeScreenOrchestration() {
     confirmLabel,
     showShiftBlocker,
     showProductionModal,
+    showTelemetryClassify,
 
     // Snackbar
     snackbarVisible,
@@ -460,12 +570,15 @@ export function useOeeScreenOrchestration() {
     handleRegisterProduction,
     handleNumpadSubmit,
     handleConfirm,
+    handleDismissCadence,
+    handleTelemetryClassify,
 
     // Setters for dismiss
     setShowStopModal,
     setShowConfirmModal,
     setShowShiftBlocker,
     setShowProductionModal,
+    setShowTelemetryClassify,
     setSnackbarVisible,
   } as const;
 }

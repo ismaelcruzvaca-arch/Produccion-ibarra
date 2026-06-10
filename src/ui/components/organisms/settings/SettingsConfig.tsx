@@ -71,6 +71,8 @@ export function SettingsConfig() {
     getConciliationRequiredDepartments, setConciliationRequiredDepartments,
     getDepartmentReasonCodes, setDepartmentReasonCodes,
     getSignatureChainConfig, setSignatureChainConfig,
+    getCadenceIntervalMin, setCadenceIntervalMin,
+    getCadencePolicy, setCadencePolicy,
   } = usePlantConfigRepository();
 
   // ─── Shared state ────────────────────────────────────────────────────────────
@@ -106,6 +108,13 @@ export function SettingsConfig() {
 
   const [deptReasonCodes, setDeptReasonCodes] = useState<string>('');
   const [originalDeptReasonCodes, setOriginalDeptReasonCodes] = useState<string>('');
+
+  // ─── Cadence state ─────────────────────────────────────────────────────────
+  const [cadenceExpanded, setCadenceExpanded] = useState(false);
+  const [cadenceInterval, setCadenceInterval] = useState<string>('30');
+  const [originalCadenceInterval, setOriginalCadenceInterval] = useState<string>('30');
+  const [cadencePolicy, setCadencePolicyLocal] = useState<'reminder-only' | 'blocking'>('reminder-only');
+  const [originalCadencePolicy, setOriginalCadencePolicy] = useState<'reminder-only' | 'blocking'>('reminder-only');
 
   // ─── Signature config state ───────────────────────────────────────────────
   const [firmasExpanded, setFirmasExpanded] = useState(false);
@@ -171,12 +180,21 @@ export function SettingsConfig() {
       setFirmasCalidad(strVal);
       setOriginalFirmasCalidad(strVal);
     });
+    getCadenceIntervalMin().then((val) => {
+      const strVal = String(val);
+      setCadenceInterval(strVal);
+      setOriginalCadenceInterval(strVal);
+    });
+    getCadencePolicy().then((val) => {
+      setCadencePolicyLocal(val);
+      setOriginalCadencePolicy(val);
+    });
     setFirmasLoading(false);
   }, [
     getMicroStopThreshold, getConciliationThresholdMin, getRcaThresholdMin,
     getEscalationHours, getRcaRecurrenceCount,
     getConciliationRequiredDepartments, getDepartmentReasonCodes,
-    getSignatureChainConfig,
+    getSignatureChainConfig, getCadenceIntervalMin, getCadencePolicy,
   ]);
 
   // ─── Micro-stop validation ───────────────────────────────────────────────
@@ -318,6 +336,34 @@ export function SettingsConfig() {
     rcaRecurrenceCount !== originalRcaRecurrenceCount ||
     requiredDepartments !== originalRequiredDepartments ||
     deptReasonCodes !== originalDeptReasonCodes;
+
+  const hasCadenceChanges =
+    cadenceInterval !== originalCadenceInterval ||
+    cadencePolicy !== originalCadencePolicy;
+
+  const handleCadenceSave = useCallback(async () => {
+    const errors: string[] = [];
+    const ciErr = validateNumeric(cadenceInterval, 5, 120);
+    if (ciErr) errors.push(`Intervalo: ${ciErr}`);
+
+    if (errors.length > 0) {
+      showSnackbar(errors.join('. '), true);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await setCadenceIntervalMin(parseInt(cadenceInterval, 10));
+      await setCadencePolicy(cadencePolicy);
+      setOriginalCadenceInterval(cadenceInterval);
+      setOriginalCadencePolicy(cadencePolicy);
+      showSnackbar('Configuración de cadencia actualizada');
+    } catch (err: any) {
+      showSnackbar(err?.message ?? 'Error al guardar cadencia', true);
+    } finally {
+      setSaving(false);
+    }
+  }, [cadenceInterval, cadencePolicy, validateNumeric, setCadenceIntervalMin, setCadencePolicy, showSnackbar]);
 
   const hasFirmasChanges = firmasOee !== originalFirmasOee || firmasCalidad !== originalFirmasCalidad;
 
@@ -509,6 +555,71 @@ export function SettingsConfig() {
         </View>
       </List.Accordion>
 
+      {/* ── Cadencia Accordion ─────────────────────────────────────────── */}
+      <List.Accordion
+        title="Configuración de Cadencia"
+        titleStyle={styles.accordionTitle}
+        left={(props) => <List.Icon {...props} icon="clock-outline" color={colors.primary} />}
+        expanded={cadenceExpanded}
+        onPress={() => setCadenceExpanded(!cadenceExpanded)}
+      >
+        <View style={styles.content}>
+          <Text variant="bodySmall" style={styles.description}>
+            Control de cadencia para estaciones manuales. El sistema recuerda al operador
+            registrar producción periódicamente. Configurable entre solo recordatorio o bloqueo.
+          </Text>
+
+          <Divider style={styles.divider} />
+
+          <FieldRow
+            label="Intervalo (min)"
+            hint="Minutos sin registro antes de mostrar recordatorio (5-120)"
+            value={cadenceInterval}
+            onChangeText={setCadenceInterval}
+            disabled={saving}
+            error={false}
+            keyboardType="numeric"
+          />
+
+          {/* Policy toggle */}
+          <View style={styles.policyRow}>
+            <View style={styles.fieldLabel}>
+              <Text variant="bodyMedium" style={styles.fieldTitle}>
+                Modo de cumplimiento
+              </Text>
+              <Text variant="bodySmall" style={styles.fieldHint}>
+                {cadencePolicy === 'blocking'
+                  ? 'Bloqueante: el operador debe registrar antes de continuar'
+                  : 'Solo recordatorio: el operador puede ignorar la alerta'}
+              </Text>
+            </View>
+            <Button
+              mode="contained"
+              compact
+              buttonColor={cadencePolicy === 'blocking' ? colors.caution : colors.primary}
+              onPress={() => setCadencePolicyLocal(cadencePolicy === 'reminder-only' ? 'blocking' : 'reminder-only')}
+              style={styles.policyToggle}
+              disabled={saving}
+            >
+              {cadencePolicy === 'reminder-only' ? 'Recordatorio' : 'Bloqueante'}
+            </Button>
+          </View>
+
+          {hasCadenceChanges && (
+            <Button
+              mode="contained"
+              onPress={handleCadenceSave}
+              loading={saving}
+              disabled={saving}
+              style={styles.saveButton}
+              contentStyle={styles.saveButtonContent}
+            >
+              {saving ? 'Guardando...' : 'Guardar Cambios'}
+            </Button>
+          )}
+        </View>
+      </List.Accordion>
+
       {/* ── Firmas Accordion ────────────────────────────────────────────── */}
       <List.Accordion
         title="Configuración de Firmas"
@@ -662,5 +773,15 @@ const styles = StyleSheet.create({
   },
   snackbar: {
     borderRadius: borderRadius.sm,
+  },
+  policyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  policyToggle: {
+    borderRadius: borderRadius.sm,
+    minWidth: 140,
   },
 });

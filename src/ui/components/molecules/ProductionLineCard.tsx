@@ -24,6 +24,8 @@ import { Card, Text, Chip, TouchableRipple } from 'react-native-paper';
 
 export type LineStatus = 'running' | 'stopped' | 'idle';
 
+export type CardTimeFilter = 'all' | 'shift' | '24h';
+
 export interface ProductionLineCardProps {
   id: string;
   name: string;
@@ -32,6 +34,7 @@ export interface ProductionLineCardProps {
   oee?: number;
   lastUpdated?: number;
   activeAlerts?: number;
+  timeFilter?: CardTimeFilter;
   onPress: (lineId: string) => void;
 }
 
@@ -73,6 +76,7 @@ export function ProductionLineCard({
   oee,
   lastUpdated,
   activeAlerts,
+  timeFilter,
   onPress,
 }: ProductionLineCardProps) {
   return (
@@ -103,7 +107,9 @@ export function ProductionLineCard({
 
           <View style={styles.metrics}>
             <View style={styles.metric}>
-              <Text variant="labelSmall" style={styles.metricLabel}>OEE</Text>
+              <Text variant="labelSmall" style={styles.metricLabel}>
+                OEE{timeFilter && timeFilter !== 'all' ? ` (${timeFilter})` : ''}
+              </Text>
               <Text style={[styles.metricValue, { color: oeeColor(oee) }]}>
                 {oee != null ? `${oee.toFixed(1)}%` : '--'}
               </Text>

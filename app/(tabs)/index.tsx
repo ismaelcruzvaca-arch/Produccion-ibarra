@@ -11,15 +11,22 @@
  * When a line card is pressed, the machine selector auto-selects the first
  * machine of that line and navigates to OEE (or the FormRouter for the station).
  *
+ * TimeFilter support (design decision for PT/OEE):
+ *   - The dashboard includes a chip selector for 'all', 'shift', or '24h' views.
+ *   - This filter is stored in useUIStore and consumed by downstream OEE/PT hooks.
+ *   - Weekly is a future extension.
+ *
  * Tablet-optimised: touch targets >= 48 dp, responsive layout via useResponsive.
  */
 
 import React, { useCallback } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Text } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/auth/useAuthStore';
 import { useCatalogStore } from '../../src/ui/store/catalogStore';
+import { useUIStore } from '../../src/ui/store/useUIStore';
+import type { DashboardTimeFilter } from '../../src/ui/store/useUIStore';
 import { ProductionLineCard } from '../../src/ui/components/molecules/ProductionLineCard';
 import { ProductionDashboardSupervisor } from '../../src/ui/components/organisms/ProductionDashboardSupervisor';
 import { ConnectionBadge } from '../../src/ui/components/ConnectionBadge';
@@ -31,8 +38,16 @@ export default function DashboardHub() {
   const assignedLines = useAuthStore((s) => s.assignedLines);
   const lines = useCatalogStore((s) => s.lines);
   const getMachinesByLine = useCatalogStore((s) => s.getMachinesByLine);
+  const dashboardTimeFilter = useUIStore((s) => s.dashboardTimeFilter);
+  const setDashboardTimeFilter = useUIStore((s) => s.setDashboardTimeFilter);
 
   const isSupervisor = role === 'supervisor' || role === 'admin';
+
+  const TIME_FILTER_OPTIONS: { value: DashboardTimeFilter; label: string }[] = [
+    { value: 'all', label: 'Todo' },
+    { value: 'shift', label: 'Turno' },
+    { value: '24h', label: '24h' },
+  ];
 
   // ── Supervisor view: full dashboard ─────────────────────────────────────
   if (isSupervisor) {
@@ -72,6 +87,30 @@ export default function DashboardHub() {
         Produccion — Dashboard
       </Text>
 
+      {/* TimeFilter chip bar (PT/OEE scope selector) */}
+      <View style={styles.filterRow}>
+        {TIME_FILTER_OPTIONS.map((opt) => (
+          <TouchableOpacity
+            key={opt.value}
+            style={[
+              styles.filterChip,
+              dashboardTimeFilter === opt.value && styles.filterChipActive,
+            ]}
+            onPress={() => setDashboardTimeFilter(opt.value)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.filterChipText,
+                dashboardTimeFilter === opt.value && styles.filterChipTextActive,
+              ]}
+            >
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <View style={styles.cardsContainer}>
         {visibleLines.map((line) => {
           const machines = getMachinesByLine(line.id);
@@ -86,6 +125,7 @@ export default function DashboardHub() {
               currentProduct={undefined}
               onPress={handleLinePress}
               activeAlerts={0}
+              timeFilter={dashboardTimeFilter}
             />
           );
         })}
@@ -127,6 +167,31 @@ const styles = StyleSheet.create({
   subtitle: {
     marginBottom: 20,
     color: '#757575',
+  },
+  filterRow: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    gap: 8,
+  },
+  filterChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  filterChipActive: {
+    backgroundColor: '#5D4037',
+    borderColor: '#5D4037',
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#757575',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
   },
   cardsContainer: {
     marginBottom: 24,
