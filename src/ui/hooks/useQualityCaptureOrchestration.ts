@@ -9,8 +9,14 @@
  *   3. If liberado: record weight_logs[]
  *   4. If rechazado/reproceso: record defect_logs[]
  *   5. Confirm and save
+ *   6. If NC (rechazado/reproceso): trigger signature capture for traceability
  * - Weight validation against product_weight_standards via sku
  * - Free-text defect_type (no catalog lookup)
+ *
+ * NC Signature flow (F-AC-46):
+ *   After confirm() saves a NC inspection, pendingNcSignature is set to true.
+ *   The UI should show SignaturePrompt, then call signNcInspection() to create
+ *   the signature in the signatures collection before navigating away.
  *
  * Returns:
  * - inspector_id, shift_type, disposition
@@ -20,6 +26,9 @@
  * - confirm: saves inspection + children
  * - productList for product selection
  * - weightValidation for inline weight checking
+ * - pendingNcSignature: true when NC inspection saved and needs signature
+ * - signNcInspection: creates the signature in signatures collection
+ * - resetSavedInspection: clears the saved state after signing
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -29,6 +38,7 @@ import { useDefectLogsRepository } from '../../repositories/useDefectLogsReposit
 import { useWeightLogsRepository } from '../../repositories/useWeightLogsRepository';
 import { useProductWeightStandardsRepository } from '../../repositories/useProductWeightStandardsRepository';
 import { useShiftSessionsRepository } from '../../repositories/useShiftSessionsRepository';
+import { useSignaturesRepository } from '../../repositories/useSignaturesRepository';
 import { useCatalogStore } from '../store/catalogStore';
 import { useAuthStore } from '../../auth/useAuthStore';
 import { nowMs } from '../../utils/timestamp';
@@ -47,9 +57,13 @@ export function useQualityCaptureOrchestration() {
   const weightLogsRepo = useWeightLogsRepository();
   const weightStandardsRepo = useProductWeightStandardsRepository();
   const shiftSessionsRepo = useShiftSessionsRepository();
+  const signaturesRepo = useSignaturesRepository();
 
   const selectedMachine = useCatalogStore((s) => s.selectedMachine);
   const user = useAuthStore((s) => s.user) as { id?: string } | null;
+  const authRole = useAuthStore((s) => s.role);
+  const authName = useAuthStore((s) => s.fullName);
+  const operatorId = useAuthStore((s) => s.operatorId);
 
   // ─── Core form state ────────────────────────────────────────────────────────
   const [inspectorId, setInspectorId] = useState<string>('');
@@ -159,6 +173,9 @@ export function useQualityCaptureOrchestration() {
   const [savedInspection, setSavedInspection] = useState<IQualityInspection | null>(null);
   const [dataSource] = useState<'vision' | 'manual' | 'hybrid'>('manual');
 
+  // ─── NC Signature state (F-AC-46) ───────────────────────────────────────────
+  const [pendingNcSignature, setPendingNcSignature] = useState(false);
+
   const confirm = useCallback(async (): Promise<IQualityInspection> => {
     if (!isValid()) {
       throw new Error(validationMessage ?? 'Datos incompletos');
@@ -222,6 +239,11 @@ export function useQualityCaptureOrchestration() {
       setValidationMessage(null);
       setSavedInspection(inspection);
 
+      // 4. If NC disposition (rechazado/reproceso), set pending signature flag
+      // so the UI shows SignaturePrompt before navigating away (F-AC-46).
+      const ncDispositions: DispositionType[] = ['rechazado', 'reproceso'];
+      setPendingNcSignature(ncDispositions.includes(disposition!));
+
       return inspection;
     } finally {
       setSaving(false);
@@ -233,6 +255,28 @@ export function useQualityCaptureOrchestration() {
     shiftSessionsRepo,
   ]);
 
+  // ─── Sign NC inspection (creates signature in signatures collection) ─────────
+
+  const signNcInspection = useCallback(async (): Promise<boolean> => {
+    if (!savedInspection) return false;
+    if (!authRole || !operatorId || !authName) return false;
+
+    try {
+      await signaturesRepo.create({
+        document_type: 'quality_inspection',
+        document_id: savedInspection.id,
+        signer_id: operatorId,
+        signer_name: authName,
+        signer_role: authRole,
+        sequence: 1,
+      });
+      return true;
+    } catch (err) {
+      console.warn('[QualityCapture] Failed to create NC signature:', err);
+      return false;
+    }
+  }, [savedInspection, authRole, operatorId, authName, signaturesRepo]);
+
   // ─── Reset ──────────────────────────────────────────────────────────────────
   const reset = useCallback(() => {
     setDisposition(null);
@@ -243,6 +287,12 @@ export function useQualityCaptureOrchestration() {
     setWeightValidation(null);
     setValidationMessage(null);
     setSavedInspection(null);
+    setPendingNcSignature(false);
+  }, []);
+
+  const resetSavedInspection = useCallback(() => {
+    setSavedInspection(null);
+    setPendingNcSignature(false);
   }, []);
 
   return {
@@ -285,5 +335,10 @@ export function useQualityCaptureOrchestration() {
     // Actions
     confirm,
     reset,
+    signNcInspection,
+    resetSavedInspection,
+
+    // NC signature state
+    pendingNcSignature,
   } as const;
 }

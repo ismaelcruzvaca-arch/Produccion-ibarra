@@ -12,7 +12,7 @@
  * No more inspection_type selector, pass/fail buttons, defect catalog lookup.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -31,10 +31,12 @@ import {
 import { useRouter } from 'expo-router';
 
 import { useQualityCaptureOrchestration } from '../../../src/ui/hooks/useQualityCaptureOrchestration';
+import { SignaturePrompt } from '../../../src/ui/components/molecules/SignaturePrompt';
 import { SmartNumpad } from '../../../src/ui/components/atoms/SmartNumpad';
 import { AppButton } from '../../../src/ui/components/atoms/AppButton';
 import { AppBadge } from '../../../src/ui/components/atoms/AppBadge';
-import { colors, spacing, typography, borderRadius, shadows } from '../../../src/ui/theme/tokens';
+import { useAuthStore } from '../../../src/auth/useAuthStore';
+import { colors, spacing, typography, borderRadius } from '../../../src/ui/theme/tokens';
 import type { DispositionType, ShiftType, IDefectLog } from '../../../src/core/types';
 
 const SHIFT_OPTIONS: { value: ShiftType; label: string }[] = [
@@ -51,6 +53,8 @@ const DISPOSITION_OPTIONS: { value: DispositionType; label: string; color: strin
 
 export default function QualityCaptureScreen() {
   const router = useRouter();
+  const authRole = useAuthStore((s) => s.role);
+  const authName = useAuthStore((s) => s.fullName);
   const {
     inspectorId,
     shiftType,
@@ -64,6 +68,7 @@ export default function QualityCaptureScreen() {
     validationMessage,
     saving,
     savedInspection,
+    pendingNcSignature,
     setInspectorId,
     setShiftType,
     setDisposition,
@@ -76,6 +81,8 @@ export default function QualityCaptureScreen() {
     validateWeight,
     confirm,
     reset,
+    signNcInspection,
+    resetSavedInspection,
   } = useQualityCaptureOrchestration();
 
   // ─── Local UI state ─────────────────────────────────────────────────────────
@@ -87,6 +94,14 @@ export default function QualityCaptureScreen() {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [errorDialogVisible, setErrorDialogVisible] = useState(false);
   const [errorDialogMessage, setErrorDialogMessage] = useState('');
+  const [signaturePromptVisible, setSignaturePromptVisible] = useState(false);
+
+  // ─── Show SignaturePrompt after NC inspection is saved (F-AC-46) ─────────────
+  useEffect(() => {
+    if (pendingNcSignature && savedInspection) {
+      setSignaturePromptVisible(true);
+    }
+  }, [pendingNcSignature, savedInspection]);
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
@@ -112,18 +127,50 @@ export default function QualityCaptureScreen() {
   }, [defectTypeInput, defectSeverity, defectCount, addDefectLog]);
 
   const handleConfirmSave = useCallback(async () => {
+    // Capture disposition BEFORE confirm() resets it
+    const currentDisposition = disposition;
     try {
       await confirm();
-      setSnackbarMessage('Inspección guardada correctamente');
-      setSnackbarVisible(true);
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      // NC dispositions (rechazado/reproceso) trigger signature prompt.
+      // The useEffect above shows the dialog when pendingNcSignature is set.
+      if (currentDisposition === 'rechazado' || currentDisposition === 'reproceso') {
+        // Signature prompt will show — do NOT navigate away yet
+      } else {
+        setSnackbarMessage('Inspección guardada correctamente');
+        setSnackbarVisible(true);
+        setTimeout(() => {
+          router.back();
+        }, 1500);
+      }
     } catch (e: any) {
       setErrorDialogMessage(e?.message ?? 'Error al guardar la inspección');
       setErrorDialogVisible(true);
     }
-  }, [confirm, router]);
+  }, [confirm, disposition, router]);
+
+  const handleNcSign = useCallback(async () => {
+    const success = await signNcInspection();
+    if (success) {
+      setSignaturePromptVisible(false);
+      resetSavedInspection();
+      setSnackbarMessage('Inspección guardada con firma NC');
+      setSnackbarVisible(true);
+      setTimeout(() => {
+        router.back();
+      }, 1500);
+    }
+  }, [signNcInspection, resetSavedInspection, router]);
+
+  // Signature info for the prompt
+  const ncSignatureInfo = savedInspection
+    ? {
+        documentType: 'quality_inspection' as const,
+        documentId: savedInspection.id,
+        requiredRoles: ['supervisor', 'admin'] as string[],
+        sequence: 1,
+        stepLabel: 'Firma de Calidad — No Conformidad',
+      }
+    : null;
 
   // ─── Selected product name ──────────────────────────────────────────────────
   const selectedProductName = productList.find((p) => p.sku === selectedSku)?.name ?? '';
@@ -404,6 +451,28 @@ export default function QualityCaptureScreen() {
             <Button onPress={() => setErrorDialogVisible(false)}>Entendido</Button>
           </Dialog.Actions>
         </Dialog>
+
+        {/* NC Signature Prompt (F-AC-46) — shown after saving NC inspection */}
+        {ncSignatureInfo && savedInspection && (
+          <SignaturePrompt
+            visible={signaturePromptVisible}
+            signature={ncSignatureInfo}
+            currentRole={authRole}
+            currentUserName={authName ?? 'Inspector'}
+            existingSignatures={[]}
+            onSign={handleNcSign}
+            onSkip={() => {
+              setSignaturePromptVisible(false);
+              resetSavedInspection();
+              router.back();
+            }}
+            onDismiss={() => {
+              setSignaturePromptVisible(false);
+              resetSavedInspection();
+              router.back();
+            }}
+          />
+        )}
       </Portal>
     </ScrollView>
   );
