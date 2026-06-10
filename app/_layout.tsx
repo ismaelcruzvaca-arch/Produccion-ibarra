@@ -24,6 +24,7 @@ import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { DatabaseProvider } from '../src/data/DatabaseContext';
 import { AuthProvider, useAuthContext } from '../src/auth/AuthContext';
 import { SentryErrorBoundary, SentryFallback } from '../src/lib/sentry';
+import { ResponsiveLayoutProvider } from '../src/ui/layouts/ResponsiveLayoutProvider';
 
 const theme = {
   ...MD3LightTheme,
@@ -102,7 +103,9 @@ export default function RootLayout() {
         <AuthProvider>
           <DatabaseProvider>
             <AuthGuard>
-              <Slot />
+              <ResponsiveLayoutProvider>
+                <Slot />
+              </ResponsiveLayoutProvider>
             </AuthGuard>
           </DatabaseProvider>
         </AuthProvider>

@@ -25,6 +25,7 @@ const FORM_LABELS: Record<string, string> = {
   mixing: 'Mezcladora (F-PD-17)',
   extractor: 'Extractor (F-PD-18)',
   vitamin: 'Vitaminas (F-PD-06)',
+  packaging: 'Empaque (F-PD-21)',
 };
 
 /**

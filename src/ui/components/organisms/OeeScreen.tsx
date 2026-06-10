@@ -50,6 +50,9 @@ export default function OeeScreen() {
   const selectedProduct = useCatalogStore((s) => s.selectedProduct);
   const setSelectedProduct = useCatalogStore((s) => s.setSelectedProduct);
   const isIotMachine = selectedMachine ? !!getMachineById(selectedMachine)?.is_iot_enabled : false;
+  const machineSourceType = selectedMachine
+    ? (getMachineById(selectedMachine)?.source_type ?? 'manual')
+    : 'manual';
   const selectedPpm = selectedProduct ? getProductById(selectedProduct)?.theoretical_ppm : undefined;
   const { isValid } = useOeeValidation();
 
@@ -346,6 +349,11 @@ export default function OeeScreen() {
             </Chip>
           </View>
         )}
+        <View style={styles.sourceRow}>
+          <Chip compact style={styles.sourceChip} textStyle={styles.sourceChipText}>
+            {machineSourceType === 'telemetry' ? 'Telemetria' : 'Manual'}
+          </Chip>
+        </View>
         <View pointerEvents={isValid ? 'auto' : 'none'} style={{ opacity: isValid ? 1 : 0.5, flex: 1 }}>
           <OeeDashboard
             isActiveDowntime={!!activeDowntime}
@@ -568,5 +576,20 @@ const styles = StyleSheet.create({
   syncedChipText: {
     fontSize: 12,
     color: '#2E7D32',
+  },
+
+  // Source mode indicator (design decision 1)
+  sourceRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  sourceChip: {
+    backgroundColor: '#E3F2FD',
+    height: 28,
+  },
+  sourceChipText: {
+    fontSize: 12,
+    color: '#1565C0',
   },
 });

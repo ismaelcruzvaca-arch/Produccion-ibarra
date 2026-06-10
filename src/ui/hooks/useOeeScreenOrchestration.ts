@@ -59,6 +59,9 @@ export function useOeeScreenOrchestration() {
   const isIotMachine = selectedMachine
     ? !!getMachineById(selectedMachine)?.is_iot_enabled
     : false;
+  const machineSourceType = selectedMachine
+    ? (getMachineById(selectedMachine)?.source_type ?? 'manual')
+    : 'manual';
   const selectedPpm = selectedProduct
     ? getProductById(selectedProduct)?.theoretical_ppm
     : undefined;
@@ -446,6 +449,7 @@ export function useOeeScreenOrchestration() {
 
     // Helper flags
     isIotMachine,
+    machineSourceType,
 
     // Handlers
     handleStartShift,
