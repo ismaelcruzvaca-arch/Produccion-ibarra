@@ -83,6 +83,11 @@ export function useOeeScreenOrchestration() {
   const [pendingEvent, setPendingEvent] = useState<Partial<IOeeEvent> | null>(null);
   const [showShiftBlocker, setShowShiftBlocker] = useState(false);
 
+  // ─── Telemetry stop classification ───────────────────────────────────────
+  const [showTelemetryClassify, setShowTelemetryClassify] = useState(false);
+  const [telemetryClassifyTarget, setTelemetryClassifyTarget] = useState<string | null>(null);
+  const prevActiveDowntimeRef = useRef<string | null>(null);
+
   // ─── Production counter modal ───────────────────────────────────────────────
   const [showProductionModal, setShowProductionModal] = useState(false);
   const [pendingAnomalousProduction, setPendingAnomalousProduction] = useState<number | null>(null);
@@ -182,7 +187,44 @@ export function useOeeScreenOrchestration() {
     };
   }, [shiftStarted, selectedMachine]);
 
-  // ─── OEE Calculator ────────────────────────────────────────────────────────
+  // ─── Telemetry stop classification detection ──────────────────────────────
+  useEffect(() => {
+    if (!shiftStarted || !selectedMachine || machineSourceType !== 'telemetry') {
+      setShowTelemetryClassify(false);
+      setTelemetryClassifyTarget(null);
+      prevActiveDowntimeRef.current = null;
+      return;
+    }
+
+    const currentId = activeDowntime?.get('id') ?? null;
+    const prevId = prevActiveDowntimeRef.current;
+    prevActiveDowntimeRef.current = currentId;
+
+    // Detect a NEW active downtime (not previously seen) on a telemetry machine
+    if (currentId && currentId !== prevId) {
+      const reasonCode = activeDowntime?.get('reason_code') as string | undefined;
+      // If telemetry-detected stop has no reason_code, operator must classify it
+      if (!reasonCode) {
+        setTelemetryClassifyTarget(currentId);
+        setShowTelemetryClassify(true);
+      }
+    }
+  }, [shiftStarted, selectedMachine, machineSourceType, activeDowntime]);
+
+  // ─── Telemetry classification handler ─────────────────────────────────────
+  const handleTelemetryClassify = useCallback(async (reason: ParoReason) => {
+    const targetId = telemetryClassifyTarget;
+    if (!targetId) return;
+
+    setShowTelemetryClassify(false);
+    setTelemetryClassifyTarget(null);
+
+    // Update the existing telemetry event with the operator's classification
+    await repository.update(targetId, { reason_code: reason.code });
+    setSnackbarMessage(`Paro clasificado: ${reason.label}`);
+    setSnackbarVisible(true);
+  }, [telemetryClassifyTarget, repository]);
+
   const { metrics } = useOeeCalculator(events, selectedPpm);
 
   // ─── Shift Start ───────────────────────────────────────────────────────────
@@ -509,6 +551,7 @@ export function useOeeScreenOrchestration() {
     confirmLabel,
     showShiftBlocker,
     showProductionModal,
+    showTelemetryClassify,
 
     // Snackbar
     snackbarVisible,
@@ -528,12 +571,14 @@ export function useOeeScreenOrchestration() {
     handleNumpadSubmit,
     handleConfirm,
     handleDismissCadence,
+    handleTelemetryClassify,
 
     // Setters for dismiss
     setShowStopModal,
     setShowConfirmModal,
     setShowShiftBlocker,
     setShowProductionModal,
+    setShowTelemetryClassify,
     setSnackbarVisible,
   } as const;
 }
