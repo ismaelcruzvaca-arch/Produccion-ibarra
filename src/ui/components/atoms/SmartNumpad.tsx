@@ -23,6 +23,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Portal, Dialog, Button, Text } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../../theme/tokens';
 
 interface SmartNumpadProps {
@@ -186,21 +187,30 @@ export function SmartNumpad({
 
           {/* Hard Limit Warning */}
           {isExceedingMax && (
-            <Text testID="numpad-warning-text" style={styles.warningText}>
-              ⚠️ Excede el límite de {max.toLocaleString('es-MX')}
-            </Text>
+            <View style={styles.warningRow}>
+              <MaterialCommunityIcons name="alert" size={16} color="#C62828" />
+              <Text testID="numpad-warning-text" style={styles.warningText}>
+                Excede el límite de {max.toLocaleString('es-MX')}
+              </Text>
+            </View>
           )}
 
           {isBelowMin && (
-            <Text testID="numpad-min-warning" style={styles.warningText}>
-              ⚠️ Debe ser mayor o igual a {min}
-            </Text>
+            <View style={styles.warningRow}>
+              <MaterialCommunityIcons name="alert" size={16} color="#C62828" />
+              <Text testID="numpad-min-warning" style={styles.warningText}>
+                Debe ser mayor o igual a {min}
+              </Text>
+            </View>
           )}
 
           {isExceedingSoftLimit && (
-            <Text style={styles.softWarning}>
-              ⚠️ Excede el límite recomendado de {softLimit}
-            </Text>
+            <View style={[styles.warningRow, { justifyContent: 'center' }]}>
+              <MaterialCommunityIcons name="alert" size={16} color={colors.caution} />
+              <Text style={styles.softWarning}>
+                Excede el límite recomendado de {softLimit}
+              </Text>
+            </View>
           )}
 
           {/* Keyboard grid */}
@@ -392,19 +402,24 @@ const styles = StyleSheet.create({
   textError: {
     color: '#C62828',
   },
+  warningRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginBottom: spacing.sm,
+  },
   warningText: {
     color: '#C62828',
     fontSize: typography.sizes.bodyMedium,
     fontWeight: typography.weights.semibold,
     textAlign: 'center',
-    marginBottom: spacing.sm,
   },
   softWarning: {
     color: colors.caution,
     fontSize: typography.sizes.bodySmall,
     fontWeight: typography.weights.semibold,
     textAlign: 'center',
-    marginBottom: spacing.sm,
   },
   gridContainer: {
     gap: spacing.xs,

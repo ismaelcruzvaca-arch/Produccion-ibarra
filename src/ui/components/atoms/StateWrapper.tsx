@@ -17,6 +17,7 @@
 import React from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Text, Button } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../../theme/tokens';
 
 interface StateWrapperProps {
@@ -51,7 +52,7 @@ export function StateWrapper({
 
       {state === 'empty' && (
         <>
-          <Text style={styles.emptyIcon}>📋</Text>
+          <MaterialCommunityIcons name="clipboard-text-outline" size={48} color={colors.textSecondary} />
           <Text style={styles.message}>{message ?? 'Sin datos disponibles'}</Text>
           {emptyAction && (
             <Button
@@ -68,7 +69,7 @@ export function StateWrapper({
 
       {state === 'error' && (
         <>
-          <Text style={styles.errorIcon}>⚠️</Text>
+          <MaterialCommunityIcons name="alert-circle" size={48} color={colors.error} />
           <Text style={[styles.message, styles.errorMessage]}>
             {message ?? 'Ocurrió un error'}
           </Text>
@@ -104,11 +105,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptyIcon: {
-    fontSize: 48,
     marginBottom: spacing.sm,
   },
   errorIcon: {
-    fontSize: 48,
     marginBottom: spacing.sm,
   },
   errorMessage: {

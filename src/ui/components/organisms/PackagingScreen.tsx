@@ -15,6 +15,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, Button, Portal, Dialog, Divider, Snackbar, DataTable } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { RxDocument } from 'rxdb';
 
 import { useOeeEventsRepository } from '../../../repositories/useOeeEventsRepository';
@@ -352,9 +353,12 @@ export default function PackagingScreen() {
         {/* Cadence Banner */}
         {cadenceDue && (
           <View style={styles.cadenceBanner}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <MaterialCommunityIcons name="clock-outline" size={16} color={colors.textWarning} style={{ marginRight: 4 }} />
             <Text variant="bodyMedium" style={styles.cadenceBannerText}>
-              ⏰ {cadenceElapsedMin.toFixed(0)} min sin registro — ingrese producción de la hora actual
+              {cadenceElapsedMin.toFixed(0)} min sin registro — ingrese producción de la hora actual
             </Text>
+          </View>
           </View>
         )}
 

@@ -3,7 +3,7 @@
  *
  * Pattern: Atomic Design — Molecule
  * Why:
- * - Shows disposition badge (🟢 liberado / 🔴 rechazado / 🟡 reproceso) instead of pass/fail.
+ * - Shows disposition badge (liberado / rechazado / reproceso) instead of pass/fail.
  * - Shows shift_type and inspector_id instead of inspection_type and operator_id.
  * - Post-reconciliation: no more value, defect_code, inspection_type fields.
  */
@@ -11,14 +11,15 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../theme/tokens';
 import type { IQualityInspection, DispositionType } from '../../../core/types';
 import { AppBadge } from '../atoms/AppBadge';
 
 const DISPOSITION_CONFIG: Record<DispositionType, { label: string; variant: 'success' | 'error' | 'warning' | 'info' }> = {
-  liberado: { label: '🟢 Liberado', variant: 'success' },
-  rechazado: { label: '🔴 Rechazado', variant: 'error' },
-  reproceso: { label: '🟡 Reproceso', variant: 'warning' },
+  liberado: { label: 'Liberado', variant: 'success' },
+  rechazado: { label: 'Rechazado', variant: 'error' },
+  reproceso: { label: 'Reproceso', variant: 'warning' },
 };
 
 function formatTimestamp(ts: number): string {
@@ -54,7 +55,7 @@ export function QualityInspectionCard({
       <View style={styles.row}>
         {/* Icon */}
         <View style={styles.iconContainer}>
-          <Text style={styles.icon}>📋</Text>
+          <MaterialCommunityIcons name="clipboard-text" size={24} color={colors.primary} />
         </View>
 
         {/* Info column */}
@@ -111,9 +112,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.sm,
-  },
-  icon: {
-    fontSize: 24,
   },
   info: {
     flex: 1,

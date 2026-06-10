@@ -257,7 +257,7 @@ export default function OeeScreen() {
     const durationHours = (nowMs() - (activeDowntime.get('timestamp') as number)) / 3600000;
     const isAtypical = durationHours > OEE_LIMITS.MAX_DOWNTIME_HOURS;
 
-    setConfirmTitle(isAtypical ? '⚠️ Paro Atípico' : 'Fin de Paro');
+    setConfirmTitle(isAtypical ? 'Paro Atípico' : 'Fin de Paro');
     setConfirmMessage(
       isAtypical
         ? `Este paro duró más de ${OEE_LIMITS.MAX_DOWNTIME_HOURS}h. ¿Cerrar paro: ${reasonLabel}?`
@@ -291,7 +291,7 @@ export default function OeeScreen() {
   const handleNumpadSubmit = useCallback((value: number) => {
     setShowProductionModal(false);
     if (value > OEE_LIMITS.DEFAULT_SOFT_LIMIT) {
-      setConfirmTitle('⚠️ Producción Anómala');
+      setConfirmTitle('Producción Anómala');
       setConfirmMessage(
         `¿Confirma registrar ${value.toLocaleString('es-MX')} cajas?\nEsta cantidad supera el límite de precaución de ${OEE_LIMITS.DEFAULT_SOFT_LIMIT.toLocaleString('es-MX')}.`
       );
@@ -344,9 +344,9 @@ export default function OeeScreen() {
         )}
         {pendingCount === 0 && (
           <View style={styles.pendingSyncRow}>
-            <Chip compact style={styles.syncedChip} textStyle={styles.syncedChipText}>
-              {'\u2705'} Sincronizado
-            </Chip>
+          <Chip compact icon="check-circle" style={styles.syncedChip} textStyle={styles.syncedChipText}>
+            Sincronizado
+          </Chip>
           </View>
         )}
         <View style={styles.sourceRow}>
@@ -433,12 +433,12 @@ export default function OeeScreen() {
                       {OEE_CHAIN_CONFIG.labels[index]}
                     </Text>
                     {isSigned ? (
-                      <Chip compact style={styles.sigSignedChip} textStyle={styles.sigSignedChipText}>
-                        {'\u2705'} Firmado
+                      <Chip compact icon="check-circle" style={styles.sigSignedChip} textStyle={styles.sigSignedChipText}>
+                        Firmado
                       </Chip>
                     ) : (
-                      <Chip compact style={styles.sigPendingChip} textStyle={styles.sigPendingChipText}>
-                        {'\u25CB'} Pendiente
+                      <Chip compact icon="circle-outline" style={styles.sigPendingChip} textStyle={styles.sigPendingChipText}>
+                        Pendiente
                       </Chip>
                     )}
                   </View>

@@ -13,6 +13,7 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, Button, SegmentedButtons, TextInput, Portal, Dialog } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useQualityCaptureOrchestration } from '../../../hooks/useQualityCaptureOrchestration';
 import { InspectionTypeSelector } from '../molecules/InspectionTypeSelector';
@@ -244,9 +245,12 @@ export function QualityCaptureScreen({
               </Text>
             </View>
             {state.standardWarning && (
-              <Text variant="bodySmall" style={styles.warningText}>
-                ⚠️ Sin estándar de peso configurado — pase con advertencia
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginTop: 12 }}>
+                <MaterialCommunityIcons name="alert" size={16} color="#E65100" style={{ marginRight: 4 }} />
+                <Text variant="bodySmall" style={styles.warningText}>
+                  Sin estándar de peso configurado — pase con advertencia
+                </Text>
+              </View>
             )}
             {state.defectId && (
               <View style={styles.confirmRow}>

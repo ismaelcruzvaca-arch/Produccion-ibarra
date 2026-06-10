@@ -11,6 +11,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Button, Portal, Dialog, Chip, Divider, ActivityIndicator } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -124,7 +125,7 @@ export function SignaturePrompt({
           {/* Role validation */}
           {!isRoleValid && (
             <View style={styles.errorSection}>
-              <Text style={styles.errorIcon}>⚠️</Text>
+              <MaterialCommunityIcons name="alert" size={18} color="#E65100" />
               <Text variant="bodyMedium" style={styles.errorText}>
                 Su rol ({currentRole ?? 'ninguno'}) no está autorizado para firmar este documento.
                 Roles requeridos: {signature.requiredRoles.join(', ')}.
@@ -134,7 +135,7 @@ export function SignaturePrompt({
 
           {alreadySigned && (
             <View style={styles.errorSection}>
-              <Text style={styles.errorIcon}>ℹ️</Text>
+              <MaterialCommunityIcons name="information" size={18} color="#E65100" />
               <Text variant="bodyMedium" style={styles.errorText}>
                 Ya ha firmado este documento en esta posición.
               </Text>
@@ -223,9 +224,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
     gap: 8,
-  },
-  errorIcon: {
-    fontSize: 18,
   },
   errorText: {
     flex: 1,
