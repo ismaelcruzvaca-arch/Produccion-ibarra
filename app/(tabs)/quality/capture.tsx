@@ -4,7 +4,7 @@
  * Architecture: Thin Container (Hook + Presentational)
  * Flow:
  *   Set inspector_id (from auth) + shift_type
- *   Select disposition (🟢 liberado / 🔴 rechazado / 🟡 reproceso)
+ *   Select disposition (liberado / rechazado / reproceso)
  *   If liberado: add weight_logs[] entries
  *   If rechazado/reproceso: add defect_logs[] entries
  *   Confirm → saves inspection + children
@@ -46,9 +46,9 @@ const SHIFT_OPTIONS: { value: ShiftType; label: string }[] = [
 ];
 
 const DISPOSITION_OPTIONS: { value: DispositionType; label: string; color: string }[] = [
-  { value: 'liberado', label: '🟢 Liberado', color: colors.success },
-  { value: 'rechazado', label: '🔴 Rechazado', color: colors.error },
-  { value: 'reproceso', label: '🟡 Reproceso', color: colors.caution },
+  { value: 'liberado', label: 'Liberado', color: colors.success },
+  { value: 'rechazado', label: 'Rechazado', color: colors.error },
+  { value: 'reproceso', label: 'Reproceso', color: colors.caution },
 ];
 
 export default function QualityCaptureScreen() {

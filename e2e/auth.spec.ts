@@ -9,7 +9,7 @@ test.describe('Authentication', () => {
       console.log('❌ BROWSER CRASH:', error.message)
     );
     page.on('requestfailed', (request) =>
-      console.log('⚠️ BROWSER NETWORK FAIL:', request.url(), request.failure()?.errorText)
+      console.log('[WARN] BROWSER NETWORK FAIL:', request.url(), request.failure()?.errorText)
     );
   });
 

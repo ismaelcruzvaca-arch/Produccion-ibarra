@@ -227,8 +227,8 @@ describe('useUIStore — actions-only pattern', () => {
 
     it('can only change state through defined actions', () => {
       // This test demonstrates the intended patterns:
-      // ✅ CORRECT: useUIStore.getState().startSyncing();
-      // ❌ WRONG:  directly setting state values
+      // CORRECT: useUIStore.getState().startSyncing();
+      // WRONG:  directly setting state values
 
       // The only way to change sync state is through actions
       useUIStore.getState().startSyncing();

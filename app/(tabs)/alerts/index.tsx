@@ -85,9 +85,12 @@ function RuleRow({ rule, nodeCatalog, onToggle }: RuleRowProps) {
         <Text style={styles.thresholdText}>Umbral: {rule.valor_umbral}</Text>
         <View style={styles.channelsRow}>
           {rule.canales.map((ch) => (
-            <Text key={ch} style={styles.channelChip}>
-              {ch === 'EMAIL' ? '📧' : ch === 'SNACKBAR' ? '🔔' : '📱'}
-            </Text>
+            <MaterialCommunityIcons
+              key={ch}
+              name={ch === 'EMAIL' ? 'email' : ch === 'SNACKBAR' ? 'bell' : 'cellphone'}
+              size={16}
+              color={colors.textSecondary}
+            />
           ))}
         </View>
       </View>
@@ -394,9 +397,6 @@ const styles = StyleSheet.create({
   channelsRow: {
     flexDirection: 'row',
     gap: 2,
-  },
-  channelChip: {
-    fontSize: 14,
   },
   // ── Empty state ───────────────────────────────────────────────────────
   emptyState: {

@@ -23,6 +23,7 @@ import {
   ActivityIndicator,
   Chip,
 } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useDatabase } from '../../../src/data/DatabaseContext';
 import { nowMs } from '../../../src/utils/timestamp';
 import type { ISyncError } from '../../../src/core/types';
@@ -130,7 +131,7 @@ export default function DlqScreen() {
 
       {errors.length === 0 ? (
         <View style={styles.center}>
-          <Text variant="displaySmall">✅</Text>
+          <MaterialCommunityIcons name="check-circle" size={48} color="#388E3C" />
           <Text variant="bodyLarge" style={styles.emptyText}>Sin errores pendientes</Text>
           <Text variant="bodySmall" style={styles.emptySubtext}>
             Todos los eventos se sincronizaron correctamente con el servidor.

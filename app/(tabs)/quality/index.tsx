@@ -3,7 +3,7 @@
  *
  * Architecture: Thin Container (Hook + Presentational)
  * All state orchestration delegated to useQualityListOrchestration().
- * Shows disposition badges (🟢 liberado / 🔴 rechazado / 🟡 reproceso) instead of pass/fail.
+ * Shows disposition badges (liberado / rechazado / reproceso) instead of pass/fail.
  * No more inspection_type filter chips.
  */
 

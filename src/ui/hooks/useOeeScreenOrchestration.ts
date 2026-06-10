@@ -402,7 +402,7 @@ export function useOeeScreenOrchestration() {
     const durationHours = (nowMs() - (activeDowntime.get('timestamp') as number)) / 3600000;
     const isAtypical = durationHours > OEE_LIMITS.MAX_DOWNTIME_HOURS;
 
-    setConfirmTitle(isAtypical ? '⚠️ Paro Atípico' : 'Fin de Paro');
+    setConfirmTitle(isAtypical ? 'Paro Atípico' : 'Fin de Paro');
     setConfirmMessage(
       isAtypical
         ? `Este paro duró más de ${OEE_LIMITS.MAX_DOWNTIME_HOURS}h. ¿Cerrar paro: ${reasonLabel}?`
@@ -490,7 +490,7 @@ export function useOeeScreenOrchestration() {
   const handleNumpadSubmit = useCallback((value: number) => {
     setShowProductionModal(false);
     if (value > OEE_LIMITS.DEFAULT_SOFT_LIMIT) {
-      setConfirmTitle('⚠️ Producción Anómala');
+      setConfirmTitle('Producción Anómala');
       setConfirmMessage(
         `¿Confirma registrar ${value.toLocaleString('es-MX')} cajas?\nEsta cantidad supera el límite de precaución de ${OEE_LIMITS.DEFAULT_SOFT_LIMIT.toLocaleString('es-MX')}.`
       );

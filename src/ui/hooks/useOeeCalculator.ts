@@ -6,7 +6,7 @@ import { DEFAULT_PPM } from '../../config/catalogs';
 export interface UseOeeCalculatorResult {
   metrics: OeeMetrics;
   isLoading: boolean;
-  isUsingFallbackPpm: boolean; // CRITICAL: Wave 3 reads this for ⚠️ warning
+  isUsingFallbackPpm: boolean; // CRITICAL: Wave 3 reads this for warning indicator
 }
 
 const INITIAL_OEE_METRICS: OeeMetrics = {

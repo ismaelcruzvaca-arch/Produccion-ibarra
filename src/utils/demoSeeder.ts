@@ -163,7 +163,7 @@ export async function seedDemoData(
   await db.sync_errors.bulkInsert(syncErrors as any);
 
   console.log(
-    `[demoSeeder] ✅ Inserted ${events.length} OEE events + ${syncErrors.length} sync errors`
+    `[demoSeeder] [OK] Inserted ${events.length} OEE events + ${syncErrors.length} sync errors`
   );
 
   return {

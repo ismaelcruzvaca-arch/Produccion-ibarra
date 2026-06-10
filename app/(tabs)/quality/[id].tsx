@@ -11,6 +11,7 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, Card, ActivityIndicator } from 'react-native-paper';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useQualityInspectionsRepository } from '../../../src/repositories/useQualityInspectionsRepository';
 import { useDefectLogsRepository } from '../../../src/repositories/useDefectLogsRepository';
@@ -21,9 +22,9 @@ import { colors, spacing, typography, borderRadius, shadows } from '../../../src
 import type { IQualityInspection, IDefectLog, IWeightLog, DispositionType } from '../../../src/core/types';
 
 const DISPOSITION_CONFIG: Record<DispositionType, { label: string; variant: 'success' | 'error' | 'warning' | 'info' }> = {
-  liberado: { label: '🟢 Liberado', variant: 'success' },
-  rechazado: { label: '🔴 Rechazado', variant: 'error' },
-  reproceso: { label: '🟡 Reproceso', variant: 'warning' },
+  liberado: { label: 'Liberado', variant: 'success' },
+  rechazado: { label: 'Rechazado', variant: 'error' },
+  reproceso: { label: 'Reproceso', variant: 'warning' },
 };
 
 function formatTimestamp(ts: number): string {
@@ -108,7 +109,7 @@ export default function QualityDetailScreen() {
   if (error || !inspection) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorIcon}>⚠️</Text>
+        <MaterialCommunityIcons name="alert-circle" size={48} color={colors.error} />
         <Text style={styles.errorText}>{error ?? 'Inspección no encontrada'}</Text>
         <AppButton onPress={() => router.back()} style={styles.retryButton}>
           Volver
@@ -124,7 +125,7 @@ export default function QualityDetailScreen() {
       {/* Header card */}
       <Card style={styles.headerCard}>
         <Card.Content style={styles.headerContent}>
-          <Text style={styles.headerIcon}>📋</Text>
+          <MaterialCommunityIcons name="clipboard-text" size={36} color={colors.primary} style={{ marginRight: spacing.md }} />
           <View style={styles.headerInfo}>
             <Text style={styles.typeLabel}>Inspección de Calidad</Text>
             <Text style={styles.timestamp}>
@@ -261,14 +262,11 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.bodyMedium,
     color: colors.textSecondary,
   },
-  errorIcon: {
-    fontSize: 48,
-    marginBottom: spacing.sm,
-  },
   errorText: {
     fontSize: typography.sizes.bodyMedium,
     color: colors.textError,
     textAlign: 'center',
+    marginTop: spacing.sm,
     marginBottom: spacing.lg,
   },
   retryButton: {
@@ -283,10 +281,6 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  headerIcon: {
-    fontSize: 36,
-    marginRight: spacing.md,
   },
   headerInfo: {
     flex: 1,
