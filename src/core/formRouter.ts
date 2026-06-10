@@ -33,7 +33,8 @@ const FORM_MAPPINGS: Array<[string, FormType]> = [
   ['empaque', 'packaging'],
   ['packaging', 'packaging'],
   ['envasado', 'packaging'],
-  ['linea', 'packaging'],
+  ['linea de empaque', 'packaging'],
+  ['linea empaque', 'packaging'],
 ];
 
 /**
