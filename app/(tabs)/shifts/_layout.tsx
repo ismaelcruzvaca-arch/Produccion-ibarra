@@ -1,9 +1,12 @@
 /**
- * Shift Setup stack navigator — shift selection → setup flow.
+ * Shift stack navigator — shift management screens.
  *
  * Routes:
- * - index → Shift calendar / selection
- * - setup → Shift setup flow (operator assignment, planned boxes, etc.)
+ * - index → Shift list / selection
+ * - setup → Operator assignment (post-turno-automatico)
+ * - calendar → Admin calendar management (slots + exceptions)
+ * - [id] → Shift detail
+ * - close/[id] → Shift close
  */
 
 import React from 'react';
@@ -25,7 +28,11 @@ export default function ShiftsLayout() {
       />
       <Stack.Screen
         name="setup"
-        options={{ title: 'Configurar Turno' }}
+        options={{ title: 'Asignar Operador' }}
+      />
+      <Stack.Screen
+        name="calendar"
+        options={{ title: 'Calendario de Turnos' }}
       />
       <Stack.Screen
         name="[id]"
