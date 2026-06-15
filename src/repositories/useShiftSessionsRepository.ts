@@ -23,8 +23,8 @@ import { useDatabase } from '../data/DatabaseContext';
 import { getDeviceId } from '../sync/deviceId';
 
 export type CreateShiftSessionPayload = Omit<
-  IShiftSession, 'id' | 'updated_at' | 'is_deleted' | 'device_id'
-> & { device_id?: string };
+  IShiftSession, 'id' | 'updated_at' | 'is_deleted' | 'device_id' | 'operator_id'
+> & { device_id?: string; operator_id?: string | null };
 
 export interface ShiftSessionsRepository {
   /** Emits all non-deleted sessions on change */
@@ -54,12 +54,14 @@ export function useShiftSessionsRepository(): ShiftSessionsRepository {
   const create = useCallback(
     async (payload: CreateShiftSessionPayload) => {
       const deviceId = payload.device_id ?? await getDeviceId();
+      const operatorId = payload.operator_id ?? null;
       const newDoc: IShiftSession = {
         id: generateUuid(),
         updated_at: nowMs(),
         is_deleted: false,
         device_id: deviceId,
         ...payload,
+        operator_id: operatorId,
       };
       const result = await db.collections.shift_sessions.insert(newDoc);
       return result as RxDocument<IShiftSession>;

@@ -88,6 +88,13 @@ export interface PlantConfigRepository {
   getCadencePolicy: () => Promise<'reminder-only' | 'blocking'>;
   /** Set cadence enforcement policy */
   setCadencePolicy: (policy: 'reminder-only' | 'blocking') => Promise<RxDocument<IPlantConfig>>;
+
+  // ── Turno Automático: Auto-Shift ───────────────────────────────────────────────
+
+  /** Get whether automatic shift detection is enabled (boolean from 'true'|'false' string) */
+  getAutoShiftEnabled: () => Promise<boolean>;
+  /** Enable or disable automatic shift detection */
+  setAutoShiftEnabled: (enabled: boolean) => Promise<RxDocument<IPlantConfig>>;
 }
 
 export const DEFAULT_MICRO_STOP_THRESHOLD = 5;
@@ -113,6 +120,13 @@ export const DEFAULT_CONCILIATION_DEPARTMENT_REASON_CODES = '{"MTTO":["FC","FS",
 export const DEFAULT_CADENCE_INTERVAL_MIN = '30';
 /** Default cadence enforcement policy */
 export const DEFAULT_CADENCE_POLICY = 'reminder-only';
+
+// ── Turno Automático: Auto-Shift Defaults ─────────────────────────────────────────
+
+/** Config key for the auto-shift-detection feature flag */
+export const AUTO_SHIFT_KEY = 'auto_shift_enabled';
+/** Default value for auto-shift enabled (disabled by default — feature flag) */
+export const DEFAULT_AUTO_SHIFT_ENABLED = false;
 
 export function usePlantConfigRepository(): PlantConfigRepository {
   const db = useDatabase();
@@ -326,6 +340,25 @@ export function usePlantConfigRepository(): PlantConfigRepository {
     [set],
   );
 
+  // ── Turno Automático: Auto-Shift Getters/Setters ───────────────────────────────
+
+  const getAutoShiftEnabled = useCallback(async (): Promise<boolean> => {
+    const val = await get(AUTO_SHIFT_KEY);
+    if (val === null) return DEFAULT_AUTO_SHIFT_ENABLED;
+    return val === 'true';
+  }, [get]);
+
+  const setAutoShiftEnabled = useCallback(
+    async (enabled: boolean) => {
+      return set(
+        AUTO_SHIFT_KEY,
+        enabled ? 'true' : 'false',
+        'Detección automática de turnos — cuando está activo, el sistema inicia turnos según el calendario',
+      );
+    },
+    [set],
+  );
+
   const getDepartmentReasonCodes = useCallback(async (): Promise<Record<string, string[]>> => {
     const val = await get('conciliation_department_reason_codes');
     if (val === null) return JSON.parse(DEFAULT_CONCILIATION_DEPARTMENT_REASON_CODES) as Record<string, string[]>;
@@ -360,6 +393,7 @@ export function usePlantConfigRepository(): PlantConfigRepository {
       getSignatureChainConfig, setSignatureChainConfig,
       getCadenceIntervalMin, setCadenceIntervalMin,
       getCadencePolicy, setCadencePolicy,
+      getAutoShiftEnabled, setAutoShiftEnabled,
     }),
     [
       docs$, get, set,
@@ -373,6 +407,7 @@ export function usePlantConfigRepository(): PlantConfigRepository {
       getSignatureChainConfig, setSignatureChainConfig,
       getCadenceIntervalMin, setCadenceIntervalMin,
       getCadencePolicy, setCadencePolicy,
+      getAutoShiftEnabled, setAutoShiftEnabled,
     ],
   );
 }
