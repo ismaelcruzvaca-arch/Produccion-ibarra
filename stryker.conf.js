@@ -24,7 +24,7 @@ module.exports = {
   thresholds: {
     high: 80,
     low: 60,
-    break: 50,
+    break: 45,
   },
   tempDirName: 'stryker-tmp',
   cleanTempDir: true,

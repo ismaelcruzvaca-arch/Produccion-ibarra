@@ -2,47 +2,18 @@
  * Unit tests for useAutoShiftDetector helper functions.
  *
  * Pattern: Pure function tests, plain data, no mocks (useShiftClose.test.ts style).
- * Functions are defined inline (same logic as autoShiftDetector.ts)
- * to avoid pulling in the hook's React/RxDB dependency chain.
+ * Functions imported from autoShiftDetector.ts — tests cover the actual source.
  *
  * Tests:
  * - computeStartTime: slot-in-past returns slot time, slot-in-future clips to now
  * - timeFromHHmm: converts HH:mm string to epoch ms
- * - checkStaleData: warning when >24h old, clears when fresh
+ * - isStaleData: warning when >24h old, clears when fresh
  * - Idempotency guard logic: no duplicate creation when active session exists
  *
  * Ref: AD-1, AD-2, AD-4
  */
 
-// ─── Constants (mirrored from autoShiftDetector.ts) ──────────────────────────────
-
-const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1_000;
-
-// ─── Helper Functions (inlined from autoShiftDetector.ts) ───────────────────────
-
-function timeFromHHmm(hhmm: string, now?: number): number {
-  const [hours, minutes] = hhmm.split(':').map(Number);
-  const d = now ? new Date(now) : new Date();
-  d.setHours(hours, minutes, 0, 0);
-  return d.getTime();
-}
-
-function computeStartTime(slotStart: number): number {
-  const now = Date.now();
-  return slotStart <= now ? slotStart : now;
-}
-
-function isStaleData(
-  latestUpdate: number,
-  now: number,
-): string | null {
-  if (latestUpdate === 0) return null;
-  const age = now - latestUpdate;
-  if (age > STALE_THRESHOLD_MS) {
-    return 'Calendario no actualizado desde hace más de 24h';
-  }
-  return null;
-}
+import { timeFromHHmm, computeStartTime, isStaleData, STALE_THRESHOLD_MS } from '../shiftTimeUtils';
 
 // ─── Idempotency guard simulation ─────────────────────────────────────────────
 

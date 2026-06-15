@@ -215,19 +215,4 @@ async function checkStaleData(
  * Converts a "HH:mm" string to epoch milliseconds for the current date.
  * Used to compute the started_at timestamp for auto-created sessions.
  */
-function timeFromHHmm(hhmm: string): number {
-  const [hours, minutes] = hhmm.split(':').map(Number);
-  const now = new Date();
-  now.setHours(hours, minutes, 0, 0);
-  return now.getTime();
-}
-
-/**
- * Computes the session start time. If the slot start_time is in the past
- * (e.g., the scheduler started late), uses the slot start time anyway
- * (historical accuracy). If it's somehow in the future, clips to now.
- */
-function computeStartTime(slotStart: number): number {
-  const now = Date.now();
-  return slotStart <= now ? slotStart : now;
-}
+export { timeFromHHmm, computeStartTime, isStaleData } from './shiftTimeUtils';
