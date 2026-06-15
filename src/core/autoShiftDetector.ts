@@ -1,6 +1,6 @@
 /**
  * useAutoShiftDetector — Foreground scheduler that evaluates the shift calendar
- * every 60 seconds and idempotently creates shift_sessions with operator_id=null.
+ * every 60 seconds: creates sessions when a slot starts, closes them when it ends.
  *
  * Pattern: Foreground Hook + Scheduler
  * Why:
@@ -10,13 +10,13 @@
  *   and performance optimization) and re-evaluates on foreground return.
  *
  * Lifecycle:
- * 1. On mount, register AppState listener and start 60s interval.
- * 2. Each tick: check auto_shift_enabled flag, evaluate calendar via
- *    getActiveSlot, create sessions idempotently.
- * 3. On unmount, clear interval and remove listener.
- *
- * Auto-close (AD-3) is deferred to P1 per design decision. The detector
- * only auto-creates sessions. Manual close via supervisor remains available.
+ * 1. On mount, cleanup orphaned sessions (>24h active without calendar slot).
+ * 2. Register AppState listener and start 60s interval.
+ * 3. Each tick:
+ *    a. Check auto_shift_enabled flag.
+ *    b. For each line: if active slot → CREATE session idempotently.
+ *    c. For each line: if NO active slot → CLOSE any active session.
+ * 4. On unmount, clear interval and remove listener.
  *
  * Stale calendar data (>24h since last sync) produces a persistent warning.
  */
@@ -99,31 +99,45 @@ export function useAutoShiftDetector(): AutoShiftDetectorState {
       for (const line of lines) {
         // 4. Resolve active slot for this line
         const activeSlot = await calendarRef.current.getActiveSlot(line.id, nowMs());
-        if (!activeSlot) continue;
 
-        // 5. Find active machines for this line (first one without session)
-        const machines = getMachinesByLine(line.id).filter((m) => m.is_active);
-        if (machines.length === 0) continue;
+        if (activeSlot) {
+          // ── SLOT ACTIVO → crear sesión si no existe ──────────────────────
+          const machines = getMachinesByLine(line.id).filter((m) => m.is_active);
+          if (machines.length === 0) continue;
 
-        // Try to find a machine without an active session
-        for (const machine of machines) {
-          const existingSession = await shiftSessionsRef.current.findActiveByMachine(machine.id);
-          if (!existingSession) {
-            // 6. Idempotent creation — no active session for this machine
-            const slotStart = timeFromHHmm(activeSlot.start_time);
-            const startedAt = computeStartTime(slotStart);
+          for (const machine of machines) {
+            const existingSession = await shiftSessionsRef.current.findActiveByMachine(machine.id);
+            if (!existingSession) {
+              const slotStart = timeFromHHmm(activeSlot.start_time);
+              const startedAt = computeStartTime(slotStart);
 
-            await shiftSessionsRef.current.create({
-              machine_id: machine.id,
-              shift_type: activeSlot.shift_type,
-              started_at: startedAt,
-              status: 'active',
-              created_at: nowMs(),
-              // operator_id intentionally null — operator assigns post-creation (SS-2)
-            });
-
-            // Create one session per line per tick — move to next line
-            break;
+              await shiftSessionsRef.current.create({
+                machine_id: machine.id,
+                shift_type: activeSlot.shift_type,
+                started_at: startedAt,
+                status: 'active',
+                created_at: nowMs(),
+                // operator_id intentionally null — operator assigns post-creation (SS-2)
+              });
+              break; // one session per line per tick
+            }
+          }
+        } else {
+          // ── SIN SLOT ACTIVO → cerrar sesiones huérfanas de esta línea ────
+          const machines = getMachinesByLine(line.id).filter((m) => m.is_active);
+          for (const machine of machines) {
+            const activeSession = await shiftSessionsRef.current.findActiveByMachine(machine.id);
+            if (activeSession && activeSession.get('status') === 'active') {
+              // Only auto-close sessions created by the scheduler (no operator assigned)
+              // Sessions with operator assigned should be closed manually by the supervisor
+              const operatorId = activeSession.get('operator_id') as string | null | undefined;
+              if (!operatorId) {
+                await shiftSessionsRef.current.update(activeSession.get('id'), {
+                  status: 'closed',
+                  updated_at: nowMs(),
+                });
+              }
+            }
           }
         }
       }
@@ -136,6 +150,32 @@ export function useAutoShiftDetector(): AutoShiftDetectorState {
   // ── Lifecycle: Interval + AppState ──────────────────────────────────────────
 
   useEffect(() => {
+    // ── Cleanup orphaned sessions on mount ─────────────────────────────────
+    // Sessions that were created before auto-close existed and have been
+    // "active" for >24h with no operator assigned → close them.
+    (async () => {
+      try {
+        const allSessions = await shiftSessionsRepo.findByStatus('active');
+        const now = nowMs();
+        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1_000;
+
+        for (const doc of allSessions) {
+          const startedAt = doc.get('started_at') as number;
+          const operatorId = doc.get('operator_id') as string | null | undefined;
+          const age = now - startedAt;
+
+          if (age > TWENTY_FOUR_HOURS && !operatorId) {
+            await shiftSessionsRepo.update(doc.get('id'), {
+              status: 'closed',
+              updated_at: now,
+            });
+          }
+        }
+      } catch {
+        // Non-critical — cleanup is best-effort
+      }
+    })();
+
     // Initial evaluation (don't wait 60s for first tick)
     evaluate();
 
