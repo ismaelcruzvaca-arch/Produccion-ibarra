@@ -54,6 +54,10 @@ import {
   toGraphQLDowntimeConciliation,
   toGraphQLPlantConfig,
   toGraphQLShiftSummary,
+  toGraphQLShiftCalendarSlot,
+  fromGraphQLShiftCalendarSlot,
+  toGraphQLShiftCalendarException,
+  fromGraphQLShiftCalendarException,
 } from './dto';
 import type {
   GraphQLAsset,
@@ -74,6 +78,8 @@ import type {
   GraphQLDowntimeConciliation,
   GraphQLPlantConfig,
   GraphQLShiftSummary,
+  GraphQLShiftCalendarSlot,
+  GraphQLShiftCalendarException,
 } from './dto';
 import type { ChocolateIbarraDatabase } from '../data/database';
 import type {
@@ -92,6 +98,8 @@ import type {
   IMixingBatch,
   IExtractorCheck,
   IVitaminKit,
+  IShiftCalendarSlot,
+  IShiftCalendarException,
 } from '../core/types';
 import { createResilientReplication, runDLQDiagnosis, type ResilientState } from '../sync/resilientReplication';
 
@@ -884,6 +892,8 @@ export interface ReplicationStates {
   downtimeConciliations: RxGraphQLReplicationState<IDowntimeConciliation, GraphQLDowntimeConciliation>;
   plantConfigs: RxGraphQLReplicationState<IPlantConfig, GraphQLPlantConfig>;
   shiftSummaries: RxGraphQLReplicationState<IShiftSummary, GraphQLShiftSummary>;
+  shiftCalendarSlots: RxGraphQLReplicationState<IShiftCalendarSlot, GraphQLShiftCalendarSlot>;
+  shiftCalendarExceptions: RxGraphQLReplicationState<IShiftCalendarException, GraphQLShiftCalendarException>;
   /** Resilient replication controller for OEE events (backoff, circuit breaker, DLQ). */
   resilientOeeController?: { cleanup: () => void; getState: () => ResilientState };
   /** Resilient replication controller for signatures (backoff + circuit breaker only). */
@@ -1296,6 +1306,52 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
     replicationPlantConfigs = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
   }
 
+  // ── Shift Calendar Slots replication ────────────────────────────────────────
+  let replicationShiftCalendarSlots: RxGraphQLReplicationState<IShiftCalendarSlot, GraphQLShiftCalendarSlot>;
+  try {
+    replicationShiftCalendarSlots = replicateGraphQL<IShiftCalendarSlot, GraphQLShiftCalendarSlot>({
+      replicationIdentifier: 'shift-calendar-slots-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
+      collection: db.collections.shift_calendar_slots,
+      pull: {
+        queryBuilder: pullQueryBuilderShiftCalendarSlots,
+        modifier: (doc: GraphQLShiftCalendarSlot) => ({ ...fromGraphQLShiftCalendarSlot(doc), _deleted: false }),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderShiftCalendarSlots,
+      },
+      live: false,
+      autoStart: true,
+    });
+  } catch (err) {
+    console.warn('ShiftCalendarSlots replication failed to initialise:', err);
+    replicationShiftCalendarSlots = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
+
+  // ── Shift Calendar Exceptions replication ──────────────────────────────────
+  let replicationShiftCalendarExceptions: RxGraphQLReplicationState<IShiftCalendarException, GraphQLShiftCalendarException>;
+  try {
+    replicationShiftCalendarExceptions = replicateGraphQL<IShiftCalendarException, GraphQLShiftCalendarException>({
+      replicationIdentifier: 'shift-calendar-exceptions-graphql-replication',
+      url: { http: getGraphQLUrl() },
+      headers: getHeaders(),
+      collection: db.collections.shift_calendar_exceptions,
+      pull: {
+        queryBuilder: pullQueryBuilderShiftCalendarExceptions,
+        modifier: (doc: GraphQLShiftCalendarException) => ({ ...fromGraphQLShiftCalendarException(doc), _deleted: false }),
+      },
+      push: {
+        queryBuilder: pushMutationBuilderShiftCalendarExceptions,
+      },
+      live: false,
+      autoStart: true,
+    });
+  } catch (err) {
+    console.warn('ShiftCalendarExceptions replication failed to initialise:', err);
+    replicationShiftCalendarExceptions = { canceled: false, awaitInitialReplication: () => Promise.resolve() } as any;
+  }
+
   // ── Shift Summary replication ───────────────────────────────────────────────
   let replicationShiftSummaries: RxGraphQLReplicationState<IShiftSummary, GraphQLShiftSummary>;
   try {
@@ -1335,6 +1391,8 @@ export function startReplication(db: ChocolateIbarraDatabase): ReplicationStates
     downtimeConciliations: replicationDowntimeConciliations,
     plantConfigs: replicationPlantConfigs,
     shiftSummaries: replicationShiftSummaries,
+    shiftCalendarSlots: replicationShiftCalendarSlots,
+    shiftCalendarExceptions: replicationShiftCalendarExceptions,
     resilientOeeController,
     resilientSignaturesController,
     resilientQualityInspectionsController,
@@ -1644,6 +1702,104 @@ function pushMutationBuilderShiftSummary(docs: any[]) {
               total_micro_stop_min, total_mtto_min, total_prod_min,
               total_boxes, total_rejects, performance_pct,
               has_pending_conciliation, updated_at
+            ]
+          }
+        ) { affected_rows }
+      }
+    `,
+    variables: { objects },
+  };
+}
+
+// ─── Pull Query Builder (Shift Calendar Slots) ─────────────────────────────────
+
+function pullQueryBuilderShiftCalendarSlots(checkpoint: GraphQLShiftCalendarSlot | undefined, _limit: number) {
+  return {
+    query: `
+      query PullShiftCalendarSlots($lastCheckpoint: timestamptz!) {
+        shift_calendar_slots(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          day_of_week
+          start_time
+          end_time
+          line_id
+          shift_type
+          updated_at
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ?? '1970-01-01T00:00:00Z' },
+  };
+}
+
+// ─── Push Mutation Builder (Shift Calendar Slots Upsert) ───────────────────────
+
+function pushMutationBuilderShiftCalendarSlots(docs: any[]) {
+  const objects = docs.map(toGraphQLShiftCalendarSlot);
+  return {
+    query: `
+      mutation UpsertShiftCalendarSlots($objects: [shift_calendar_slots_insert_input!]!) {
+        insert_shift_calendar_slots(
+          objects: $objects,
+          on_conflict: {
+            constraint: shift_calendar_slots_pkey,
+            update_columns: [
+              day_of_week, start_time, end_time, line_id,
+              shift_type, updated_at
+            ]
+          }
+        ) { affected_rows }
+      }
+    `,
+    variables: { objects },
+  };
+}
+
+// ─── Pull Query Builder (Shift Calendar Exceptions) ───────────────────────────
+
+function pullQueryBuilderShiftCalendarExceptions(checkpoint: GraphQLShiftCalendarException | undefined, _limit: number) {
+  return {
+    query: `
+      query PullShiftCalendarExceptions($lastCheckpoint: timestamptz!) {
+        shift_calendar_exceptions(
+          where: { updated_at: { _gt: $lastCheckpoint } },
+          order_by: { updated_at: asc }
+        ) {
+          id
+          date
+          type
+          line_id
+          slot_id
+          start_time
+          end_time
+          shift_type
+          description
+          updated_at
+        }
+      }
+    `,
+    variables: { lastCheckpoint: checkpoint?.updated_at ?? '1970-01-01T00:00:00Z' },
+  };
+}
+
+// ─── Push Mutation Builder (Shift Calendar Exceptions Upsert) ──────────────────
+
+function pushMutationBuilderShiftCalendarExceptions(docs: any[]) {
+  const objects = docs.map(toGraphQLShiftCalendarException);
+  return {
+    query: `
+      mutation UpsertShiftCalendarExceptions($objects: [shift_calendar_exceptions_insert_input!]!) {
+        insert_shift_calendar_exceptions(
+          objects: $objects,
+          on_conflict: {
+            constraint: shift_calendar_exceptions_pkey,
+            update_columns: [
+              date, type, line_id, slot_id,
+              start_time, end_time, shift_type, description,
+              updated_at
             ]
           }
         ) { affected_rows }

@@ -576,7 +576,7 @@ export interface IShiftSession {
   updated_at: number;   // epoch ms (replication checkpoint)
   is_deleted: boolean;
   machine_id: string;
-  operator_id: string;
+  operator_id: string | null;
   shift_type: ShiftType;
   status: 'active' | 'closed';
   started_at: number;
@@ -605,6 +605,64 @@ export interface IOperator {
 }
 
 export type RxOperator = RxDocument<IOperator>;
+
+// ─── Shift Calendar Slot ────────────────────────────────────────────────────────
+
+/**
+ * Shift Calendar Slot — weekly recurring production slot per line.
+ *
+ * Fields:
+ * - day_of_week: 0-6 (Sunday = 0)
+ * - start_time: HH:mm format (24h)
+ * - end_time: HH:mm format (24h)
+ * - line_id: production line this slot belongs to
+ * - shift_type: matutino | vespertino | nocturno
+ */
+export interface IShiftCalendarSlot extends IBaseDocument {
+  day_of_week: number;     // 0-6 (Sunday = 0)
+  start_time: string;      // HH:mm format
+  end_time: string;        // HH:mm format
+  line_id: string;
+  shift_type: ShiftType;
+  device_id: string;
+}
+
+export type RxShiftCalendarSlot = RxDocument<IShiftCalendarSlot>;
+
+// ─── Shift Calendar Exception ───────────────────────────────────────────────────
+
+export type CalendarExceptionType = 'holiday' | 'override' | 'extraordinary';
+
+/**
+ * Shift Calendar Exception — date-based override for recurring slots.
+ *
+ * Types:
+ * - holiday: full-day cancel (no session created)
+ * - override: different hours for a specific date
+ * - extraordinary: ad-hoc slot on a non-recurring date
+ *
+ * Fields:
+ * - date: ISO date string (YYYY-MM-DD)
+ * - type: exception classification
+ * - line_id: production line this exception applies to
+ * - slot_id: optional FK to the recurring slot being overridden
+ * - start_time/end_time: override hours (HH:mm) for override/extraordinary types
+ * - shift_type: optional override for the shift type
+ * - description: optional human-readable reason
+ */
+export interface IShiftCalendarException extends IBaseDocument {
+  date: string;              // YYYY-MM-DD
+  type: CalendarExceptionType;
+  line_id: string;
+  slot_id?: string;          // FK → shift_calendar_slots.id
+  start_time?: string;       // HH:mm
+  end_time?: string;         // HH:mm
+  shift_type?: ShiftType;
+  description?: string;
+  device_id: string;
+}
+
+export type RxShiftCalendarException = RxDocument<IShiftCalendarException>;
 
 // ─── Product Weight Standards ───────────────────────────────────────────────────
 

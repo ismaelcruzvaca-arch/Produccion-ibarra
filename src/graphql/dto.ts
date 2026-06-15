@@ -25,6 +25,7 @@ import type {
   IQualityInspection, IDefectLog, IWeightLog,
   IShiftSession, IOperator, IProductWeightStandard,
   IDowntimeConciliation, IPlantConfig, IShiftSummary,
+  IShiftCalendarSlot, IShiftCalendarException,
 } from '../core/types';
 
 // ─── Asset Mappers ─────────────────────────────────────────────────────────────
@@ -946,7 +947,7 @@ export function fromGraphQLWeightLog(gql: GraphQLWeightLog): IWeightLog {
 export interface GraphQLShiftSession {
   id: string;
   machine_id: string;
-  operator_id: string;
+  operator_id: string | null;
   shift_type: string;
   status: string;
   started_at: string; // TIMESTAMPTZ → ISO 8601 string from Hasura
@@ -978,7 +979,7 @@ export function fromGraphQLShiftSession(gql: GraphQLShiftSession): IShiftSession
   return {
     id: gql.id,
     machine_id: gql.machine_id,
-    operator_id: gql.operator_id,
+    operator_id: gql.operator_id ?? null,
     shift_type: gql.shift_type as IShiftSession['shift_type'],
     status: gql.status as IShiftSession['status'],
     started_at: new Date(gql.started_at).getTime(),
@@ -1054,6 +1055,106 @@ export function fromGraphQLProductWeightStandard(gql: GraphQLProductWeightStanda
     lower_limit: gql.lower_limit,
     upper_limit: gql.upper_limit,
     requires_tare: gql.requires_tare,
+    created_at: updatedAt,
+    updated_at: updatedAt,
+    device_id: '',
+    is_deleted: false,
+  };
+}
+
+// ─── Shift Calendar Slot Mappers ───────────────────────────────────────────────
+
+/**
+ * GraphQL representation of a Shift Calendar Slot as returned by Hasura.
+ * snake_case to match Hasura column naming.
+ * start_time/end_time are time strings (HH:mm) from DB.
+ */
+export interface GraphQLShiftCalendarSlot {
+  id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  line_id: string;
+  shift_type: string;
+  updated_at: string; // TIMESTAMPTZ → ISO 8601
+  // device_id is RxDB-only — not in Hasura
+}
+
+export function toGraphQLShiftCalendarSlot(slot: IShiftCalendarSlot): Record<string, unknown> {
+  return {
+    id: slot.id,
+    day_of_week: slot.day_of_week,
+    start_time: slot.start_time,
+    end_time: slot.end_time,
+    line_id: slot.line_id,
+    shift_type: slot.shift_type,
+    updated_at: new Date(slot.updated_at).toISOString(),
+  };
+}
+
+export function fromGraphQLShiftCalendarSlot(gql: GraphQLShiftCalendarSlot): IShiftCalendarSlot {
+  const updatedAt = new Date(gql.updated_at).getTime();
+  return {
+    id: gql.id,
+    day_of_week: gql.day_of_week,
+    start_time: gql.start_time,
+    end_time: gql.end_time,
+    line_id: gql.line_id,
+    shift_type: gql.shift_type as IShiftCalendarSlot['shift_type'],
+    created_at: updatedAt,
+    updated_at: updatedAt,
+    device_id: '',
+    is_deleted: false,
+  };
+}
+
+// ─── Shift Calendar Exception Mappers ──────────────────────────────────────────
+
+/**
+ * GraphQL representation of a Shift Calendar Exception as returned by Hasura.
+ * date: YYYY-MM-DD string. type: holiday | override | extraordinary.
+ */
+export interface GraphQLShiftCalendarException {
+  id: string;
+  date: string;
+  type: string;
+  line_id: string;
+  slot_id?: string;
+  start_time?: string;
+  end_time?: string;
+  shift_type?: string;
+  description?: string;
+  updated_at: string; // TIMESTAMPTZ → ISO 8601
+  // device_id is RxDB-only — not in Hasura
+}
+
+export function toGraphQLShiftCalendarException(exc: IShiftCalendarException): Record<string, unknown> {
+  return {
+    id: exc.id,
+    date: exc.date,
+    type: exc.type,
+    line_id: exc.line_id,
+    slot_id: exc.slot_id,
+    start_time: exc.start_time,
+    end_time: exc.end_time,
+    shift_type: exc.shift_type,
+    description: exc.description,
+    updated_at: new Date(exc.updated_at).toISOString(),
+  };
+}
+
+export function fromGraphQLShiftCalendarException(gql: GraphQLShiftCalendarException): IShiftCalendarException {
+  const updatedAt = new Date(gql.updated_at).getTime();
+  return {
+    id: gql.id,
+    date: gql.date,
+    type: gql.type as IShiftCalendarException['type'],
+    line_id: gql.line_id,
+    slot_id: gql.slot_id,
+    start_time: gql.start_time,
+    end_time: gql.end_time,
+    shift_type: gql.shift_type as IShiftCalendarException['shift_type'] | undefined,
+    description: gql.description,
     created_at: updatedAt,
     updated_at: updatedAt,
     device_id: '',

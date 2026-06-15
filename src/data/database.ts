@@ -40,6 +40,8 @@ import {
   downtimeConciliationSchema,
   plantConfigSchema,
   shiftSummarySchema,
+  shiftCalendarSlotSchema,
+  shiftCalendarExceptionSchema,
 } from './schemas';
 import { MIGRATIONS } from './migrations';
 import type {
@@ -63,6 +65,8 @@ import type {
   IDowntimeConciliation,
   IPlantConfig,
   IShiftSummary,
+  IShiftCalendarSlot,
+  IShiftCalendarException,
 } from '../core/types';
 
 // ─── Database Collections Type ──────────────────────────────────────────────────
@@ -89,6 +93,8 @@ export type ChocolateIbarraDatabase = RxDatabase<{
   downtime_conciliation: RxCollection<IDowntimeConciliation>;
   plant_config: RxCollection<IPlantConfig>;
   shift_summary: RxCollection<IShiftSummary>;
+  shift_calendar_slots: RxCollection<IShiftCalendarSlot>;
+  shift_calendar_exceptions: RxCollection<IShiftCalendarException>;
 }>;
 
 // ─── Database Singleton ────────────────────────────────────────────────────────
@@ -149,6 +155,9 @@ export async function getDatabase(): Promise<ChocolateIbarraDatabase> {
         downtime_conciliation: { schema: downtimeConciliationSchema, migrationStrategies: MIGRATIONS.downtimeConciliationSchema },
         plant_config: { schema: plantConfigSchema, migrationStrategies: MIGRATIONS.plantConfigSchema },
         shift_summary: { schema: shiftSummarySchema, migrationStrategies: MIGRATIONS.shiftSummarySchema },
+        // Colecciones de calendario de turnos (turno-automatico)
+        shift_calendar_slots: { schema: shiftCalendarSlotSchema, migrationStrategies: MIGRATIONS.shiftCalendarSlotSchema },
+        shift_calendar_exceptions: { schema: shiftCalendarExceptionSchema, migrationStrategies: MIGRATIONS.shiftCalendarExceptionSchema },
       });
       return db as ChocolateIbarraDatabase;
     });

@@ -23,6 +23,7 @@ import type {
   IQualityInspection, IDefectLog, IWeightLog,
   IShiftSession, IOperator, IProductWeightStandard,
   IDowntimeConciliation, IPlantConfig, IShiftSummary,
+  IShiftCalendarSlot, IShiftCalendarException,
 } from '../core/types';
 
 /**
@@ -433,10 +434,10 @@ export const weightLogSchema: RxJsonSchema<IWeightLog> = {
  * shift_type (matutino/vespertino/nocturno), started_at/ended_at, planned_boxes, product_code.
  */
 export const shiftSessionSchema: RxJsonSchema<IShiftSession> = {
-  version: 1,
+  version: 2,
   primaryKey: 'id',
   type: 'object',
-  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'machine_id', 'operator_id', 'shift_type', 'status', 'started_at', 'device_id'],
+  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'machine_id', 'shift_type', 'status', 'started_at', 'device_id'],
   properties: {
     id:           { type: 'string', maxLength: 100 },
     created_at:   { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
@@ -453,6 +454,66 @@ export const shiftSessionSchema: RxJsonSchema<IShiftSession> = {
     device_id:    { type: 'string' },
   },
   indexes: ['started_at', 'status'],
+};
+
+/**
+ * Migration strategy for shift_sessions v1 → v2.
+ * operator_id removed from required → becomes nullable, no data loss.
+ */
+export const shiftSessionSchemaV1ToV2 = (oldDoc: Record<string, unknown>) => ({
+  ...oldDoc,
+});
+
+/**
+ * Shift Calendar Slot schema — slot semanal recurrente por línea de producción.
+ * day_of_week: 0-6 (Sunday = 0). start_time/end_time: HH:mm (24h).
+ */
+export const shiftCalendarSlotSchema: RxJsonSchema<IShiftCalendarSlot> = {
+  version: 1,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'day_of_week', 'start_time', 'end_time', 'line_id', 'shift_type', 'device_id'],
+  properties: {
+    id:          { type: 'string', maxLength: 100 },
+    created_at:  { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    updated_at:  { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted:  { type: 'boolean' },
+    day_of_week: { type: 'number', minimum: 0, maximum: 6 },
+    start_time:  { type: 'string', maxLength: 5, pattern: '^\\d{2}:\\d{2}$' },
+    end_time:    { type: 'string', maxLength: 5, pattern: '^\\d{2}:\\d{2}$' },
+    line_id:     { type: 'string', maxLength: 100 },
+    shift_type:  { type: 'string', enum: ['matutino', 'vespertino', 'nocturno'] },
+    device_id:   { type: 'string' },
+  },
+  indexes: ['updated_at', ['line_id', 'day_of_week']],
+};
+
+/**
+ * Shift Calendar Exception schema — excepción puntual por fecha.
+ * type: holiday (cancela slot), override (cambia horario), extraordinary (slot ad-hoc).
+ * date: YYYY-MM-DD. slot_id opcional para sobrescribir un slot recurrente.
+ */
+export const shiftCalendarExceptionSchema: RxJsonSchema<IShiftCalendarException> = {
+  version: 1,
+  primaryKey: 'id',
+  type: 'object',
+  required: ['id', 'created_at', 'updated_at', 'is_deleted', 'date', 'type', 'line_id', 'device_id'],
+  properties: {
+    id:          { type: 'string', maxLength: 100 },
+    created_at:  { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    updated_at:  { type: 'number', multipleOf: 1, minimum: 0, maximum: 10000000000000 },
+    is_deleted:  { type: 'boolean' },
+    date:        { type: 'string', maxLength: 10, pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+    type:        { type: 'string', enum: ['holiday', 'override', 'extraordinary'] },
+    line_id:     { type: 'string', maxLength: 100 },
+    slot_id:     { type: 'string', maxLength: 100 },
+    start_time:  { type: 'string', maxLength: 5, pattern: '^\\d{2}:\\d{2}$' },
+    end_time:    { type: 'string', maxLength: 5, pattern: '^\\d{2}:\\d{2}$' },
+    shift_type:  { type: 'string', enum: ['matutino', 'vespertino', 'nocturno'] },
+    description: { type: 'string' },
+    device_id:   { type: 'string' },
+  },
+  indexes: ['updated_at', ['line_id', 'date'], 'date'],
 };
 
 /**

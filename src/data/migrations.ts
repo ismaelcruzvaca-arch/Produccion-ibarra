@@ -238,11 +238,17 @@ export const MIGRATIONS: Record<string, MigrationStrategies> = {
   },
 
   // ── Shift Session Schema v0→v1 ──────────────────────────────────────────
+  // v1→v2: operator_id removed from required (becomes nullable). No data loss — pass-through.
   shiftSessionSchema: {
     1: (oldDoc: any) => {
       return {
         ...oldDoc,
         created_at: oldDoc.created_at ?? now(),
+      };
+    },
+    2: (oldDoc: any) => {
+      return {
+        ...oldDoc,
       };
     },
   },
@@ -305,6 +311,18 @@ export const MIGRATIONS: Record<string, MigrationStrategies> = {
         created_at: oldDoc.created_at ?? now(),
       };
     },
+  },
+
+  // ── Shift Calendar Slot Schema v0→v1 ────────────────────────────────────
+  // New collection at v1 — no prior versions to migrate from.
+  shiftCalendarSlotSchema: {
+    1: (oldDoc: any) => ({ ...oldDoc }),
+  },
+
+  // ── Shift Calendar Exception Schema v0→v1 ──────────────────────────────
+  // New collection at v1 — no prior versions to migrate from.
+  shiftCalendarExceptionSchema: {
+    1: (oldDoc: any) => ({ ...oldDoc }),
   },
 
   // ── Shift Summary Schema ────────────────────────────────────────────────
