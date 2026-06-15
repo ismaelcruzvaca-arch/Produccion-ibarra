@@ -215,4 +215,5 @@ async function checkStaleData(
  * Converts a "HH:mm" string to epoch milliseconds for the current date.
  * Used to compute the started_at timestamp for auto-created sessions.
  */
-export { timeFromHHmm, computeStartTime, isStaleData } from './shiftTimeUtils';
+import { timeFromHHmm, computeStartTime, isStaleData } from './shiftTimeUtils';
+export { timeFromHHmm, computeStartTime, isStaleData };
