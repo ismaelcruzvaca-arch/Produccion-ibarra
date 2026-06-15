@@ -462,6 +462,234 @@ describe('syncErrorSchema v0→v1', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// SHIFT SESSION SCHEMA v1→v2 (SS-3: operator_id nullable)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('shiftSessionSchema v1→v2 (SS-3)', () => {
+  const migrate = MIGRATIONS.shiftSessionSchema[2];
+
+  it('passes through all fields unchanged (no-op migration)', () => {
+    const oldDoc = {
+      id: 'session-1',
+      machine_id: 'MC-001',
+      operator_id: 'user-1',
+      shift_type: 'matutino',
+      status: 'active',
+      started_at: 1234567890,
+      created_at: 1234567890,
+      updated_at: 1234567890,
+      is_deleted: false,
+      device_id: 'device-1',
+    };
+    const result = migrate(oldDoc, {} as any);
+
+    // operator_id is preserved (no data loss)
+    expect(result.operator_id).toBe('user-1');
+    expect(result.machine_id).toBe('MC-001');
+    expect(result.shift_type).toBe('matutino');
+    expect(result.status).toBe('active');
+  });
+
+  it('preserves operator_id when it is null', () => {
+    const oldDoc = {
+      id: 'session-2',
+      machine_id: 'MC-001',
+      operator_id: null,
+      shift_type: 'matutino',
+      status: 'active',
+      started_at: 1234567890,
+      created_at: 1234567890,
+      updated_at: 1234567890,
+      is_deleted: false,
+      device_id: 'device-1',
+    };
+    const result = migrate(oldDoc, {} as any);
+
+    // operator_id = null is preserved (SS-3: operator_id is null, not empty string)
+    expect(result.operator_id).toBeNull();
+  });
+
+  it('preserves operator_id when it is undefined', () => {
+    const oldDoc = {
+      id: 'session-3',
+      machine_id: 'MC-001',
+      shift_type: 'vespertino',
+      status: 'active',
+      started_at: 1234567890,
+      created_at: 1234567890,
+      updated_at: 1234567890,
+      is_deleted: false,
+      device_id: 'device-1',
+    };
+    const result = migrate(oldDoc, {} as any);
+
+    // operator_id is undefined (not in required array — valid for v2 schema)
+    expect(result.operator_id).toBeUndefined();
+  });
+
+  it('preserves all existing fields unchanged', () => {
+    const oldDoc = {
+      id: 'session-4',
+      machine_id: 'MC-002',
+      shift_type: 'nocturno',
+      status: 'closed',
+      started_at: 1234567890,
+      ended_at: 1235567890,
+      planned_boxes: 5000,
+      product_code: 'CHO-123',
+      created_at: 1234567890,
+      updated_at: 1234567890,
+      is_deleted: false,
+      device_id: 'device-2',
+    };
+    const result = migrate(oldDoc, {} as any);
+
+    expect(result.id).toBe('session-4');
+    expect(result.machine_id).toBe('MC-002');
+    expect(result.shift_type).toBe('nocturno');
+    expect(result.status).toBe('closed');
+    expect(result.started_at).toBe(1234567890);
+    expect(result.ended_at).toBe(1235567890);
+    expect(result.planned_boxes).toBe(5000);
+    expect(result.product_code).toBe('CHO-123');
+    expect(result.is_deleted).toBe(false);
+    expect(result.device_id).toBe('device-2');
+  });
+
+  it('handles minimal doc with only required fields', () => {
+    const oldDoc = {
+      id: 'session-5',
+      machine_id: 'MC-003',
+      shift_type: 'matutino',
+      status: 'active',
+      started_at: 1234567890,
+      created_at: 1234567890,
+      updated_at: 1234567890,
+      is_deleted: false,
+      device_id: 'device-3',
+    };
+    const result = migrate(oldDoc, {} as any);
+
+    expect(result.id).toBe('session-5');
+    expect(result.machine_id).toBe('MC-003');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHIFT CALENDAR SLOT SCHEMA v0→v1 (new collection)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('shiftCalendarSlotSchema v0→v1', () => {
+  const migrate = MIGRATIONS.shiftCalendarSlotSchema[1];
+
+  it('passes through all fields unchanged (new collection)', () => {
+    const oldDoc = {
+      id: 'slot-1',
+      day_of_week: 1,
+      start_time: '06:00',
+      end_time: '14:00',
+      line_id: 'L1',
+      shift_type: 'matutino',
+      device_id: 'dev-1',
+      created_at: 1234567890,
+      updated_at: 1234567890,
+      is_deleted: false,
+    };
+    const result = migrate(oldDoc, {} as any);
+
+    expect(result.id).toBe('slot-1');
+    expect(result.day_of_week).toBe(1);
+    expect(result.start_time).toBe('06:00');
+    expect(result.end_time).toBe('14:00');
+    expect(result.line_id).toBe('L1');
+    expect(result.shift_type).toBe('matutino');
+  });
+
+  it('handles empty doc', () => {
+    const result = migrate({ id: 'slot-2' }, {} as any);
+    expect(result.id).toBe('slot-2');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHIFT CALENDAR EXCEPTION SCHEMA v0→v1 (new collection)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('shiftCalendarExceptionSchema v0→v1', () => {
+  const migrate = MIGRATIONS.shiftCalendarExceptionSchema[1];
+
+  it('passes through all fields unchanged (new collection)', () => {
+    const oldDoc = {
+      id: 'exc-1',
+      date: '2026-12-25',
+      type: 'holiday',
+      line_id: 'L1',
+      device_id: 'dev-1',
+      description: 'Navidad',
+      created_at: 1234567890,
+      updated_at: 1234567890,
+      is_deleted: false,
+    };
+    const result = migrate(oldDoc, {} as any);
+
+    expect(result.id).toBe('exc-1');
+    expect(result.date).toBe('2026-12-25');
+    expect(result.type).toBe('holiday');
+    expect(result.line_id).toBe('L1');
+    expect(result.description).toBe('Navidad');
+  });
+
+  it('handles override with time fields', () => {
+    const oldDoc = {
+      id: 'exc-2',
+      date: '2026-06-22',
+      type: 'override',
+      line_id: 'L1',
+      slot_id: 'slot-1',
+      start_time: '08:00',
+      end_time: '12:00',
+      shift_type: 'vespertino',
+      device_id: 'dev-1',
+      created_at: 1234567890,
+      updated_at: 1234567890,
+      is_deleted: false,
+    };
+    const result = migrate(oldDoc, {} as any);
+
+    expect(result.type).toBe('override');
+    expect(result.start_time).toBe('08:00');
+    expect(result.end_time).toBe('12:00');
+    expect(result.slot_id).toBe('slot-1');
+    expect(result.shift_type).toBe('vespertino');
+  });
+
+  it('handles extraordinary type', () => {
+    const oldDoc = {
+      id: 'exc-3',
+      date: '2026-07-04',
+      type: 'extraordinary',
+      line_id: 'L2',
+      start_time: '10:00',
+      end_time: '18:00',
+      shift_type: 'matutino',
+      device_id: 'dev-1',
+      created_at: 1234567890,
+      updated_at: 1234567890,
+      is_deleted: false,
+    };
+    const result = migrate(oldDoc, {} as any);
+
+    expect(result.type).toBe('extraordinary');
+    expect(result.start_time).toBe('10:00');
+  });
+
+  it('handles empty doc', () => {
+    const result = migrate({ id: 'exc-4' }, {} as any);
+    expect(result.id).toBe('exc-4');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // EDGE CASES
 // ═══════════════════════════════════════════════════════════════════════════════
 
